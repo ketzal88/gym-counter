@@ -49,8 +49,8 @@ export async function GET(request: Request) {
         if (!sheet) {
           return NextResponse.json({
             users: [
-              { id: '1', name: 'Me' },
-              { id: '2', name: 'Friend' }
+              { id: '1', name: 'Gabi' },
+              { id: '2', name: 'Iña' }
             ]
           });
         }
@@ -69,8 +69,8 @@ export async function GET(request: Request) {
         if (type === 'users') {
           return NextResponse.json({
             users: [
-              { id: '1', name: 'Me' },
-              { id: '2', name: 'Friend' }
+              { id: '1', name: 'Gabi' },
+              { id: '2', name: 'Iña' }
             ]
           });
         }
@@ -97,8 +97,8 @@ export async function GET(request: Request) {
         } else {
           return NextResponse.json({ 
             users: [
-              { id: '1', name: 'Me' },
-              { id: '2', name: 'Friend' }
+              { id: '1', name: 'Gabi' },
+              { id: '2', name: 'Iña' }
             ], 
             visits 
           });

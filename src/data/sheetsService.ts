@@ -1,29 +1,68 @@
 import { GymVisit, User } from './types';
 
+// Caché para limitar solicitudes repetidas
+const apiCache = {
+  users: null as User[] | null,
+  visits: null as GymVisit[] | null,
+  lastFetched: {
+    users: 0,
+    visits: 0
+  }
+};
+
+// Tiempo de caché en milisegundos (5 minutos)
+const CACHE_DURATION = 5 * 60 * 1000;
+
+// Valores predeterminados si no podemos cargar datos
+const DEFAULT_USERS: User[] = [
+  { id: '1', name: 'Gabi' },
+  { id: '2', name: 'Iña' }
+];
+
 // Cargar usuarios
 export async function loadUsers(): Promise<User[]> {
   try {
+    // Verificar si tenemos datos en caché recientes
+    const now = Date.now();
+    if (apiCache.users && (now - apiCache.lastFetched.users < CACHE_DURATION)) {
+      console.log('Usando usuarios en caché');
+      return apiCache.users;
+    }
+    
     // Llamar a la API en lugar de conectarse directamente a Google Sheets
+    console.log('Obteniendo usuarios desde la API');
     const response = await fetch('/api/sheets?type=users');
     const data = await response.json();
     
     if (!response.ok) {
       console.error('Error cargando usuarios desde la API:', data.error);
-      // Valores por defecto como fallback
-      return [
-        { id: '1', name: 'Me' },
-        { id: '2', name: 'Friend' }
-      ];
+      
+      // Si tenemos datos en caché, aunque sean viejos, los usamos como fallback
+      if (apiCache.users) {
+        console.log('Usando caché antigua como fallback para usuarios');
+        return apiCache.users;
+      }
+      
+      // Valores por defecto como fallback final
+      return DEFAULT_USERS;
     }
+    
+    // Actualizar caché
+    apiCache.users = data.users || [];
+    apiCache.lastFetched.users = now;
     
     return data.users || [];
   } catch (error) {
     console.error('Error cargando usuarios:', error);
+    
+    // Si tenemos datos en caché, los usamos como fallback
+    if (apiCache.users) {
+      console.log('Usando caché como fallback para usuarios después de error');
+      return apiCache.users;
+    }
+    
     // Valores por defecto como fallback
-    return [
-      { id: '1', name: 'Me' },
-      { id: '2', name: 'Friend' }
-    ];
+    return DEFAULT_USERS;
   }
 }
 
@@ -44,16 +83,35 @@ export async function loadVisits(): Promise<GymVisit[]> {
       }
     }
     
+    // Verificar si tenemos datos en caché recientes
+    const now = Date.now();
+    if (apiCache.visits && (now - apiCache.lastFetched.visits < CACHE_DURATION)) {
+      console.log('Usando visitas en caché');
+      return apiCache.visits;
+    }
+    
     // Luego intentamos obtener datos más actualizados de la API
+    console.log('Obteniendo visitas desde la API');
     const response = await fetch('/api/sheets?type=visits');
     if (!response.ok) {
       console.error('Error cargando visitas desde la API, usando datos locales');
+      
+      // Si tenemos datos en caché, aunque sean viejos, los usamos
+      if (apiCache.visits) {
+        console.log('Usando caché antigua como fallback para visitas');
+        return apiCache.visits;
+      }
+      
       return localVisits;
     }
     
     const data = await response.json();
     const apiVisits = data.visits || [];
     console.log(`${apiVisits.length} visitas cargadas desde la API`);
+    
+    // Actualizar caché
+    apiCache.visits = apiVisits;
+    apiCache.lastFetched.visits = now;
     
     // Actualizar localStorage con datos más recientes
     if (apiVisits.length > 0) {
@@ -69,6 +127,12 @@ export async function loadVisits(): Promise<GymVisit[]> {
     return apiVisits;
   } catch (error) {
     console.error('Error cargando visitas:', error);
+    
+    // Si tenemos datos en caché, los usamos como fallback
+    if (apiCache.visits) {
+      console.log('Usando caché como fallback para visitas después de error');
+      return apiCache.visits;
+    }
     
     // Fallback a localStorage
     try {
@@ -96,6 +160,11 @@ export async function saveVisit(visit: GymVisit): Promise<boolean> {
     data.visits = [...data.visits, visit];
     localStorage.setItem('gym_counter_data', JSON.stringify(data));
     console.log("Guardado en localStorage exitoso");
+    
+    // Actualizar también la caché en memoria
+    if (apiCache.visits) {
+      apiCache.visits = [...apiCache.visits, visit];
+    }
   } catch (error) {
     console.error('Error al guardar en localStorage:', error);
   }
