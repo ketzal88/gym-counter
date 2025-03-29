@@ -21,11 +21,14 @@ A simple web application to track gym attendance with friends. Perfect for motiv
    ```
    npm install
    ```
-3. Run the development server:
+3. Configure environment variables:
+   - Copy `.env.example` to `.env.local`
+   - Replace `TU_API_KEY_AQUÍ` with your Google API Key (see "Google Sheets Integration" section)
+4. Run the development server:
    ```
    npm run dev
    ```
-4. Open [http://localhost:3000](http://localhost:3000) in your browser
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
 
 ### Deploying to Vercel
 
@@ -35,8 +38,9 @@ To deploy this application to Vercel, follow these steps:
 2. Go to [Vercel](https://vercel.com) and sign up/login
 3. Click on "New Project"
 4. Import your GitHub repository
-5. Vercel will detect it's a Next.js project and configure the build settings automatically
-6. Click "Deploy"
+5. Under "Environment Variables", add `NEXT_PUBLIC_GOOGLE_API_KEY` with your Google API Key
+6. Vercel will detect it's a Next.js project and configure the build settings automatically
+7. Click "Deploy"
 
 Once deployed, you'll get a URL where your app is accessible to everyone.
 
@@ -47,9 +51,12 @@ By default, GymCounter stores data in your browser's localStorage. To enable syn
 1. Use this Google Sheet as your data source: [GymCounter Spreadsheet](https://docs.google.com/spreadsheets/d/1sJmsAry32FM0A1jlyM1bWI9VyyBHedX65PyLUNVahXI/edit)
 2. Create a project in [Google Cloud Console](https://console.cloud.google.com/)
 3. Enable the Google Sheets API in your project
-4. Create API credentials (either an API Key or Service Account)
-5. If using a Service Account, share the spreadsheet with the Service Account email
-6. Update the code in `src/data/sheetsService.ts` with your credentials
+4. Create API credentials (API Key)
+5. Configure this API Key as an environment variable:
+   - Locally: in your `.env.local` file
+   - Vercel: in project settings under "Environment Variables"
+
+For security reasons, it's recommended to restrict your API key to only work with the Google Sheets API and from specific domains (your Vercel domain and localhost for development).
 
 For detailed steps, see the [Google Spreadsheet documentation](https://theoephraim.github.io/node-google-spreadsheet/#/getting-started/authentication).
 
