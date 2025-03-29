@@ -19,6 +19,17 @@ const DEFAULT_USERS: User[] = [
   { id: '2', name: 'Iña' }
 ];
 
+// Función para construir la URL completa de la API
+function getApiUrl(endpoint: string): string {
+  // Verificar si estamos en desarrollo o producción
+  const baseUrl = 
+    typeof window !== 'undefined' && window.location.hostname === 'localhost' 
+      ? '' // En desarrollo, usa la misma URL base
+      : window.location.origin; // En producción, usa el origen actual
+  
+  return `${baseUrl}${endpoint}`;
+}
+
 // Cargar usuarios
 export async function loadUsers(): Promise<User[]> {
   try {
@@ -31,11 +42,20 @@ export async function loadUsers(): Promise<User[]> {
     
     // Llamar a la API en lugar de conectarse directamente a Google Sheets
     console.log('Obteniendo usuarios desde la API');
-    const response = await fetch('/api/sheets?type=users');
+    const apiUrl = getApiUrl('/api/sheets?type=users');
+    console.log('URL de la API:', apiUrl);
+    
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      // Agregar credenciales para asegurar que se envíen cookies
+      credentials: 'same-origin'
+    });
+    
     const data = await response.json();
     
     if (!response.ok) {
-      console.error('Error cargando usuarios desde la API:', data.error);
+      console.error('Error cargando usuarios desde la API:', data.error, data.details || '');
       
       // Si tenemos datos en caché, aunque sean viejos, los usamos como fallback
       if (apiCache.users) {
@@ -92,9 +112,18 @@ export async function loadVisits(): Promise<GymVisit[]> {
     
     // Luego intentamos obtener datos más actualizados de la API
     console.log('Obteniendo visitas desde la API');
-    const response = await fetch('/api/sheets?type=visits');
+    const apiUrl = getApiUrl('/api/sheets?type=visits');
+    console.log('URL de la API:', apiUrl);
+    
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin'
+    });
+    
     if (!response.ok) {
-      console.error('Error cargando visitas desde la API, usando datos locales');
+      const errorData = await response.json();
+      console.error('Error cargando visitas desde la API:', errorData.error, errorData.details || '');
       
       // Si tenemos datos en caché, aunque sean viejos, los usamos
       if (apiCache.visits) {
@@ -171,11 +200,15 @@ export async function saveVisit(visit: GymVisit): Promise<boolean> {
   
   // Intentar guardar en el servidor a través de la API
   try {
-    const response = await fetch('/api/sheets', {
+    const apiUrl = getApiUrl('/api/sheets');
+    console.log('URL de la API para guardar:', apiUrl);
+    
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'same-origin',
       body: JSON.stringify({
         type: 'visit',
         visit
@@ -184,7 +217,7 @@ export async function saveVisit(visit: GymVisit): Promise<boolean> {
     
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('Error guardando visita en el servidor:', errorData.error);
+      console.error('Error guardando visita en el servidor:', errorData.error, errorData.details || '');
       return false;
     }
     
