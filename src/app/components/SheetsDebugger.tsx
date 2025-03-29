@@ -24,8 +24,8 @@ export default function SheetsDebugger() {
         
         // Verificar conexión con Google Sheets comprobando si hay usuarios predeterminados
         const hasDefaultUsers = data.users?.length === 2 && 
-          data.users[0]?.name === 'Me' && 
-          data.users[1]?.name === 'Friend';
+          data.users[0]?.name === 'Gabi' && 
+          data.users[1]?.name === 'Iña';
           
         if (hasDefaultUsers) {
           addLog('⚠️ Se están usando usuarios predeterminados, lo que puede indicar que:');
