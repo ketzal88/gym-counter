@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GymCounter
+
+A simple web application to track gym attendance with friends. Perfect for motivating each other to go to the gym regularly!
+
+## Features
+
+- Track gym visits for you and a friend
+- See the total count of gym visits for each person
+- View gym attendance history
+- Track consecutive days streak
+- Data is stored in your browser's localStorage
 
 ## Getting Started
 
-First, run the development server:
+### Running Locally
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+1. Clone this repository
+2. Install dependencies:
+   ```
+   npm install
+   ```
+3. Run the development server:
+   ```
+   npm run dev
+   ```
+4. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Deploying to Vercel
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+To deploy this application to Vercel, follow these steps:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Fork this repository to your GitHub account
+2. Go to [Vercel](https://vercel.com) and sign up/login
+3. Click on "New Project"
+4. Import your GitHub repository
+5. Vercel will detect it's a Next.js project and configure the build settings automatically
+6. Click "Deploy"
 
-## Learn More
+Once deployed, you'll get a URL where your app is accessible to everyone.
 
-To learn more about Next.js, take a look at the following resources:
+## How It Works
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- The app uses your browser's localStorage to keep track of gym visits
+- Each person gets a counter with a "+1" button to record gym visits
+- The history section shows when each person went to the gym
+- The app tracks consecutive days to help maintain your gym streak
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Technologies Used
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Next.js 15
+- React
+- TypeScript
+- Tailwind CSS
+- localStorage for data persistence
