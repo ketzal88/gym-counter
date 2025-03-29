@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { User, GymVisit } from '@/data/types';
 import { loadUsers, loadVisits, saveVisit } from '@/data/sheetsService';
 
@@ -12,6 +12,21 @@ export default function Counter() {
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [resetting, setResetting] = useState<boolean>(false);
+  
+  // Actualizar contadores basados en las visitas (usando useCallback para evitar dependencias circulares)
+  const updateCounts = useCallback((visits: GymVisit[], keepInitialValues = false) => {
+    const newCounts: Record<string, number> = keepInitialValues ? { ...counts } : {};
+    
+    // Contar visitas para cada usuario
+    visits.forEach(visit => {
+      if (!newCounts[visit.userId]) {
+        newCounts[visit.userId] = 0;
+      }
+      newCounts[visit.userId]++;
+    });
+    
+    setCounts(newCounts);
+  }, [counts]);
   
   // Cargar los datos iniciales
   useEffect(() => {
@@ -32,22 +47,7 @@ export default function Counter() {
     };
     
     fetchData();
-  }, []);
-  
-  // Actualizar contadores basados en las visitas
-  const updateCounts = (visits: GymVisit[], keepInitialValues = false) => {
-    const newCounts: Record<string, number> = keepInitialValues ? { ...counts } : {};
-    
-    // Contar visitas para cada usuario
-    visits.forEach(visit => {
-      if (!newCounts[visit.userId]) {
-        newCounts[visit.userId] = 0;
-      }
-      newCounts[visit.userId]++;
-    });
-    
-    setCounts(newCounts);
-  };
+  }, [updateCounts]);
   
   // Manejar la adición de una nueva visita
   const handleAddVisit = async (userId: string) => {
