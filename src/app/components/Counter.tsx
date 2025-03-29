@@ -15,18 +15,21 @@ export default function Counter() {
   
   // Actualizar contadores basados en las visitas (usando useCallback para evitar dependencias circulares)
   const updateCounts = useCallback((visits: GymVisit[], keepInitialValues = false) => {
-    const newCounts: Record<string, number> = keepInitialValues ? { ...counts } : {};
-    
-    // Contar visitas para cada usuario
-    visits.forEach(visit => {
-      if (!newCounts[visit.userId]) {
-        newCounts[visit.userId] = 0;
-      }
-      newCounts[visit.userId]++;
+    setCounts(prevCounts => {
+      // Usar el valor anterior para evitar dependencia circular
+      const newCounts: Record<string, number> = keepInitialValues ? { ...prevCounts } : {};
+      
+      // Contar visitas para cada usuario
+      visits.forEach(visit => {
+        if (!newCounts[visit.userId]) {
+          newCounts[visit.userId] = 0;
+        }
+        newCounts[visit.userId]++;
+      });
+      
+      return newCounts;
     });
-    
-    setCounts(newCounts);
-  }, [counts]);
+  }, []); // Sin dependencia de counts
   
   // Cargar los datos iniciales
   useEffect(() => {
