@@ -1,44 +1,146 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User } from '@/data/types';
-import { addGymVisit, getVisitCounts, loadData } from '@/data/storage';
+import { User, GymVisit } from '@/data/types';
+import { loadUsers, loadVisits, saveVisit } from '@/data/sheetsService';
 
 export default function Counter() {
   const [users, setUsers] = useState<User[]>([]);
-  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [counts, setCounts] = useState<Record<string, number>>({
+    '1': 29, // Gabi: 29 visitas
+    '2': 28, // Iña: 28 visitas
+  });
+  const [loading, setLoading] = useState<boolean>(false);
+  const [resetting, setResetting] = useState<boolean>(false);
   
-  // Load initial data
+  // Cargar los datos iniciales
   useEffect(() => {
-    const data = loadData();
-    setUsers(data.users);
-    setCounts(getVisitCounts());
+    const fetchData = async () => {
+      try {
+        // Cargar usuarios
+        const usersData = await loadUsers();
+        setUsers(usersData);
+        
+        // Cargar visitas y calcular contadores
+        const visits = await loadVisits();
+        
+        // Mantenemos los valores iniciales establecidos directamente
+        updateCounts(visits, true);
+      } catch (error) {
+        console.error('Error cargando datos:', error);
+      }
+    };
+    
+    fetchData();
   }, []);
   
-  // Handle adding a new visit
-  const handleAddVisit = (userId: string) => {
-    addGymVisit(userId);
-    setCounts(getVisitCounts());
+  // Actualizar contadores basados en las visitas
+  const updateCounts = (visits: GymVisit[], keepInitialValues = false) => {
+    const newCounts: Record<string, number> = keepInitialValues ? { ...counts } : {};
+    
+    // Contar visitas para cada usuario
+    visits.forEach(visit => {
+      if (!newCounts[visit.userId]) {
+        newCounts[visit.userId] = 0;
+      }
+      newCounts[visit.userId]++;
+    });
+    
+    setCounts(newCounts);
+  };
+  
+  // Manejar la adición de una nueva visita
+  const handleAddVisit = async (userId: string) => {
+    setLoading(true);
+    
+    try {
+      // Crear nuevo registro de visita
+      const newVisit: GymVisit = {
+        id: Date.now().toString(),
+        userId,
+        date: new Date().toISOString()
+      };
+      
+      // Guardar en Google Sheets (y localStorage como respaldo)
+      await saveVisit(newVisit);
+      
+      // Actualizar contador localmente para feedback inmediato
+      setCounts(prevCounts => ({
+        ...prevCounts,
+        [userId]: (prevCounts[userId] || 0) + 1
+      }));
+      
+      console.log('Visita registrada con éxito');
+    } catch (error) {
+      console.error('Error al registrar visita:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Resetear contadores
+  const handleReset = () => {
+    const confirmed = window.confirm('¿Estás seguro que quieres reiniciar todos los contadores a cero? Esta acción no se puede deshacer.');
+    if (!confirmed) return;
+    
+    setResetting(true);
+    
+    // Reiniciar contadores a cero
+    const resetCounts: Record<string, number> = {};
+    users.forEach(user => {
+      resetCounts[user.id] = 0;
+    });
+    
+    setCounts(resetCounts);
+    
+    // Limpiar datos en localStorage
+    try {
+      localStorage.removeItem('gym_counter_data');
+      console.log('Datos reiniciados correctamente');
+    } catch (error) {
+      console.error('Error al reiniciar datos:', error);
+    } finally {
+      setResetting(false);
+    }
   };
   
   return (
     <div className="w-full max-w-md mx-auto">
-      <h2 className="text-xl font-bold mb-4 text-gray-800">Gym Counter</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold text-gray-800">🏆 Gym Counter</h2>
+        <button
+          onClick={handleReset}
+          disabled={resetting}
+          className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md text-sm transition-colors shadow-md flex items-center"
+        >
+          {resetting ? 'Reiniciando...' : '🗑️ Reiniciar contadores'}
+        </button>
+      </div>
       
       <div className="grid grid-cols-2 gap-4">
         {users.map(user => (
           <div 
             key={user.id} 
-            className="bg-white p-4 rounded-lg shadow-md"
+            className="bg-white p-4 rounded-lg shadow-md transform transition-all duration-300 hover:scale-105"
           >
             <div className="flex flex-col items-center">
               <h3 className="text-lg font-medium mb-2 text-gray-800">{user.name}</h3>
-              <div className="text-4xl font-bold mb-4 text-gray-900">{counts[user.id] || 0}</div>
+              <div className="text-5xl font-bold mb-4 text-gray-900 flex items-center">
+                {counts[user.id] || 0}
+                <span className="ml-2 text-2xl">
+                  {(counts[user.id] || 0) > 10 ? '🔥' : 
+                   (counts[user.id] || 0) > 5 ? '💪' : 
+                   (counts[user.id] || 0) > 0 ? '👍' : '🏃‍♂️'}
+                </span>
+              </div>
               <button
                 onClick={() => handleAddVisit(user.id)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors"
+                disabled={loading}
+                className={`${
+                  loading ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
+                } text-white px-4 py-2 rounded-md transition-colors transform hover:scale-105 active:scale-95 shadow-md flex items-center justify-center`}
               >
-                I went to the gym! +1
+                {loading ? 'Guardando...' : '🏋️ ¡Fui al gym! +1'}
               </button>
             </div>
           </div>

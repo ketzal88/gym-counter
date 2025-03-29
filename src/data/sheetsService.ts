@@ -1,154 +1,128 @@
-import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { GymVisit, User } from './types';
-
-// ID de la hoja de cálculo (tomado de la URL)
-const SPREADSHEET_ID = '1sJmsAry32FM0A1jlyM1bWI9VyyBHedX65PyLUNVahXI';
-
-// Para una integración completa necesitarías crear credenciales de servicio en Google Cloud
-// Por ahora usaremos localStorage como alternativa temporal
-
-let doc: GoogleSpreadsheet | null = null;
-
-// Inicializar la conexión a la hoja de cálculo
-export async function initializeSheet() {
-  try {
-    // Obtener la API key desde las variables de entorno
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
-    
-    if (!apiKey) {
-      console.error('Error: API Key no encontrada en variables de entorno.');
-      return false;
-    }
-    
-    doc = new GoogleSpreadsheet(SPREADSHEET_ID, {
-      apiKey
-    });
-    
-    console.log('Intentando conectar con la hoja de cálculo...');
-    await doc.loadInfo();
-    
-    return true;
-  } catch (error) {
-    console.error('Error al conectar con Google Sheets:', error);
-    return false;
-  }
-}
-
-// Estructurar las hojas que necesitamos
-export async function setupSheets() {
-  if (!doc) {
-    await initializeSheet();
-    if (!doc) return false;
-  }
-  
-  try {
-    // Verificar si existen las hojas necesarias, y crearlas si no
-    const usersSheet = doc.sheetsByTitle['Users'];
-    const visitsSheet = doc.sheetsByTitle['Visits'];
-    
-    if (!usersSheet) {
-      console.log('Creando hoja de Usuarios...');
-      // Para crear hojas se necesitaría autenticación con credenciales
-      // Esta parte requeriría un paso adicional de configuración
-    }
-    
-    if (!visitsSheet) {
-      console.log('Creando hoja de Visitas...');
-      // Similar, requeriría autenticación
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('Error configurando las hojas:', error);
-    return false;
-  }
-}
 
 // Cargar usuarios
 export async function loadUsers(): Promise<User[]> {
-  // Simulamos los usuarios por defecto para la demostración
-  // En la implementación completa, cargarías esto desde Google Sheets
-  return [
-    { id: '1', name: 'Me' },
-    { id: '2', name: 'Friend' }
-  ];
+  try {
+    // Llamar a la API en lugar de conectarse directamente a Google Sheets
+    const response = await fetch('/api/sheets?type=users');
+    const data = await response.json();
+    
+    if (!response.ok) {
+      console.error('Error cargando usuarios desde la API:', data.error);
+      // Valores por defecto como fallback
+      return [
+        { id: '1', name: 'Me' },
+        { id: '2', name: 'Friend' }
+      ];
+    }
+    
+    return data.users || [];
+  } catch (error) {
+    console.error('Error cargando usuarios:', error);
+    // Valores por defecto como fallback
+    return [
+      { id: '1', name: 'Me' },
+      { id: '2', name: 'Friend' }
+    ];
+  }
 }
 
 // Cargar visitas
 export async function loadVisits(): Promise<GymVisit[]> {
-  if (!doc) {
-    const initialized = await initializeSheet();
-    if (!initialized || !doc) {
-      // Fallback a localStorage si no puede conectar
-      const storedData = localStorage.getItem('gym_counter_data');
-      if (!storedData) return [];
+  try {
+    // Primero intentamos cargar desde localStorage como caché rápido
+    const storedData = localStorage.getItem('gym_counter_data');
+    let localVisits: GymVisit[] = [];
+    
+    if (storedData) {
       try {
         const data = JSON.parse(storedData);
-        return data.visits || [];
-      } catch {
-        return [];
+        localVisits = data.visits || [];
+        console.log(`${localVisits.length} visitas encontradas en localStorage`);
+      } catch (e) {
+        console.error('Error al leer visitas de localStorage:', e);
       }
     }
-  }
-  
-  try {
-    const sheet = doc.sheetsByTitle['Visits'];
-    if (!sheet) return [];
     
-    // Cargar filas
-    const rows = await sheet.getRows();
-    return rows.map(row => ({
-      id: row.get('id') as string,
-      userId: row.get('userId') as string,
-      date: row.get('date') as string
-    }));
-  } catch (error) {
-    console.error('Error cargando visitas desde Google Sheets:', error);
-    // Fallback a localStorage
-    const storedData = localStorage.getItem('gym_counter_data');
-    if (!storedData) return [];
-    try {
-      const data = JSON.parse(storedData);
-      return data.visits || [];
-    } catch {
-      return [];
+    // Luego intentamos obtener datos más actualizados de la API
+    const response = await fetch('/api/sheets?type=visits');
+    if (!response.ok) {
+      console.error('Error cargando visitas desde la API, usando datos locales');
+      return localVisits;
     }
+    
+    const data = await response.json();
+    const apiVisits = data.visits || [];
+    console.log(`${apiVisits.length} visitas cargadas desde la API`);
+    
+    // Actualizar localStorage con datos más recientes
+    if (apiVisits.length > 0) {
+      try {
+        localStorage.setItem('gym_counter_data', JSON.stringify({ 
+          visits: apiVisits 
+        }));
+      } catch (e) {
+        console.error('Error al guardar visitas en localStorage:', e);
+      }
+    }
+    
+    return apiVisits;
+  } catch (error) {
+    console.error('Error cargando visitas:', error);
+    
+    // Fallback a localStorage
+    try {
+      const storedData = localStorage.getItem('gym_counter_data');
+      if (storedData) {
+        const data = JSON.parse(storedData);
+        return data.visits || [];
+      }
+    } catch (e) {
+      console.error('Error al leer visitas de localStorage (fallback):', e);
+    }
+    
+    return [];
   }
 }
 
 // Guardar una nueva visita
 export async function saveVisit(visit: GymVisit): Promise<boolean> {
-  // Siempre guardamos en localStorage como respaldo
+  console.log("Guardando visita:", visit);
+  
+  // Siempre guardamos en localStorage como respaldo/caché
   try {
     const storedData = localStorage.getItem('gym_counter_data');
-    const data = storedData ? JSON.parse(storedData) : { users: [], visits: [] };
+    const data = storedData ? JSON.parse(storedData) : { visits: [] };
     data.visits = [...data.visits, visit];
     localStorage.setItem('gym_counter_data', JSON.stringify(data));
+    console.log("Guardado en localStorage exitoso");
   } catch (error) {
     console.error('Error al guardar en localStorage:', error);
   }
   
-  // Intentar guardar en Google Sheets
-  if (!doc) {
-    const initialized = await initializeSheet();
-    if (!initialized || !doc) return false;
-  }
-  
+  // Intentar guardar en el servidor a través de la API
   try {
-    const sheet = doc.sheetsByTitle['Visits'];
-    if (!sheet) return false;
-    
-    // Agregar una nueva fila
-    await sheet.addRow({
-      id: visit.id,
-      userId: visit.userId,
-      date: visit.date
+    const response = await fetch('/api/sheets', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        type: 'visit',
+        visit
+      }),
     });
     
-    console.log('Visita guardada correctamente en Google Sheets');
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Error guardando visita en el servidor:', errorData.error);
+      return false;
+    }
+    
+    console.log('Visita guardada correctamente en el servidor');
     return true;
   } catch (error) {
-    console.error('Error guardando en Google Sheets:', error);
+    console.error('Error en la petición para guardar visita:', error);
     return false;
   }
 } 

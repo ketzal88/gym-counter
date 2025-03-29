@@ -1,17 +1,47 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getVisitsByDate, loadData } from '@/data/storage';
 import { User } from '@/data/types';
+import { loadUsers, loadVisits } from '@/data/sheetsService';
 
 export default function Stats() {
   const [users, setUsers] = useState<User[]>([]);
   const [visitsByDate, setVisitsByDate] = useState<Record<string, { [userId: string]: boolean }>>({});
+  const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    const data = loadData();
-    setUsers(data.users);
-    setVisitsByDate(getVisitsByDate());
+    const fetchData = async () => {
+      try {
+        // Cargar usuarios y visitas
+        const [usersData, visitsData] = await Promise.all([
+          loadUsers(),
+          loadVisits()
+        ]);
+        
+        setUsers(usersData);
+        
+        // Procesar visitas por fecha
+        const visitMap: Record<string, { [userId: string]: boolean }> = {};
+        
+        visitsData.forEach(visit => {
+          const dateStr = visit.date.split('T')[0]; // Get YYYY-MM-DD part
+          
+          if (!visitMap[dateStr]) {
+            visitMap[dateStr] = {};
+          }
+          
+          visitMap[dateStr][visit.userId] = true;
+        });
+        
+        setVisitsByDate(visitMap);
+      } catch (error) {
+        console.error('Error cargando datos para estadísticas:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
   }, []);
   
   // Get sorted dates (most recent first)
@@ -58,39 +88,61 @@ export default function Stats() {
   
   const consecutiveDays = getConsecutiveDays();
   
+  if (loading) {
+    return (
+      <div className="w-full max-w-md mx-auto mt-8 text-center">
+        <h2 className="text-xl font-bold mb-4 text-gray-800">📊 Estadísticas</h2>
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <p className="text-gray-600">
+            <span className="inline-block animate-spin">⏳</span> Cargando estadísticas...
+          </p>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div className="w-full max-w-md mx-auto mt-8">
-      <h2 className="text-xl font-bold mb-4 text-gray-800">Stats</h2>
+      <h2 className="text-xl font-bold mb-4 text-gray-800">📊 Estadísticas</h2>
       
       {consecutiveDays > 0 && (
-        <div className="bg-green-100 p-4 rounded-lg mb-4">
-          <p className="text-green-800">
-            <span className="font-bold">{consecutiveDays}</span> consecutive days going to the gym!
+        <div className="bg-green-100 p-4 rounded-lg mb-4 shadow-md">
+          <p className="text-green-800 flex items-center">
+            <span className="text-2xl mr-2">🔥</span>
+            <span className="font-bold">{consecutiveDays}</span> días consecutivos yendo al gimnasio!
           </p>
         </div>
       )}
       
       <div className="bg-white p-4 rounded-lg shadow-md">
-        <h3 className="font-medium mb-4 text-gray-800">History</h3>
+        <h3 className="font-medium mb-4 text-gray-800 flex items-center">
+          <span className="text-xl mr-2">📅</span> Historial
+        </h3>
         
         {sortedDates.length === 0 ? (
-          <p className="text-gray-600">No gym visits recorded yet.</p>
+          <div className="text-center py-4">
+            <p className="text-gray-600 mb-2">📝 No hay visitas registradas aún.</p>
+            <p className="text-sm text-gray-500">¡Comienza a registrar tus visitas al gimnasio!</p>
+          </div>
         ) : (
           <ul className="space-y-3">
             {sortedDates.map(date => (
-              <li key={date} className="border-b pb-2">
-                <div className="font-medium text-gray-800">{formatDate(date)}</div>
-                <div className="flex gap-2 mt-1">
+              <li key={date} className="border-b pb-2 hover:bg-gray-50 rounded p-2 transition-colors">
+                <div className="font-medium text-gray-800 flex items-center">
+                  <span className="text-blue-500 mr-2">📅</span>
+                  {formatDate(date)}
+                </div>
+                <div className="flex gap-2 mt-1 flex-wrap">
                   {users.map(user => (
                     <div 
                       key={user.id}
                       className={`px-3 py-1 rounded-full text-sm ${
                         visitsByDate[date][user.id] 
-                          ? 'bg-green-100 text-green-800' 
+                          ? 'bg-green-100 text-green-800 border border-green-300' 
                           : 'bg-gray-200 text-gray-600'
-                      }`}
+                      } transition-all hover:scale-105`}
                     >
-                      {user.name} {visitsByDate[date][user.id] ? '✓' : '✗'}
+                      {user.name} {visitsByDate[date][user.id] ? '✅' : '❌'}
                     </div>
                   ))}
                 </div>
