@@ -49,13 +49,15 @@ export default function Stats() {
   
   // Format date to a more readable format
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('es-ES', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
+    // Create date object and format it in Argentina timezone
+    const date = new Date(dateStr + 'T12:00:00Z');
+    return new Intl.DateTimeFormat('es-ES', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: 'America/Argentina/Buenos_Aires'
+    }).format(date);
   };
   
   const getConsecutiveDays = () => {

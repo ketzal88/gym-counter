@@ -57,25 +57,31 @@ export default function Counter() {
     setLoading(true);
     
     try {
-      // Crear nuevo registro de visita
+      // Create new visit record with Argentina timezone
+      const now = new Date();
+      // Convert to Argentina time
+      const argDate = new Date(now.toLocaleString('en-US', {
+        timeZone: 'America/Argentina/Buenos_Aires'
+      }));
+      
       const newVisit: GymVisit = {
         id: Date.now().toString(),
         userId,
-        date: new Date().toISOString()
+        date: argDate.toISOString()
       };
       
-      // Guardar en Google Sheets (y localStorage como respaldo)
+      // Save to Google Sheets (and localStorage as backup)
       await saveVisit(newVisit);
       
-      // Actualizar contador localmente para feedback inmediato
+      // Update counter locally for immediate feedback
       setCounts(prevCounts => ({
         ...prevCounts,
         [userId]: (prevCounts[userId] || 0) + 1
       }));
       
-      console.log('Visita registrada con éxito');
+      console.log('Visit registered successfully');
     } catch (error) {
-      console.error('Error al registrar visita:', error);
+      console.error('Error registering visit:', error);
     } finally {
       setLoading(false);
     }
