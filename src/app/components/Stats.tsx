@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User, GymVisit } from '@/data/types';
+import { User } from '@/data/types';
 import { loadUsers, loadVisits } from '@/data/sheetsService';
 
 export default function Stats() {
