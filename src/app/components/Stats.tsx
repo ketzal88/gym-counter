@@ -1,13 +1,21 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User } from '@/data/types';
+import { User, GymVisit } from '@/data/types';
 import { loadUsers, loadVisits } from '@/data/sheetsService';
 
 export default function Stats() {
   const [users, setUsers] = useState<User[]>([]);
-  const [visitsByDate, setVisitsByDate] = useState<Record<string, { [userId: string]: boolean }>>({});
+  const [userVisits, setUserVisits] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  
+  // Fecha de inicio del contador: 3 de febrero de 2025
+  const startDate = new Date(2025, 1, 3); // Meses en JS son 0-indexed, febrero es 1
+  
+  // Calcular días transcurridos
+  const today = new Date();
+  const diffTime = Math.abs(today.getTime() - startDate.getTime());
+  const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   
   useEffect(() => {
     const fetchData = async () => {
@@ -20,23 +28,27 @@ export default function Stats() {
         
         setUsers(usersData);
         
-        // Procesar visitas por fecha
-        const visitMap: Record<string, { [userId: string]: boolean }> = {};
+        // Contar todas las visitas por usuario
+        const visitCounts: Record<string, number> = {};
         
-        visitsData.forEach(visit => {
-          const dateStr = visit.date.split('T')[0]; // Get YYYY-MM-DD part
-          
-          if (!visitMap[dateStr]) {
-            visitMap[dateStr] = {};
-          }
-          
-          visitMap[dateStr][visit.userId] = true;
+        // Inicializar contadores en cero
+        usersData.forEach(user => {
+          visitCounts[user.id] = 0;
         });
         
-        setVisitsByDate(visitMap);
+        // Contar todas las visitas
+        visitsData.forEach(visit => {
+          try {
+            visitCounts[visit.userId] = (visitCounts[visit.userId] || 0) + 1;
+          } catch (error) {
+            console.error('Error procesando visita:', visit, error);
+          }
+        });
+        
+        setUserVisits(visitCounts);
+        setLoading(false);
       } catch (error) {
         console.error('Error cargando datos para estadísticas:', error);
-      } finally {
         setLoading(false);
       }
     };
@@ -44,51 +56,14 @@ export default function Stats() {
     fetchData();
   }, []);
   
-  // Get sorted dates (most recent first)
-  const sortedDates = Object.keys(visitsByDate).sort().reverse();
-  
-  // Format date to a more readable format
-  const formatDate = (dateStr: string) => {
-    // Create date object and format it in Argentina timezone
-    const date = new Date(dateStr + 'T12:00:00Z');
+  // Formato de fecha en español
+  const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('es-ES', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
       day: 'numeric',
-      timeZone: 'America/Argentina/Buenos_Aires'
+      month: 'long',
+      year: 'numeric'
     }).format(date);
   };
-  
-  const getConsecutiveDays = () => {
-    if (!sortedDates.length) return 0;
-    
-    // Get today's date in YYYY-MM-DD format
-    const today = new Date().toISOString().split('T')[0];
-    
-    // If today doesn't have a visit, return 0
-    if (sortedDates[0] !== today) return 0;
-    
-    let consecutiveDays = 1;
-    for (let i = 1; i < sortedDates.length; i++) {
-      const currentDateObj = new Date(sortedDates[i-1]);
-      const prevDateObj = new Date(sortedDates[i]);
-      
-      // Check if dates are consecutive
-      const diffTime = currentDateObj.getTime() - prevDateObj.getTime();
-      const diffDays = diffTime / (1000 * 60 * 60 * 24);
-      
-      if (diffDays === 1) {
-        consecutiveDays++;
-      } else {
-        break;
-      }
-    }
-    
-    return consecutiveDays;
-  };
-  
-  const consecutiveDays = getConsecutiveDays();
   
   if (loading) {
     return (
@@ -107,51 +82,50 @@ export default function Stats() {
     <div className="w-full max-w-md mx-auto mt-8">
       <h2 className="text-xl font-bold mb-4 text-gray-800">📊 Estadísticas</h2>
       
-      {consecutiveDays > 0 && (
-        <div className="bg-green-100 p-4 rounded-lg mb-4 shadow-md">
-          <p className="text-green-800 flex items-center">
-            <span className="text-2xl mr-2">🔥</span>
-            <span className="font-bold">{consecutiveDays}</span> días consecutivos yendo al gimnasio!
+      <div className="bg-white p-4 rounded-lg shadow-md mb-4">
+        <div className="bg-blue-50 p-3 rounded-lg mb-4">
+          <p className="text-gray-700">
+            <span className="font-bold">Inicio del conteo:</span> {formatDate(startDate)}
+          </p>
+          <p className="text-gray-700 mt-1">
+            <span className="font-bold">Días transcurridos:</span> {totalDays} días
           </p>
         </div>
-      )}
-      
-      <div className="bg-white p-4 rounded-lg shadow-md">
+        
         <h3 className="font-medium mb-4 text-gray-800 flex items-center">
-          <span className="text-xl mr-2">📅</span> Historial
+          <span className="text-xl mr-2">📈</span> Porcentajes de asistencia
         </h3>
         
-        {sortedDates.length === 0 ? (
-          <div className="text-center py-4">
-            <p className="text-gray-600 mb-2">📝 No hay visitas registradas aún.</p>
-            <p className="text-sm text-gray-500">¡Comienza a registrar tus visitas al gimnasio!</p>
-          </div>
-        ) : (
-          <ul className="space-y-3">
-            {sortedDates.map(date => (
-              <li key={date} className="border-b pb-2 hover:bg-gray-50 rounded p-2 transition-colors">
-                <div className="font-medium text-gray-800 flex items-center">
-                  <span className="text-blue-500 mr-2">📅</span>
-                  {formatDate(date)}
+        <div className="space-y-4">
+          {users.map(user => {
+            const visits = userVisits[user.id] || 0;
+            const percentage = ((visits / totalDays) * 100).toFixed(1);
+            
+            // Determinar color basado en el porcentaje
+            let barColor = 'bg-red-500';
+            if (Number(percentage) > 40) barColor = 'bg-green-500';
+            else if (Number(percentage) > 30) barColor = 'bg-yellow-500';
+            else if (Number(percentage) > 20) barColor = 'bg-orange-500';
+            
+            return (
+              <div key={user.id} className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="font-medium text-gray-800">{user.name}</span>
+                  <span className="text-gray-700 font-bold">{percentage}%</span>
                 </div>
-                <div className="flex gap-2 mt-1 flex-wrap">
-                  {users.map(user => (
-                    <div 
-                      key={user.id}
-                      className={`px-3 py-1 rounded-full text-sm ${
-                        visitsByDate[date][user.id] 
-                          ? 'bg-green-100 text-green-800 border border-green-300' 
-                          : 'bg-gray-200 text-gray-600'
-                      } transition-all hover:scale-105`}
-                    >
-                      {user.name} {visitsByDate[date][user.id] ? '✅' : '❌'}
-                    </div>
-                  ))}
+                <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                  <div 
+                    className={`${barColor} h-4 rounded-full transition-all duration-500`} 
+                    style={{ width: `${percentage}%` }}
+                  ></div>
                 </div>
-              </li>
-            ))}
-          </ul>
-        )}
+                <div className="mt-2 text-sm text-gray-600">
+                  <span className="font-medium">{visits}</span> visitas de {totalDays} días posibles
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

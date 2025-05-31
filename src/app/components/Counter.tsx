@@ -6,46 +6,45 @@ import { loadUsers, loadVisits, saveVisit } from '@/data/sheetsService';
 
 export default function Counter() {
   const [users, setUsers] = useState<User[]>([]);
-  const [counts, setCounts] = useState<Record<string, number>>({
-    '1': 29, // Gabi: 29 visitas
-    '2': 28, // Iña: 28 visitas
-  });
-  const [loading, setLoading] = useState<boolean>(false);
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState<boolean>(true);
   const [resetting, setResetting] = useState<boolean>(false);
   
   // Actualizar contadores basados en las visitas (usando useCallback para evitar dependencias circulares)
-  const updateCounts = useCallback((visits: GymVisit[], keepInitialValues = false) => {
-    setCounts(prevCounts => {
-      // Usar el valor anterior para evitar dependencia circular
-      const newCounts: Record<string, number> = keepInitialValues ? { ...prevCounts } : {};
-      
-      // Contar visitas para cada usuario
-      visits.forEach(visit => {
-        if (!newCounts[visit.userId]) {
-          newCounts[visit.userId] = 0;
-        }
-        newCounts[visit.userId]++;
-      });
-      
-      return newCounts;
+  const updateCounts = useCallback((visits: GymVisit[]) => {
+    // Inicializar contadores en cero
+    const newCounts: Record<string, number> = {};
+    
+    // Contar visitas para cada usuario
+    visits.forEach(visit => {
+      if (!newCounts[visit.userId]) {
+        newCounts[visit.userId] = 0;
+      }
+      newCounts[visit.userId]++;
     });
+    
+    // Actualizar estado
+    setCounts(newCounts);
   }, []); // Sin dependencia de counts
   
   // Cargar los datos iniciales
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true);
+        
         // Cargar usuarios
         const usersData = await loadUsers();
         setUsers(usersData);
         
         // Cargar visitas y calcular contadores
         const visits = await loadVisits();
+        updateCounts(visits);
         
-        // Mantenemos los valores iniciales establecidos directamente
-        updateCounts(visits, true);
+        setLoading(false);
       } catch (error) {
         console.error('Error cargando datos:', error);
+        setLoading(false);
       }
     };
     
@@ -57,31 +56,32 @@ export default function Counter() {
     setLoading(true);
     
     try {
-      // Create new visit record with Argentina timezone
+      // Crear una fecha actual correcta
       const now = new Date();
-      // Convert to Argentina time
-      const argDate = new Date(now.toLocaleString('en-US', {
-        timeZone: 'America/Argentina/Buenos_Aires'
-      }));
       
+      // Formato de fecha ISO
+      const isoDate = now.toISOString();
+      console.log('Creando visita con fecha:', isoDate);
+      
+      // Crear nuevo registro de visita
       const newVisit: GymVisit = {
         id: Date.now().toString(),
         userId,
-        date: argDate.toISOString()
+        date: isoDate
       };
       
-      // Save to Google Sheets (and localStorage as backup)
+      // Guardar en Google Sheets (y localStorage como respaldo)
       await saveVisit(newVisit);
       
-      // Update counter locally for immediate feedback
+      // Actualizar contador localmente para feedback inmediato
       setCounts(prevCounts => ({
         ...prevCounts,
         [userId]: (prevCounts[userId] || 0) + 1
       }));
       
-      console.log('Visit registered successfully');
+      console.log('Visita registrada con éxito');
     } catch (error) {
-      console.error('Error registering visit:', error);
+      console.error('Error al registrar visita:', error);
     } finally {
       setLoading(false);
     }
@@ -135,12 +135,18 @@ export default function Counter() {
             <div className="flex flex-col items-center">
               <h3 className="text-lg font-medium mb-2 text-gray-800">{user.name}</h3>
               <div className="text-5xl font-bold mb-4 text-gray-900 flex items-center">
-                {counts[user.id] || 0}
-                <span className="ml-2 text-2xl">
-                  {(counts[user.id] || 0) > 10 ? '🔥' : 
-                   (counts[user.id] || 0) > 5 ? '💪' : 
-                   (counts[user.id] || 0) > 0 ? '👍' : '🏃‍♂️'}
-                </span>
+                {loading ? (
+                  <span className="text-2xl">⏳</span>
+                ) : (
+                  <>
+                    {counts[user.id] || 0}
+                    <span className="ml-2 text-2xl">
+                      {(counts[user.id] || 0) > 10 ? '🔥' : 
+                       (counts[user.id] || 0) > 5 ? '💪' : 
+                       (counts[user.id] || 0) > 0 ? '👍' : '🏃‍♂️'}
+                    </span>
+                  </>
+                )}
               </div>
               <button
                 onClick={() => handleAddVisit(user.id)}
