@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User } from '@/data/types';
-import { loadUsers, loadVisits } from '@/data/sheetsService';
+import { User, GymVisit } from '@/data/types';
+import { loadUsers, loadVisits, saveVisit } from '@/data/sheetsService';
 
 export default function Stats() {
   const [users, setUsers] = useState<User[]>([]);
   const [userVisits, setUserVisits] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [visitsData, setVisitsData] = useState<GymVisit[]>([]);
+  const [refreshCounter, setRefreshCounter] = useState(0);
   
   // Fecha de inicio del contador: 3 de febrero de 2025
   const startDate = new Date(2025, 1, 3); // Meses en JS son 0-indexed, febrero es 1
@@ -19,14 +21,16 @@ export default function Stats() {
   
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
         // Cargar usuarios y visitas
-        const [usersData, visitsData] = await Promise.all([
+        const [usersData, visits] = await Promise.all([
           loadUsers(),
           loadVisits()
         ]);
         
         setUsers(usersData);
+        setVisitsData(visits);
         
         // Contar todas las visitas por usuario
         const visitCounts: Record<string, number> = {};
@@ -37,7 +41,7 @@ export default function Stats() {
         });
         
         // Contar todas las visitas
-        visitsData.forEach(visit => {
+        visits.forEach(visit => {
           try {
             visitCounts[visit.userId] = (visitCounts[visit.userId] || 0) + 1;
           } catch (error) {
@@ -54,7 +58,45 @@ export default function Stats() {
     };
     
     fetchData();
-  }, []);
+  }, [refreshCounter]); // Dependencia para recargar cuando cambie el contador
+  
+  // Función para forzar recarga de datos
+  const handleRefresh = () => {
+    console.log("Recargando datos manualmente...");
+    // Incrementar contador para disparar el useEffect
+    setRefreshCounter(prev => prev + 1);
+  };
+  
+  // Función para registrar visita manual
+  const handleAddVisit = async (userId: string, dateString: string) => {
+    if (!window.confirm(`¿Registrar visita para el día ${dateString}?`)) {
+      return;
+    }
+    
+    try {
+      const date = new Date(dateString);
+      date.setHours(12, 0, 0); // Mediodía para evitar problemas de zona horaria
+      
+      const visit: GymVisit = {
+        id: Date.now().toString(),
+        userId,
+        date: date.toISOString()
+      };
+      
+      console.log("Registrando visita manual:", visit);
+      const success = await saveVisit(visit);
+      
+      if (success) {
+        alert(`Visita registrada con éxito para ${dateString}`);
+        handleRefresh(); // Recargar datos
+      } else {
+        alert("Error al registrar la visita. Intenta nuevamente.");
+      }
+    } catch (error) {
+      console.error("Error al registrar visita:", error);
+      alert("Error al registrar la visita: " + error);
+    }
+  };
   
   // Formato de fecha en español
   const formatDate = (date: Date) => {
@@ -63,6 +105,61 @@ export default function Stats() {
       month: 'long',
       year: 'numeric'
     }).format(date);
+  };
+
+  // Formato corto para fechas recientes
+  const formatShortDate = (date: Date) => {
+    return new Intl.DateTimeFormat('es-ES', {
+      day: 'numeric',
+      month: 'short',
+      weekday: 'short'
+    }).format(date);
+  };
+  
+  // Función para obtener los últimos 5 días
+  const getLastFiveDays = () => {
+    const days = [];
+    for (let i = 0; i < 5; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      days.push(date);
+    }
+    return days;
+  };
+
+  // Función para verificar si un usuario asistió en una fecha específica
+  const didUserAttendOnDate = (userId: string, date: Date) => {
+    // Para comparar fechas, sólo necesitamos año-mes-día
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const day = date.getDate();
+    
+    // Depuración
+    console.log(`Verificando asistencia de usuario ${userId} en fecha ${year}-${month+1}-${day}`);
+    
+    // Buscar visitas coincidentes
+    const matchingVisits = visitsData.filter(visit => {
+      // Parsear la fecha de visita
+      const visitDate = new Date(visit.date);
+      const visitYear = visitDate.getFullYear();
+      const visitMonth = visitDate.getMonth();
+      const visitDay = visitDate.getDate();
+      
+      // Comparar sólo año, mes y día (ignorando horas, minutos, etc.)
+      const matches = visit.userId === userId && 
+                     visitYear === year && 
+                     visitMonth === month && 
+                     visitDay === day;
+      
+      // Mostrar info de depuración para visitas del usuario
+      if (visit.userId === userId) {
+        console.log(`  - Visita en ${visitYear}-${visitMonth+1}-${visitDay}, coincide: ${matches}`);
+      }
+      
+      return matches;
+    });
+    
+    return matchingVisits.length > 0;
   };
   
   if (loading) {
@@ -78,9 +175,22 @@ export default function Stats() {
     );
   }
   
+  const lastFiveDays = getLastFiveDays();
+  
   return (
     <div className="w-full max-w-md mx-auto mt-8">
-      <h2 className="text-xl font-bold mb-4 text-gray-800">📊 Estadísticas</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold text-gray-800">📊 Estadísticas</h2>
+        <button 
+          onClick={handleRefresh} 
+          className="bg-blue-500 hover:bg-blue-600 text-white rounded-full p-2 transition-colors"
+          disabled={loading}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
+      </div>
       
       <div className="bg-white p-4 rounded-lg shadow-md mb-4">
         <div className="bg-blue-50 p-3 rounded-lg mb-4">
@@ -125,6 +235,132 @@ export default function Stats() {
               </div>
             );
           })}
+        </div>
+        
+        {/* Componente para los últimos 5 días con scroll vertical */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-lg mt-6">
+          <h3 className="font-medium mb-3 text-gray-800 flex items-center">
+            <span className="text-xl mr-2">📅</span> Asistencia últimos 5 días
+          </h3>
+          
+          <div className="max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 rounded-lg">
+            {/* Tabla de encabezado fija */}
+            <div className="sticky top-0 z-10 bg-gradient-to-r from-indigo-100 to-blue-100 shadow-sm rounded-t-lg">
+              <div className="grid grid-cols-6 gap-1 p-2 font-medium text-indigo-900">
+                <div className="col-span-1"></div>
+                {lastFiveDays.map((date, index) => (
+                  <div key={index} className="col-span-1 text-center px-1 py-2">
+                    <div className="text-xs">{formatShortDate(date).split(' ')[0]}</div>
+                    <div className="text-sm font-bold">{formatShortDate(date).split(' ')[1]}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Contenido de la tabla con scroll */}
+            <div className="bg-white rounded-b-lg">
+              {users.map(user => (
+                <div key={user.id} className="grid grid-cols-6 gap-1 p-2 border-t border-indigo-100">
+                  <div className="col-span-1 font-medium text-indigo-900 flex items-center">{user.name}</div>
+                  {lastFiveDays.map((date, index) => {
+                    const attended = didUserAttendOnDate(user.id, date);
+                    return (
+                      <div key={index} className="col-span-1 flex justify-center items-center">
+                        {attended ? (
+                          <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                            <span className="text-green-600 text-xl">✅</span>
+                          </div>
+                        ) : (
+                          <div className="w-10 h-10 bg-red-50 rounded-full flex items-center justify-center">
+                            <span className="text-red-500 text-xl">❌</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        
+        {/* Componente de depuración - Últimas visitas */}
+        <div className="mt-6 p-3 bg-gray-50 rounded-lg border border-gray-200">
+          <details open>
+            <summary className="font-medium text-gray-700 cursor-pointer">
+              🔍 Depuración - Visitas recientes ({visitsData.length})
+            </summary>
+            
+            {/* Verificador de fechas para los últimos 10 días */}
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+              <h4 className="font-medium text-gray-800 mb-2">Últimos 10 días</h4>
+              <div className="space-y-2">
+                {Array.from({length: 10}).map((_, i) => {
+                  const dateObj = new Date();
+                  dateObj.setDate(dateObj.getDate() - i);
+                  const dateString = dateObj.toISOString().split('T')[0];
+                  
+                  const visitsOnDate = visitsData.filter(visit => {
+                    const visitDate = new Date(visit.date);
+                    return visitDate.getFullYear() === dateObj.getFullYear() &&
+                           visitDate.getMonth() === dateObj.getMonth() &&
+                           visitDate.getDate() === dateObj.getDate();
+                  });
+                  
+                  const gabi = visitsOnDate.filter(v => v.userId === '1');
+                  const ina = visitsOnDate.filter(v => v.userId === '2');
+                  
+                  return (
+                    <div key={dateString} className="p-2 bg-white rounded border border-gray-200">
+                      <div className="font-medium">{dateString} ({new Intl.DateTimeFormat('es-ES', {weekday: 'long'}).format(dateObj)})</div>
+                      <div className="mt-1 ml-2">
+                        <div className={`${gabi.length > 0 ? 'text-green-600' : 'text-red-500'} flex justify-between items-center`}>
+                          <div>
+                            Gabi: {gabi.length > 0 ? `✅ (${gabi.length} visitas)` : '❌ No registrado'}
+                            {gabi.length > 0 && (
+                              <div className="text-xs text-gray-500 ml-4">
+                                {gabi.map((v, i) => (
+                                  <div key={i}>ID: {v.id} - Hora: {new Date(v.date).toLocaleTimeString()}</div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          {gabi.length === 0 && (
+                            <button 
+                              onClick={() => handleAddVisit('1', dateString)}
+                              className="text-xs bg-green-100 hover:bg-green-200 text-green-800 px-2 py-1 rounded"
+                            >
+                              Registrar
+                            </button>
+                          )}
+                        </div>
+                        <div className={`${ina.length > 0 ? 'text-green-600' : 'text-red-500'} flex justify-between items-center`}>
+                          <div>
+                            Iña: {ina.length > 0 ? `✅ (${ina.length} visitas)` : '❌ No registrado'}
+                            {ina.length > 0 && (
+                              <div className="text-xs text-gray-500 ml-4">
+                                {ina.map((v, i) => (
+                                  <div key={i}>ID: {v.id} - Hora: {new Date(v.date).toLocaleTimeString()}</div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          {ina.length === 0 && (
+                            <button 
+                              onClick={() => handleAddVisit('2', dateString)}
+                              className="text-xs bg-green-100 hover:bg-green-200 text-green-800 px-2 py-1 rounded"
+                            >
+                              Registrar
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </details>
         </div>
       </div>
     </div>

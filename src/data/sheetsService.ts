@@ -24,7 +24,7 @@ function getApiUrl(endpoint: string): string {
   // Verificar si estamos en desarrollo o producción
   const baseUrl = 
     typeof window !== 'undefined' && window.location.hostname === 'localhost' 
-      ? '' // En desarrollo, usa la misma URL base
+      ? 'http://localhost:3001' // En desarrollo, usa siempre el puerto 3001
       : window.location.origin; // En producción, usa el origen actual
   
   return `${baseUrl}${endpoint}`;
