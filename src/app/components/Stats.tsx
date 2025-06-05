@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { User, GymVisit } from '@/data/types';
-import { loadUsers, loadVisits, saveVisit } from '@/data/sheetsService';
+import { loadUsers, loadVisits, saveVisit, deleteVisit } from '@/data/sheetsService';
 
 export default function Stats() {
   const [users, setUsers] = useState<User[]>([]);
@@ -62,7 +62,6 @@ export default function Stats() {
   
   // Función para forzar recarga de datos
   const handleRefresh = () => {
-    console.log("Recargando datos manualmente...");
     // Incrementar contador para disparar el useEffect
     setRefreshCounter(prev => prev + 1);
   };
@@ -83,7 +82,6 @@ export default function Stats() {
         date: date.toISOString()
       };
       
-      console.log("Registrando visita manual:", visit);
       const success = await saveVisit(visit);
       
       if (success) {
@@ -95,6 +93,27 @@ export default function Stats() {
     } catch (error) {
       console.error("Error al registrar visita:", error);
       alert("Error al registrar la visita: " + error);
+    }
+  };
+  
+  // Función para eliminar una visita
+  const handleDeleteVisit = async (visitId: string) => {
+    if (!window.confirm('¿Estás seguro de que deseas eliminar esta visita?')) {
+      return;
+    }
+    
+    try {
+      const success = await deleteVisit(visitId);
+      
+      if (success) {
+        alert('Visita eliminada con éxito');
+        handleRefresh(); // Recargar datos
+      } else {
+        alert("Error al eliminar la visita. Intenta nuevamente.");
+      }
+    } catch (error) {
+      console.error("Error al eliminar visita:", error);
+      alert("Error al eliminar la visita: " + error);
     }
   };
   
@@ -133,10 +152,7 @@ export default function Stats() {
     const year = date.getFullYear();
     const month = date.getMonth();
     const day = date.getDate();
-    
-    // Depuración
-    console.log(`Verificando asistencia de usuario ${userId} en fecha ${year}-${month+1}-${day}`);
-    
+        
     // Buscar visitas coincidentes
     const matchingVisits = visitsData.filter(visit => {
       // Parsear la fecha de visita
@@ -149,12 +165,7 @@ export default function Stats() {
       const matches = visit.userId === userId && 
                      visitYear === year && 
                      visitMonth === month && 
-                     visitDay === day;
-      
-      // Mostrar info de depuración para visitas del usuario
-      if (visit.userId === userId) {
-        console.log(`  - Visita en ${visitYear}-${visitMonth+1}-${visitDay}, coincide: ${matches}`);
-      }
+                     visitDay === day;    
       
       return matches;
     });
@@ -320,7 +331,16 @@ export default function Stats() {
                             {gabi.length > 0 && (
                               <div className="text-xs text-gray-500 ml-4">
                                 {gabi.map((v, i) => (
-                                  <div key={i}>ID: {v.id} - Hora: {new Date(v.date).toLocaleTimeString()}</div>
+                                  <div key={i} className="flex justify-between items-center">
+                                    <div>ID: {v.id} - Hora: {new Date(v.date).toLocaleTimeString()}</div>
+                                    <button 
+                                      onClick={() => handleDeleteVisit(v.id)}
+                                      className="text-xs bg-red-100 hover:bg-red-200 text-red-800 px-2 py-1 rounded ml-2"
+                                      title="Eliminar esta visita"
+                                    >
+                                      Eliminar
+                                    </button>
+                                  </div>
                                 ))}
                               </div>
                             )}
@@ -340,7 +360,16 @@ export default function Stats() {
                             {ina.length > 0 && (
                               <div className="text-xs text-gray-500 ml-4">
                                 {ina.map((v, i) => (
-                                  <div key={i}>ID: {v.id} - Hora: {new Date(v.date).toLocaleTimeString()}</div>
+                                  <div key={i} className="flex justify-between items-center">
+                                    <div>ID: {v.id} - Hora: {new Date(v.date).toLocaleTimeString()}</div>
+                                    <button 
+                                      onClick={() => handleDeleteVisit(v.id)}
+                                      className="text-xs bg-red-100 hover:bg-red-200 text-red-800 px-2 py-1 rounded ml-2"
+                                      title="Eliminar esta visita"
+                                    >
+                                      Eliminar
+                                    </button>
+                                  </div>
                                 ))}
                               </div>
                             )}

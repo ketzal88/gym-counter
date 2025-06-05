@@ -21,12 +21,8 @@ const DEFAULT_USERS: User[] = [
 
 // Función para construir la URL completa de la API
 function getApiUrl(endpoint: string): string {
-  // Verificar si estamos en desarrollo o producción
-  const baseUrl = 
-    typeof window !== 'undefined' && window.location.hostname === 'localhost' 
-      ? 'http://localhost:3001' // En desarrollo, usa siempre el puerto 3001
-      : window.location.origin; // En producción, usa el origen actual
-  
+  // Usar siempre el origen actual (mismo puerto que la aplicación)
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
   return `${baseUrl}${endpoint}`;
 }
 
@@ -36,30 +32,25 @@ export async function loadUsers(): Promise<User[]> {
     // Verificar si tenemos datos en caché recientes
     const now = Date.now();
     if (apiCache.users && (now - apiCache.lastFetched.users < CACHE_DURATION)) {
-      console.log('Usando usuarios en caché');
       return apiCache.users;
     }
     
     // Llamar a la API en lugar de conectarse directamente a Google Sheets
-    console.log('Obteniendo usuarios desde la API');
     const apiUrl = getApiUrl('/api/sheets?type=users');
-    console.log('URL de la API:', apiUrl);
     
     const response = await fetch(apiUrl, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
-      // Agregar credenciales para asegurar que se envíen cookies
       credentials: 'same-origin'
     });
     
     const data = await response.json();
     
     if (!response.ok) {
-      console.error('Error cargando usuarios desde la API:', data.error, data.details || '');
+      console.error('Error cargando usuarios desde la API:', data.error);
       
       // Si tenemos datos en caché, aunque sean viejos, los usamos como fallback
       if (apiCache.users) {
-        console.log('Usando caché antigua como fallback para usuarios');
         return apiCache.users;
       }
       
@@ -77,7 +68,6 @@ export async function loadUsers(): Promise<User[]> {
     
     // Si tenemos datos en caché, los usamos como fallback
     if (apiCache.users) {
-      console.log('Usando caché como fallback para usuarios después de error');
       return apiCache.users;
     }
     
@@ -97,7 +87,6 @@ export async function loadVisits(): Promise<GymVisit[]> {
       try {
         const data = JSON.parse(storedData);
         localVisits = data.visits || [];
-        console.log(`${localVisits.length} visitas encontradas en localStorage`);
       } catch (e) {
         console.error('Error al leer visitas de localStorage:', e);
       }
@@ -106,14 +95,11 @@ export async function loadVisits(): Promise<GymVisit[]> {
     // Verificar si tenemos datos en caché recientes
     const now = Date.now();
     if (apiCache.visits && (now - apiCache.lastFetched.visits < CACHE_DURATION)) {
-      console.log('Usando visitas en caché');
       return apiCache.visits;
     }
     
     // Luego intentamos obtener datos más actualizados de la API
-    console.log('Obteniendo visitas desde la API');
     const apiUrl = getApiUrl('/api/sheets?type=visits');
-    console.log('URL de la API:', apiUrl);
     
     const response = await fetch(apiUrl, {
       method: 'GET',
@@ -123,11 +109,10 @@ export async function loadVisits(): Promise<GymVisit[]> {
     
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('Error cargando visitas desde la API:', errorData.error, errorData.details || '');
+      console.error('Error cargando visitas desde la API:', errorData.error);
       
       // Si tenemos datos en caché, aunque sean viejos, los usamos
       if (apiCache.visits) {
-        console.log('Usando caché antigua como fallback para visitas');
         return apiCache.visits;
       }
       
@@ -136,7 +121,6 @@ export async function loadVisits(): Promise<GymVisit[]> {
     
     const data = await response.json();
     const apiVisits = data.visits || [];
-    console.log(`${apiVisits.length} visitas cargadas desde la API`);
     
     // Actualizar caché
     apiCache.visits = apiVisits;
@@ -159,7 +143,6 @@ export async function loadVisits(): Promise<GymVisit[]> {
     
     // Si tenemos datos en caché, los usamos como fallback
     if (apiCache.visits) {
-      console.log('Usando caché como fallback para visitas después de error');
       return apiCache.visits;
     }
     
@@ -180,15 +163,12 @@ export async function loadVisits(): Promise<GymVisit[]> {
 
 // Guardar una nueva visita
 export async function saveVisit(visit: GymVisit): Promise<boolean> {
-  console.log("Guardando visita:", visit);
-  
   // Siempre guardamos en localStorage como respaldo/caché
   try {
     const storedData = localStorage.getItem('gym_counter_data');
     const data = storedData ? JSON.parse(storedData) : { visits: [] };
     data.visits = [...data.visits, visit];
     localStorage.setItem('gym_counter_data', JSON.stringify(data));
-    console.log("Guardado en localStorage exitoso");
     
     // Actualizar también la caché en memoria
     if (apiCache.visits) {
@@ -201,7 +181,6 @@ export async function saveVisit(visit: GymVisit): Promise<boolean> {
   // Intentar guardar en el servidor a través de la API
   try {
     const apiUrl = getApiUrl('/api/sheets');
-    console.log('URL de la API para guardar:', apiUrl);
     
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -217,14 +196,60 @@ export async function saveVisit(visit: GymVisit): Promise<boolean> {
     
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('Error guardando visita en el servidor:', errorData.error, errorData.details || '');
+      console.error('Error guardando visita en el servidor:', errorData.error);
       return false;
     }
     
-    console.log('Visita guardada correctamente en el servidor');
     return true;
   } catch (error) {
     console.error('Error en la petición para guardar visita:', error);
+    return false;
+  }
+}
+
+// Eliminar una visita por su ID
+export async function deleteVisit(visitId: string): Promise<boolean> {
+  // Eliminar de localStorage
+  try {
+    const storedData = localStorage.getItem('gym_counter_data');
+    if (storedData) {
+      const data = JSON.parse(storedData);
+      
+      if (data.visits && Array.isArray(data.visits)) {
+        data.visits = data.visits.filter((visit: GymVisit) => visit.id !== visitId);
+        localStorage.setItem('gym_counter_data', JSON.stringify(data));
+        
+        // Actualizar también la caché en memoria
+        if (apiCache.visits) {
+          apiCache.visits = apiCache.visits.filter(visit => visit.id !== visitId);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error al eliminar visita de localStorage:', error);
+  }
+  
+  // Intentar eliminar en el servidor a través de la API
+  try {
+    const apiUrl = getApiUrl(`/api/sheets?visitId=${visitId}`);
+    
+    const response = await fetch(apiUrl, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'same-origin'
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Error eliminando visita en el servidor:', errorData.error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error en la petición para eliminar visita:', error);
     return false;
   }
 } 

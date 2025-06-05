@@ -61,7 +61,6 @@ export default function Counter() {
       
       // Formato de fecha ISO
       const isoDate = now.toISOString();
-      console.log('Creando visita con fecha:', isoDate);
       
       // Crear nuevo registro de visita
       const newVisit: GymVisit = {
@@ -79,7 +78,6 @@ export default function Counter() {
         [userId]: (prevCounts[userId] || 0) + 1
       }));
       
-      console.log('Visita registrada con éxito');
     } catch (error) {
       console.error('Error al registrar visita:', error);
     } finally {
@@ -105,7 +103,6 @@ export default function Counter() {
     // Limpiar datos en localStorage
     try {
       localStorage.removeItem('gym_counter_data');
-      console.log('Datos reiniciados correctamente');
     } catch (error) {
       console.error('Error al reiniciar datos:', error);
     } finally {
