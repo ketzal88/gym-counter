@@ -146,17 +146,23 @@ export default function Stats() {
     }).format(date);
   };
   
-  // Función para obtener los últimos 5 días
-  const getLastFiveDays = () => {
+  // Función para obtener los días de la semana actual (lunes a domingo)
+  const getCurrentWeekDays = () => {
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 (domingo) - 6 (sábado)
+    // Calcular el lunes (si es domingo, retroceder 6 días)
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - ((dayOfWeek + 6) % 7));
+    // Generar los 7 días de la semana
     const days = [];
-    for (let i = 0; i < 5; i++) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      days.push(date);
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      days.push(d);
     }
     return days;
   };
-
+  
   // Función para verificar si un usuario asistió en una fecha específica
   const didUserAttendOnDate = (userId: string, date: Date) => {
     // Para comparar fechas, sólo necesitamos año-mes-día
@@ -197,7 +203,7 @@ export default function Stats() {
     );
   }
   
-  const lastFiveDays = getLastFiveDays();
+  const currentWeekDays = getCurrentWeekDays();
   
   return (
     <div className="w-full max-w-md mx-auto mt-8">
@@ -259,18 +265,17 @@ export default function Stats() {
           })}
         </div>
         
-        {/* Componente para los últimos 5 días con scroll vertical */}
+        {/* Componente para la semana actual (lunes a domingo) con scroll vertical */}
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-lg mt-6">
           <h3 className="font-medium mb-3 text-gray-800 flex items-center">
-            <span className="text-xl mr-2">📅</span> Asistencia últimos 5 días
+            <span className="text-xl mr-2">📅</span> Asistencia semana actual (lunes a domingo)
           </h3>
-          
           <div className="max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 rounded-lg">
             {/* Tabla de encabezado fija */}
             <div className="sticky top-0 z-10 bg-gradient-to-r from-indigo-100 to-blue-100 shadow-sm rounded-t-lg">
-              <div className="grid grid-cols-6 gap-1 p-2 font-medium text-indigo-900">
+              <div className="grid grid-cols-8 gap-1 p-2 font-medium text-indigo-900">
                 <div className="col-span-1"></div>
-                {lastFiveDays.map((date, index) => (
+                {currentWeekDays.map((date, index) => (
                   <div key={index} className="col-span-1 text-center px-1 py-2">
                     <div className="text-xs">{formatShortDate(date).split(' ')[0]}</div>
                     <div className="text-sm font-bold">{formatShortDate(date).split(' ')[1]}</div>
@@ -278,17 +283,21 @@ export default function Stats() {
                 ))}
               </div>
             </div>
-            
             {/* Contenido de la tabla con scroll */}
             <div className="bg-white rounded-b-lg">
               {users.map(user => (
-                <div key={user.id} className="grid grid-cols-6 gap-1 p-2 border-t border-indigo-100">
+                <div key={user.id} className="grid grid-cols-8 gap-1 p-2 border-t border-indigo-100">
                   <div className="col-span-1 font-medium text-indigo-900 flex items-center">{user.name}</div>
-                  {lastFiveDays.map((date, index) => {
+                  {currentWeekDays.map((date, index) => {
                     const attended = didUserAttendOnDate(user.id, date);
+                    const isFuture = date > today;
                     return (
                       <div key={index} className="col-span-1 flex justify-center items-center">
-                        {attended ? (
+                        {isFuture ? (
+                          <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                            <span className="text-gray-400 text-xl">–</span>
+                          </div>
+                        ) : attended ? (
                           <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
                             <span className="text-green-600 text-xl">✅</span>
                           </div>
