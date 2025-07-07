@@ -71,6 +71,9 @@ export default function Counter() {
       
       // Guardar en Google Sheets (y localStorage como respaldo)
       await saveVisit(newVisit);
+
+      // Trigger refresh for Stats component
+      localStorage.setItem('gymcounter_refresh', Date.now().toString());
       
       // Actualizar contador localmente para feedback inmediato
       setCounts(prevCounts => ({

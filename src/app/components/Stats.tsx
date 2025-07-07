@@ -11,8 +11,8 @@ export default function Stats() {
   const [visitsData, setVisitsData] = useState<GymVisit[]>([]);
   const [refreshCounter, setRefreshCounter] = useState(0);
   
-  // Fecha de inicio del contador: 3 de febrero de 2025
-  const startDate = new Date(2025, 1, 3); // Meses en JS son 0-indexed, febrero es 1
+  // Fecha de inicio del contador: 1 de enero de 2025
+  const startDate = new Date(2025, 0, 1); // Meses en JS son 0-indexed, enero es 0
   
   // Calcular días transcurridos
   const today = new Date();
@@ -59,6 +59,16 @@ export default function Stats() {
     
     fetchData();
   }, [refreshCounter]); // Dependencia para recargar cuando cambie el contador
+
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'gymcounter_refresh') {
+        handleRefresh();
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
   
   // Función para forzar recarga de datos
   const handleRefresh = () => {
@@ -73,8 +83,9 @@ export default function Stats() {
     }
     
     try {
-      const date = new Date(dateString);
-      date.setHours(12, 0, 0); // Mediodía para evitar problemas de zona horaria
+      // Parse date string as local date (YYYY-MM-DD)
+      const [year, month, day] = dateString.split('-').map(Number);
+      const date = new Date(year, month - 1, day, 12, 0, 0); // Local time, mediodía
       
       const visit: GymVisit = {
         id: Date.now().toString(),
