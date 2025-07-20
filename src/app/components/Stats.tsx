@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User, GymVisit } from '@/data/types';
+import { User, GymVisit, BodyMeasurement } from '@/data/types';
 import { loadUsers, loadVisits, saveVisit, deleteVisit } from '@/data/sheetsService';
+import { getBodyMeasurements, addBodyMeasurement } from '@/data/storage';
+import { useRef } from 'react';
 
 export default function Stats() {
   const [users, setUsers] = useState<User[]>([]);
@@ -18,6 +20,17 @@ export default function Stats() {
   const today = new Date();
   const diffTime = Math.abs(today.getTime() - startDate.getTime());
   const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  // Add state for body measurements and modal
+  const [bodyMeasurements, setBodyMeasurements] = useState<BodyMeasurement[]>([]);
+  const [showAllMeasurements, setShowAllMeasurements] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [modalUserId, setModalUserId] = useState('');
+  const [modalDate, setModalDate] = useState('');
+  const [modalMuscle, setModalMuscle] = useState('');
+  const [modalFat, setModalFat] = useState('');
+  const [savingMeasurement, setSavingMeasurement] = useState(false);
+  const modalDateRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
     const fetchData = async () => {
@@ -59,6 +72,11 @@ export default function Stats() {
     
     fetchData();
   }, [refreshCounter]); // Dependencia para recargar cuando cambie el contador
+
+  // Load body measurements on mount and when refreshCounter changes
+  useEffect(() => {
+    getBodyMeasurements().then(setBodyMeasurements);
+  }, [refreshCounter]);
 
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
@@ -125,6 +143,40 @@ export default function Stats() {
     } catch (error) {
       console.error("Error al eliminar visita:", error);
       alert("Error al eliminar la visita: " + error);
+    }
+  };
+  
+  // Handler to open modal
+  const openModal = (userId: string) => {
+    setModalUserId(userId);
+    setModalDate('');
+    setModalMuscle('');
+    setModalFat('');
+    setShowModal(true);
+    setTimeout(() => {
+      if (modalDateRef.current) modalDateRef.current.focus();
+    }, 100);
+  };
+
+  // Handler to save measurement
+  const handleSaveMeasurement = async () => {
+    if (!modalUserId || !modalDate || !modalMuscle || !modalFat) {
+      alert('Completa todos los campos');
+      return;
+    }
+    setSavingMeasurement(true);
+    const success = await addBodyMeasurement(
+      modalUserId,
+      modalDate,
+      parseFloat(modalMuscle),
+      parseFloat(modalFat)
+    );
+    setSavingMeasurement(false);
+    if (success) {
+      setShowModal(false);
+      handleRefresh();
+    } else {
+      alert('Error al guardar la medición');
     }
   };
   
@@ -317,7 +369,7 @@ export default function Stats() {
         
         {/* Componente de depuración - Últimas visitas */}
         <div className="mt-6 p-3 bg-gray-50 rounded-lg border border-gray-200">
-          <details open>
+          <details open={false}>
             <summary className="font-medium text-gray-700 cursor-pointer">
               🔍 Depuración - Visitas recientes ({visitsData.length})
             </summary>
@@ -412,6 +464,121 @@ export default function Stats() {
           </details>
         </div>
       </div>
+      {/* Sección de mediciones corporales */}
+      <div className="mt-8 p-4 bg-white rounded-lg shadow-md border border-gray-200">
+        <h3 className="font-medium text-gray-800 mb-4 flex items-center">
+          <span className="text-xl mr-2">📏</span> Mediciones corporales
+        </h3>
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr>
+                <th className="px-2 py-1 text-left text-gray-800 font-semibold">Usuario</th>
+                <th className="px-2 py-1 text-left text-gray-800 font-semibold">Fecha</th>
+                <th className="px-2 py-1 text-left text-gray-800 font-semibold">% Masa muscular</th>
+                <th className="px-2 py-1 text-left text-gray-800 font-semibold">% Grasa</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map(user => {
+                const userMeasurements = bodyMeasurements
+                  .filter(m => m.userId === user.id)
+                  .sort((a, b) => b.date.localeCompare(a.date));
+                const measurementsToShow = showAllMeasurements ? userMeasurements : userMeasurements.slice(0, 6);
+                if (measurementsToShow.length === 0) {
+                  // Show empty row with Registrar button
+                  return (
+                    <tr key={user.id + '-empty'} className="border-t">
+                      <td className="px-2 py-1 font-medium align-top text-gray-900">{user.name}
+                        <button onClick={() => openModal(user.id)} className="ml-2 text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 px-2 py-1 rounded">+</button>
+                      </td>
+                      <td className="px-2 py-1 text-gray-500" colSpan={3}>Sin mediciones</td>
+                    </tr>
+                  );
+                }
+                return measurementsToShow.map((m, idx) => {
+                  // Find previous measurement for this user
+                  const prev = userMeasurements[userMeasurements.findIndex(mm => mm.id === m.id) + 1];
+                  // Calculate changes
+                  let muscleChange: string | null = null;
+                  let fatChange: string | null = null;
+                  if (prev) {
+                    const muscleDiff = m.muscle - prev.muscle;
+                    const fatDiff = m.fat - prev.fat;
+                    if (muscleDiff !== 0) {
+                      const sign = muscleDiff > 0 ? '+' : '';
+                      muscleChange = `${sign}${muscleDiff.toFixed(1)}%`;
+                    }
+                    if (fatDiff !== 0) {
+                      const sign = fatDiff > 0 ? '+' : '';
+                      fatChange = `${sign}${fatDiff.toFixed(1)}%`;
+                    }
+                  }
+                  return (
+                    <tr key={user.id + m.id} className="border-t">
+                      {idx === 0 && (
+                        <td rowSpan={measurementsToShow.length} className="px-2 py-1 font-medium align-top text-gray-900">{user.name}
+                          <button onClick={() => openModal(user.id)} className="ml-2 text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 px-2 py-1 rounded">+</button>
+                        </td>
+                      )}
+                      <td className="px-2 py-1 text-gray-800 font-medium text-xxs">{m.date}</td>
+                      <td className="px-2 py-1 text-gray-900 font-bold">
+                        {typeof m.muscle === 'number' && !isNaN(m.muscle) ? m.muscle + '%' : <span className="text-gray-400">–</span>}
+                        {muscleChange && (
+                          <span className={`ml-1 text-xxs ${parseFloat(muscleChange) > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                            {muscleChange}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-2 py-1 text-gray-900 font-bold">
+                        {typeof m.fat === 'number' && !isNaN(m.fat) ? m.fat + '%' : <span className="text-gray-400">–</span>}
+                        {fatChange && (
+                          <span className={`ml-1 text-xxs ${parseFloat(fatChange) < 0 ? 'text-green-600' : 'text-red-500'}`}>
+                            {fatChange}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                });
+              })}
+            </tbody>
+          </table>
+          {bodyMeasurements.length > 6 && (
+            <div className="mt-2 text-center">
+              <button onClick={() => setShowAllMeasurements(s => !s)} className="text-blue-600 underline">
+                {showAllMeasurements ? 'Mostrar menos' : 'Ver todas las mediciones'}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+      {/* Modal para registrar medición */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-xs">
+            <h4 className="font-bold mb-2 text-gray-800">Registrar medición</h4>
+            <div className="mb-2">
+              <label className="block text-xs mb-1 text-gray-800">Fecha</label>
+              <input ref={modalDateRef} type="date" className="w-full border rounded px-2 py-1 text-gray-900" value={modalDate} onChange={e => setModalDate(e.target.value)} />
+            </div>
+            <div className="mb-2">
+              <label className="block text-xs mb-1 text-gray-800">% Masa muscular</label>
+              <input type="number" min="0" max="100" step="0.1" className="w-full border rounded px-2 py-1 text-gray-900" value={modalMuscle} onChange={e => setModalMuscle(e.target.value)} />
+            </div>
+            <div className="mb-2">
+              <label className="block text-xs mb-1 text-gray-800">% Grasa</label>
+              <input type="number" min="0" max="100" step="0.1" className="w-full border rounded px-2 py-1 text-gray-900" value={modalFat} onChange={e => setModalFat(e.target.value)} />
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <button onClick={() => setShowModal(false)} className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-800">Cancelar</button>
+              <button onClick={handleSaveMeasurement} disabled={savingMeasurement} className="px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700">
+                {savingMeasurement ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

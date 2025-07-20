@@ -43,6 +43,29 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'No se pudo conectar con Google Sheets' }, { status: 500 });
     }
     
+    // Obtener mediciones corporales
+    if (type === 'body') {
+      try {
+        const sheet = doc.sheetsByTitle['BodyMeasurements'];
+        if (!sheet) {
+          return NextResponse.json({ bodyMeasurements: [] });
+        }
+        const rows = await sheet.getRows();
+        console.log(rows);
+        const bodyMeasurements = rows.map(row => ({
+          id: row.get('id'),
+          userId: row.get('userId'),
+          date: row.get('date'),
+          muscle: Number(String(row.get('muscle')).replace(',', '.')),
+          fat: Number(String(row.get('fat')).replace(',', '.'))
+        }));
+        return NextResponse.json({ bodyMeasurements });
+      } catch (error) {
+        console.error('[API] Error obteniendo mediciones corporales:', error);
+        return NextResponse.json({ bodyMeasurements: [] }, { status: 500 });
+      }
+    }
+    
     // Obtener usuarios
     if (type === 'users' || type === 'all') {
       try {
@@ -123,7 +146,40 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const data = await request.json();
-    const { type, visit } = data;
+    const { type, visit, bodyMeasurement } = data;
+    
+    if (type === 'body') {
+      if (!bodyMeasurement || !bodyMeasurement.id || !bodyMeasurement.userId || !bodyMeasurement.date) {
+        console.error('[API] Datos de medición corporal incompletos:', JSON.stringify(bodyMeasurement));
+        return NextResponse.json({ error: 'Datos de medición corporal incompletos' }, { status: 400 });
+      }
+      const doc = await getDoc();
+      if (!doc) {
+        console.error('[API] No se pudo conectar con Google Sheets para guardar la medición corporal');
+        return NextResponse.json({ error: 'No se pudo conectar con Google Sheets' }, { status: 500 });
+      }
+      const sheet = doc.sheetsByTitle['BodyMeasurements'];
+      if (!sheet) {
+        console.error('[API] No se encontró la hoja "BodyMeasurements"');
+        return NextResponse.json({ error: 'No se encontró la hoja BodyMeasurements' }, { status: 500 });
+      }
+      try {
+        await sheet.addRow({
+          id: bodyMeasurement.id,
+          userId: bodyMeasurement.userId,
+          date: bodyMeasurement.date,
+          muscle: bodyMeasurement.muscle,
+          fat: bodyMeasurement.fat
+        });
+        return NextResponse.json({ success: true });
+      } catch (addRowError) {
+        console.error('[API] Error al añadir fila a la hoja BodyMeasurements:', addRowError);
+        return NextResponse.json({
+          error: 'Error al guardar medición corporal',
+          details: String(addRowError)
+        }, { status: 500 });
+      }
+    }
     
     if (type !== 'visit') {
       console.error('[API] Tipo de datos no soportado:', type);

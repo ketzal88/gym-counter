@@ -1,4 +1,4 @@
-import { GymVisit, User } from './types';
+import { GymVisit, User, BodyMeasurement } from './types';
 
 // Caché para limitar solicitudes repetidas
 const apiCache = {
@@ -250,6 +250,52 @@ export async function deleteVisit(visitId: string): Promise<boolean> {
     return true;
   } catch (error) {
     console.error('Error en la petición para eliminar visita:', error);
+    return false;
+  }
+} 
+
+// Cargar mediciones corporales
+export async function loadBodyMeasurements(): Promise<BodyMeasurement[]> {
+  try {
+    const apiUrl = getApiUrl('/api/sheets?type=body');
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin'
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      console.error('Error cargando mediciones corporales desde la API:', data.error);
+      return [];
+    }
+    return data.bodyMeasurements || [];
+  } catch (error) {
+    console.error('Error cargando mediciones corporales:', error);
+    return [];
+  }
+}
+
+// Guardar una nueva medición corporal
+export async function saveBodyMeasurement(measurement: BodyMeasurement): Promise<boolean> {
+  try {
+    const apiUrl = getApiUrl('/api/sheets');
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({
+        type: 'body',
+        bodyMeasurement: measurement
+      })
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Error guardando medición corporal en el servidor:', errorData.error);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('Error en la petición para guardar medición corporal:', error);
     return false;
   }
 } 
