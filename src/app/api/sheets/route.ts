@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
 
-// ID de la hoja de cálculo
-const SPREADSHEET_ID = '1sJmsAry32FM0A1jlyM1bWI9VyyBHedX65PyLUNVahXI';
+// ID de la hoja de cálculo (hoja de pruebas)
+const SPREADSHEET_ID = '1n4_Jb5VF-b9aPkiteeA6JCzDYK6SP6AdGHZ1PvcfhnQ';
 const CLIENT_EMAIL = 'gymcounter@possible-byte-351918.iam.gserviceaccount.com';
 
 // Inicializar conexión a Google Sheets
@@ -42,24 +42,63 @@ export async function GET(request: Request) {
       console.error('[API] No se pudo conectar con Google Sheets');
       return NextResponse.json({ error: 'No se pudo conectar con Google Sheets' }, { status: 500 });
     }
+
+    // Verificar estructura de la hoja
+    if (type === 'check_structure') {
+      try {
+        const sheetTitles = Object.keys(doc.sheetsByTitle);
+        console.log('[API] Hojas disponibles:', sheetTitles);
+        
+        return NextResponse.json({ 
+          availableSheets: sheetTitles,
+          spreadsheetId: SPREADSHEET_ID,
+          needsSetup: sheetTitles.length === 0
+        });
+      } catch (error) {
+        console.error('[API] Error verificando estructura:', error);
+        return NextResponse.json({ error: 'Error verificando estructura' }, { status: 500 });
+      }
+    }
     
     // Obtener mediciones corporales
     if (type === 'body') {
       try {
-        const sheet = doc.sheetsByTitle['BodyMeasurements'];
-        if (!sheet) {
-          return NextResponse.json({ bodyMeasurements: [] });
+        // Buscar todas las hojas que empiecen con "Usuario_"
+        const userSheetTitles = Object.keys(doc.sheetsByTitle).filter(title => 
+          title.startsWith('Usuario_')
+        );
+        
+        let allBodyMeasurements: Array<{
+          id: string;
+          userId: string;
+          date: string;
+          muscle: number;
+          fat: number;
+        }> = [];
+        
+        // Recopilar mediciones corporales de todas las hojas de usuarios
+        for (const sheetTitle of userSheetTitles) {
+          const sheet = doc.sheetsByTitle[sheetTitle];
+          if (sheet) {
+            const rows = await sheet.getRows();
+            
+            // Filtrar solo las filas que son mediciones corporales (type === 'body_measurement')
+            const measurementsFromSheet = rows
+              .filter(row => row.get('type') === 'body_measurement')
+              .map(row => ({
+                id: row.get('id'),
+                userId: row.get('userId'),
+                date: row.get('date'),
+                muscle: Number(String(row.get('muscle')).replace(',', '.')),
+                fat: Number(String(row.get('fat')).replace(',', '.'))
+              }));
+            
+            allBodyMeasurements = allBodyMeasurements.concat(measurementsFromSheet);
+          }
         }
-        const rows = await sheet.getRows();
-        console.log(rows);
-        const bodyMeasurements = rows.map(row => ({
-          id: row.get('id'),
-          userId: row.get('userId'),
-          date: row.get('date'),
-          muscle: Number(String(row.get('muscle')).replace(',', '.')),
-          fat: Number(String(row.get('fat')).replace(',', '.'))
-        }));
-        return NextResponse.json({ bodyMeasurements });
+        
+        console.log('Mediciones corporales encontradas:', allBodyMeasurements);
+        return NextResponse.json({ bodyMeasurements: allBodyMeasurements });
       } catch (error) {
         console.error('[API] Error obteniendo mediciones corporales:', error);
         return NextResponse.json({ bodyMeasurements: [] }, { status: 500 });
@@ -71,12 +110,7 @@ export async function GET(request: Request) {
       try {
         const sheet = doc.sheetsByTitle['Users'];
         if (!sheet) {
-          return NextResponse.json({
-            users: [
-              { id: '1', name: 'Gabi' },
-              { id: '2', name: 'Iña' }
-            ]
-          });
+          return NextResponse.json({ users: [] });
         }
         
         const rows = await sheet.getRows();
@@ -92,12 +126,7 @@ export async function GET(request: Request) {
       } catch (error) {
         console.error('[API] Error obteniendo usuarios:', error);
         if (type === 'users') {
-          return NextResponse.json({
-            users: [
-              { id: '1', name: 'Gabi' },
-              { id: '2', name: 'Iña' }
-            ]
-          });
+          return NextResponse.json({ users: [] });
         }
       }
     }
@@ -105,30 +134,44 @@ export async function GET(request: Request) {
     // Obtener visitas
     if (type === 'visits' || type === 'all') {
       try {
-        const sheet = doc.sheetsByTitle['Visits'];
-        if (!sheet) {
-          return NextResponse.json({ visits: [] });
+        // Buscar todas las hojas que empiecen con "Usuario_"
+        const userSheetTitles = Object.keys(doc.sheetsByTitle).filter(title => 
+          title.startsWith('Usuario_')
+        );
+        
+        let allVisits: Array<{
+          id: string;
+          userId: string;
+          date: string;
+        }> = [];
+        
+        // Recopilar visitas de todas las hojas de usuarios
+        for (const sheetTitle of userSheetTitles) {
+          const sheet = doc.sheetsByTitle[sheetTitle];
+          if (sheet) {
+            const rows = await sheet.getRows();
+            
+            // Filtrar solo las filas que son visitas (type === 'visit')
+            const visitsFromSheet = rows
+              .filter(row => row.get('type') === 'visit')
+              .map(row => ({
+                id: row.get('id'),
+                userId: row.get('userId'),
+                date: row.get('date')
+              }));
+            
+            allVisits = allVisits.concat(visitsFromSheet);
+          }
         }
-        
-        const rows = await sheet.getRows();
-        
-        const visits = rows.map(row => ({
-          id: row.get('id'),
-          userId: row.get('userId'),
-          date: row.get('date')
-        }));
         
         if (type === 'visits') {
-          return NextResponse.json({ visits });
-        } else {
-          return NextResponse.json({ 
-            users: [
-              { id: '1', name: 'Gabi' },
-              { id: '2', name: 'Iña' }
-            ], 
-            visits 
-          });
-        }
+          return NextResponse.json({ visits: allVisits });
+                } else {
+                  return NextResponse.json({ 
+                    users: [], 
+                    visits: allVisits 
+                  });
+                }
       } catch (error) {
         console.error('[API] Error obteniendo visitas:', error);
         return NextResponse.json({ visits: [] }, { status: 500 });
@@ -146,7 +189,100 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const data = await request.json();
-    const { type, visit, bodyMeasurement } = data;
+    const { type, visit, bodyMeasurement, userId, userName } = data;
+    
+    // Configurar hojas básicas si no existen
+    if (type === 'setup_sheets') {
+      try {
+        const doc = await getDoc();
+        if (!doc) {
+          console.error('[API] No se pudo conectar con Google Sheets para configurar hojas');
+          return NextResponse.json({ error: 'No se pudo conectar con Google Sheets' }, { status: 500 });
+        }
+        
+        const createdSheets = [];
+        
+        // Crear hoja de usuarios si no existe
+        if (!doc.sheetsByTitle['Users']) {
+          await doc.addSheet({
+            title: 'Users',
+            headerValues: ['id', 'name', 'email']
+          });
+          createdSheets.push('Users');
+          console.log('[API] Hoja Users creada');
+        }
+        
+        // Crear hoja de visitas si no existe
+        if (!doc.sheetsByTitle['Visits']) {
+          await doc.addSheet({
+            title: 'Visits',
+            headerValues: ['id', 'userId', 'date']
+          });
+          createdSheets.push('Visits');
+          console.log('[API] Hoja Visits creada');
+        }
+        
+        // Crear hoja de mediciones corporales si no existe
+        if (!doc.sheetsByTitle['BodyMeasurements']) {
+          await doc.addSheet({
+            title: 'BodyMeasurements',
+            headerValues: ['id', 'userId', 'date', 'muscle', 'fat']
+          });
+          createdSheets.push('BodyMeasurements');
+          console.log('[API] Hoja BodyMeasurements creada');
+        }
+        
+        return NextResponse.json({ 
+          success: true, 
+          createdSheets,
+          message: `Hojas configuradas: ${createdSheets.join(', ') || 'Todas las hojas ya existían'}`
+        });
+      } catch (error) {
+        console.error('[API] Error configurando hojas:', error);
+        return NextResponse.json({ 
+          error: 'Error configurando hojas', 
+          details: String(error) 
+        }, { status: 500 });
+      }
+    }
+
+    // Crear hoja para nuevo usuario
+    if (type === 'create_user_sheet' && userId && userName) {
+      try {
+        const doc = await getDoc();
+        if (!doc) {
+          console.error('[API] No se pudo conectar con Google Sheets para crear hoja de usuario');
+          return NextResponse.json({ error: 'No se pudo conectar con Google Sheets' }, { status: 500 });
+        }
+        
+        // Crear una nueva hoja dentro del mismo spreadsheet
+        const sheetTitle = `Usuario_${userId}_${userName.replace(/\s+/g, '_')}`;
+        
+        // Verificar si la hoja ya existe
+        let userSheet = doc.sheetsByTitle[sheetTitle];
+        if (!userSheet) {
+          userSheet = await doc.addSheet({
+            title: sheetTitle,
+            headerValues: ['id', 'userId', 'date', 'type', 'muscle', 'fat']
+          });
+          console.log(`[API] Hoja creada para usuario ${userName}: ${sheetTitle}`);
+        } else {
+          console.log(`[API] Hoja ya existe para usuario ${userName}: ${sheetTitle}`);
+        }
+        
+        return NextResponse.json({ 
+          success: true, 
+          sheetId: userSheet.sheetId,
+          sheetTitle: sheetTitle
+        });
+      } catch (error) {
+        console.error('[API] Error creando hoja para usuario:', error);
+        return NextResponse.json({ 
+          error: 'Error creando hoja para usuario', 
+          details: String(error) 
+        }, { status: 500 });
+      }
+    }
     
     if (type === 'body') {
       if (!bodyMeasurement || !bodyMeasurement.id || !bodyMeasurement.userId || !bodyMeasurement.date) {
@@ -158,22 +294,32 @@ export async function POST(request: Request) {
         console.error('[API] No se pudo conectar con Google Sheets para guardar la medición corporal');
         return NextResponse.json({ error: 'No se pudo conectar con Google Sheets' }, { status: 500 });
       }
-      const sheet = doc.sheetsByTitle['BodyMeasurements'];
-      if (!sheet) {
-        console.error('[API] No se encontró la hoja "BodyMeasurements"');
-        return NextResponse.json({ error: 'No se encontró la hoja BodyMeasurements' }, { status: 500 });
+      // Buscar la hoja personal del usuario
+      const userSheets = Object.keys(doc.sheetsByTitle).filter(title => 
+        title.startsWith('Usuario_') && title.includes(bodyMeasurement.userId)
+      );
+      
+      if (userSheets.length === 0) {
+        console.error('[API] No se encontró la hoja personal del usuario:', bodyMeasurement.userId);
+        return NextResponse.json({ error: 'No se encontró la hoja personal del usuario' }, { status: 500 });
       }
+      
+      const userSheetTitle = userSheets[0];
+      const sheet = doc.sheetsByTitle[userSheetTitle];
+      
       try {
         await sheet.addRow({
           id: bodyMeasurement.id,
           userId: bodyMeasurement.userId,
           date: bodyMeasurement.date,
+          type: 'body_measurement',
           muscle: bodyMeasurement.muscle,
           fat: bodyMeasurement.fat
         });
+        console.log(`[API] Medición corporal guardada en hoja personal del usuario: ${userSheetTitle}`);
         return NextResponse.json({ success: true });
       } catch (addRowError) {
-        console.error('[API] Error al añadir fila a la hoja BodyMeasurements:', addRowError);
+        console.error('[API] Error al añadir fila a la hoja personal:', addRowError);
         return NextResponse.json({
           error: 'Error al guardar medición corporal',
           details: String(addRowError)
@@ -197,21 +343,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No se pudo conectar con Google Sheets' }, { status: 500 });
     }
     
-    const sheet = doc.sheetsByTitle['Visits'];
-    if (!sheet) {
-      console.error('[API] No se encontró la hoja "Visits"');
-      return NextResponse.json({ error: 'No se encontró la hoja Visits' }, { status: 500 });
+    // Buscar la hoja personal del usuario
+    // Necesitamos obtener el nombre del usuario para construir el nombre de la hoja
+    // Por ahora, vamos a buscar todas las hojas que empiecen con "Usuario_" y contengan el userId
+    const userSheets = Object.keys(doc.sheetsByTitle).filter(title => 
+      title.startsWith('Usuario_') && title.includes(visit.userId)
+    );
+    
+    if (userSheets.length === 0) {
+      console.error('[API] No se encontró la hoja personal del usuario:', visit.userId);
+      return NextResponse.json({ error: 'No se encontró la hoja personal del usuario' }, { status: 500 });
     }
+    
+    const userSheetTitle = userSheets[0];
+    const sheet = doc.sheetsByTitle[userSheetTitle];
     
     try {
       await sheet.addRow({
         id: visit.id,
         userId: visit.userId,
-        date: visit.date
+        date: visit.date,
+        type: 'visit',
+        muscle: '',
+        fat: ''
       });
+      console.log(`[API] Visita guardada en hoja personal del usuario: ${userSheetTitle}`);
       return NextResponse.json({ success: true });
     } catch (addRowError) {
-      console.error('[API] Error al añadir fila a la hoja:', addRowError);
+      console.error('[API] Error al añadir fila a la hoja personal:', addRowError);
       return NextResponse.json({ 
         error: 'Error al guardar visita', 
         details: String(addRowError) 

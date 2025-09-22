@@ -15,8 +15,30 @@ const CACHE_DURATION = 5 * 60 * 1000;
 
 // Valores predeterminados si no podemos cargar datos
 const DEFAULT_USERS: User[] = [
-  { id: '1', name: 'Gabi' },
-  { id: '2', name: 'Iña' }
+  { 
+    id: '1', 
+    name: 'Gabi',
+    email: 'gabi@example.com',
+    createdAt: new Date('2024-01-01'),
+    streak: 0,
+    totalVisits: 0,
+    subscription: 'free',
+    weight: 75,
+    height: 175,
+    gender: 'male'
+  },
+  { 
+    id: '2', 
+    name: 'Iña',
+    email: 'ina@example.com',
+    createdAt: new Date('2024-01-01'),
+    streak: 0,
+    totalVisits: 0,
+    subscription: 'free',
+    weight: 60,
+    height: 165,
+    gender: 'female'
+  }
 ];
 
 // Función para construir la URL completa de la API
@@ -297,5 +319,34 @@ export async function saveBodyMeasurement(measurement: BodyMeasurement): Promise
   } catch (error) {
     console.error('Error en la petición para guardar medición corporal:', error);
     return false;
+  }
+}
+
+// Crear una nueva hoja de Google Sheets para un usuario
+export async function createUserSheet(userId: string, userName: string): Promise<string | null> {
+  try {
+    const apiUrl = getApiUrl('/api/sheets');
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({
+        type: 'create_user_sheet',
+        userId,
+        userName
+      })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Error creando hoja para usuario:', errorData.error);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data.sheetId;
+  } catch (error) {
+    console.error('Error en la petición para crear hoja de usuario:', error);
+    return null;
   }
 } 

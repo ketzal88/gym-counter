@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { User, GymVisit } from '@/data/types';
+import { User, GymVisit, BodyMeasurement } from '@/data/types';
 
 export default function PersonalDashboard() {
   const { data: session } = useSession();
   const [user, setUser] = useState<User | null>(null);
   const [visits, setVisits] = useState<GymVisit[]>([]);
+  const [bodyMeasurements, setBodyMeasurements] = useState<BodyMeasurement[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,28 +29,37 @@ export default function PersonalDashboard() {
             const visitsData = await visitsResponse.json();
             console.log('Datos de visitas recibidos:', visitsData);
             
-            // Los datos de Google Sheets vienen en formato diferente
-            // Necesitamos convertirlos al formato esperado
+            // Filtrar solo las visitas del usuario actual
             if (visitsData.visits && Array.isArray(visitsData.visits)) {
               console.log('Usuario actual ID:', userData.user.id, 'Tipo:', typeof userData.user.id);
-              console.log('Todos los userIds en visitas:', visitsData.visits.map((v: any) => ({ id: v._rawData?.[1], type: typeof v._rawData?.[1] })));
               
               const userVisits = visitsData.visits
                 .filter((visit: any) => {
-                  // Los datos de Google Sheets tienen formato: [id, userId, date, muscle, fat]
-                  const visitUserId = visit._rawData?.[1]; // userId está en la posición 1
+                  // Los datos ahora vienen en formato: { id, userId, date }
+                  const visitUserId = visit.userId;
                   const matches = visitUserId === userData.user.id;
                   console.log(`Comparando ${visitUserId} === ${userData.user.id}: ${matches}`);
                   return matches;
-                })
-                .map((visit: any) => ({
-                  id: visit._rawData[0],
-                  userId: visit._rawData[1],
-                  date: visit._rawData[2]
-                }));
+                });
               
               console.log('Visitas filtradas para usuario:', userVisits);
               setVisits(userVisits);
+            }
+          }
+
+          // Obtener mediciones corporales del usuario
+          const bodyMeasurementsResponse = await fetch('/api/sheets?type=body');
+          if (bodyMeasurementsResponse.ok) {
+            const bodyData = await bodyMeasurementsResponse.json();
+            console.log('Datos de mediciones corporales recibidos:', bodyData);
+            
+            // Filtrar solo las mediciones del usuario actual
+            if (bodyData.bodyMeasurements && Array.isArray(bodyData.bodyMeasurements)) {
+              const userBodyMeasurements = bodyData.bodyMeasurements
+                .filter((measurement: any) => measurement.userId === userData.user.id);
+              
+              console.log('Mediciones corporales filtradas para usuario:', userBodyMeasurements);
+              setBodyMeasurements(userBodyMeasurements);
             }
           }
 
@@ -191,6 +201,59 @@ export default function PersonalDashboard() {
         </div>
       </div>
 
+      {/* Mediciones corporales */}
+      {bodyMeasurements.length > 0 && (
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">💪 Composición Corporal</h3>
+          
+          <div className="space-y-3">
+            {bodyMeasurements
+              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+              .slice(0, 3)
+              .map((measurement, index) => {
+                const prevMeasurement = index < bodyMeasurements.length - 1 ? 
+                  bodyMeasurements.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[index + 1] : null;
+                
+                const muscleChange = prevMeasurement ? measurement.muscle - prevMeasurement.muscle : 0;
+                const fatChange = prevMeasurement ? measurement.fat - prevMeasurement.fat : 0;
+                
+                return (
+                  <div key={measurement.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <span className="font-medium text-gray-900">
+                        {new Date(measurement.date).toLocaleDateString('es-ES')}
+                      </span>
+                    </div>
+                    <div className="flex space-x-4 text-sm">
+                      <div className="text-center">
+                        <div className="font-medium text-gray-900">Músculo</div>
+                        <div className="text-blue-600">
+                          {measurement.muscle}%
+                          {muscleChange !== 0 && (
+                            <span className={`ml-1 ${muscleChange > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              ({muscleChange > 0 ? '+' : ''}{muscleChange.toFixed(1)}%)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-medium text-gray-900">Grasa</div>
+                        <div className="text-orange-600">
+                          {measurement.fat}%
+                          {fatChange !== 0 && (
+                            <span className={`ml-1 ${fatChange < 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              ({fatChange > 0 ? '+' : ''}{fatChange.toFixed(1)}%)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
 
       {/* Historial de visitas */}
       <div className="bg-white rounded-lg shadow-md p-6">
