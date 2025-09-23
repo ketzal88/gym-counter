@@ -68,19 +68,15 @@ export async function GET() {
         const userGroups = rows.filter(row => {
           const members = row.get('members');
           return members && members.includes(session.user?.email);
-        }).map(row => {
-          const group = {
-            id: row.get('id'),
-            name: row.get('name'),
-            description: row.get('description'),
-            adminId: row.get('adminId'),
-            members: row.get('members').split(','),
-            createdAt: new Date(row.get('createdAt')),
-            isPublic: row.get('isPublic') === 'true'
-          };
-          console.log('[DEBUG] Grupo encontrado:', group);
-          return group;
-        });
+        }).map(row => ({
+          id: row.get('id'),
+          name: row.get('name'),
+          description: row.get('description'),
+          adminId: row.get('adminId'),
+          members: row.get('members').split(','),
+          createdAt: new Date(row.get('createdAt')),
+          isPublic: row.get('isPublic') === 'true'
+        }));
 
         // Guardar en cache por 2 minutos
         apiCache.set(cacheKey, userGroups, 120000);
@@ -221,25 +217,13 @@ export async function PUT(request: Request) {
           groupRow.set('members', currentMembers.join(','));
           
         } else if (action === 'update') {
-          // Actualizar nombre/descripción (cualquier miembro puede editar por ahora)
-          const adminId = groupRow.get('adminId');
+          // Actualizar nombre/descripción (cualquier miembro puede editar)
           const userEmail = session.user?.email;
-          console.log('[DEBUG] Admin ID:', adminId);
-          console.log('[DEBUG] User Email:', userEmail);
-          console.log('[DEBUG] Are they equal?', adminId === userEmail);
-          console.log('[DEBUG] Current members:', currentMembers);
-          console.log('[DEBUG] Is user a member?', currentMembers.includes(userEmail));
           
-          // Permitir edición si es miembro del grupo (temporalmente)
+          // Permitir edición si es miembro del grupo
           if (!currentMembers.includes(userEmail)) {
             return NextResponse.json({ 
-              error: 'No eres miembro de este grupo',
-              debug: {
-                adminId,
-                userEmail,
-                groupId,
-                members: currentMembers
-              }
+              error: 'No eres miembro de este grupo'
             }, { status: 403 });
           }
           if (name) {

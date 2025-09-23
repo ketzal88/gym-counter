@@ -6,11 +6,17 @@ import { Group, User, GymVisit } from '@/data/types';
 import { loadUsers } from '@/data/sheetsService';
 import MemberSearch from './MemberSearch';
 
+interface MemberStats extends User {
+  totalVisits: number;
+  lastVisit?: Date;
+  visitedToday: boolean;
+}
+
 export default function TeamDashboard() {
   const { data: session } = useSession();
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
-  const [groupMembers, setGroupMembers] = useState<User[]>([]);
+  const [groupMembers, setGroupMembers] = useState<MemberStats[]>([]);
   const [groupVisits, setGroupVisits] = useState<GymVisit[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingGroups, setLoadingGroups] = useState(false);
@@ -49,38 +55,55 @@ export default function TeamDashboard() {
   }, [selectedGroup]);
 
   const fetchGroupData = useCallback(async () => {
-    if (!selectedGroup) return;
-
+    if (groups.length === 0) return;
     setLoadingGroupData(true);
     try {
-      const response = await fetch(`/api/groups/${selectedGroup.id}/members`);
-      if (response.ok) {
-        const data = await response.json();
-        setGroupMembers(data.members || []);
-        setGroupVisits(data.visits || []);
-      } else {
-        console.error('Error cargando datos de miembros del grupo:', response.statusText);
-        // Fallback: cargar usuarios básicos
-        const allUsers = await loadUsers();
-        const members = allUsers.filter(user => 
-          selectedGroup.members.includes(user.email)
-        );
-        setGroupMembers(members);
-        setGroupVisits([]);
+      // Obtener datos de todos los grupos
+      const allMembers: MemberStats[] = [];
+      const allVisits: GymVisit[] = [];
+      
+      for (const group of groups) {
+        try {
+          const response = await fetch(`/api/groups/${group.id}/members?t=${Date.now()}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.members) {
+              allMembers.push(...data.members);
+            }
+            if (data.visits) {
+              allVisits.push(...data.visits);
+            }
+          }
+        } catch (err) {
+          console.error(`Error cargando datos del grupo ${group.name}:`, err);
+        }
       }
+      
+      // Remover duplicados basado en ID del usuario
+      const uniqueMembers = allMembers.filter((member, index, self) => 
+        index === self.findIndex(m => m.id === member.id)
+      );
+      
+      setGroupMembers(uniqueMembers);
+      setGroupVisits(allVisits);
+      
     } catch (error) {
-      console.error('Error cargando datos del grupo:', error);
+      console.error('Error cargando datos de grupos:', error);
       // Fallback: cargar usuarios básicos
       const allUsers = await loadUsers();
-      const members = allUsers.filter(user => 
-        selectedGroup.members.includes(user.email)
-      );
+      const members: MemberStats[] = allUsers
+        .filter(user => groups.some(group => group.members.includes(user.email)))
+        .map(user => ({
+          ...user,
+          totalVisits: 0,
+          visitedToday: false
+        }));
       setGroupMembers(members);
       setGroupVisits([]);
     } finally {
       setLoadingGroupData(false);
     }
-  }, [selectedGroup]);
+  }, [groups]);
 
   useEffect(() => {
     if (session) {
@@ -89,10 +112,10 @@ export default function TeamDashboard() {
   }, [session, fetchGroups]);
 
   useEffect(() => {
-    if (selectedGroup) {
+    if (groups.length > 0) {
       fetchGroupData();
     }
-  }, [selectedGroup, fetchGroupData]);
+  }, [groups, fetchGroupData]);
 
   const createGroup = async () => {
     if (!newGroupName.trim()) return;
@@ -395,53 +418,76 @@ export default function TeamDashboard() {
         </div>
       )}
 
+      {/* 1. Contadores de todos los grupos - PRINCIPAL */}
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center justify-center">
+          📊 Contadores de los Equipos
+        </h3>
+        
+        {loadingGroupData ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="text-center">
+              <div className="text-4xl mb-4 animate-spin">⏳</div>
+              <p className="text-gray-600">Cargando datos de los equipos...</p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {groups.map((group) => {
+              // Obtener miembros de este grupo específico
+              const groupMembersList = groupMembers.filter(member => 
+                group.members.includes(member.email)
+              );
+              
+              return (
+                <div key={group.id} className="border-2 border-gray-200 rounded-lg p-4">
+                  {/* Nombre del grupo */}
+                  <div className="text-center mb-4">
+                    <h4 className="text-xl font-bold text-gray-800">{group.name}</h4>
+                    {group.description && (
+                      <p className="text-sm text-gray-600 mt-1">{group.description}</p>
+                    )}
+                  </div>
+                  
+                  {/* Contadores de miembros */}
+                  <div 
+                    className="gap-4" 
+                    style={{ 
+                      display: 'grid',
+                      gridTemplateColumns: `repeat(${Math.min(groupMembersList.length, 2)}, 1fr)`,
+                      gap: '1rem'
+                    }}
+                  >
+                    {groupMembersList.map((member) => {
+                      const totalVisits = getTotalVisits(member.id);
+                      const attendedToday = didUserAttendOnDate(member.id, today);
+                      
+                      return (
+                        <div key={member.id} className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 text-center border-2 border-blue-100 hover:border-blue-200 transition-all duration-200 shadow-lg">
+                          <div className="text-lg font-bold text-gray-800 mb-2">
+                            {member.name}
+                          </div>
+                          <div className="text-3xl font-black text-blue-600 mb-2">
+                            {totalVisits} 🔥
+                          </div>
+                          <div className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                            attendedToday ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                          }`}>
+                            {attendedToday ? '✅ Fue hoy' : '❌ No fue hoy'}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {selectedGroup && (
         <>
-          {/* 1. Grid de contadores de miembros (1-4) - PRINCIPAL */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center justify-center">
-              📊 Contadores del Equipo
-            </h3>
-            
-            {loadingGroupData ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="text-center">
-                  <div className="text-4xl mb-4 animate-spin">⏳</div>
-                  <p className="text-gray-600">Cargando datos del equipo...</p>
-                </div>
-              </div>
-            ) : (
-              <div 
-                className="gap-4" 
-                style={{ 
-                  display: 'grid',
-                  gridTemplateColumns: `repeat(2, 1fr)`,
-                  gap: '1rem'
-                }}
-              >
-                {groupMembers.map((member) => {
-                  const totalVisits = getTotalVisits(member.id);
-                  const attendedToday = didUserAttendOnDate(member.id, today);
-                  
-                  return (
-                    <div key={member.id} className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 text-center border-2 border-blue-100 hover:border-blue-200 transition-all duration-200 shadow-lg">
-                      <div className="text-lg font-bold text-gray-800 mb-3">
-                        {member.name}
-                      </div>
-                      <div className="text-4xl font-black text-blue-600 mb-3">
-                        {totalVisits} 🔥
-                      </div>
-                      <div className={`text-sm font-semibold px-3 py-1 rounded-full ${
-                        attendedToday ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                      }`}>
-                        {attendedToday ? '✅ Fue hoy' : '❌ No fue hoy'}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
 
           {/* 2. Asistencia semanal del equipo */}
           <div className="bg-white rounded-lg shadow-md p-6">
@@ -517,7 +563,7 @@ export default function TeamDashboard() {
           {/* 3. Búsqueda de miembros - Invitar amigos al grupo */}
           <MemberSearch 
             groupId={selectedGroup.id} 
-            onInviteSent={fetchGroupData}
+            onInviteSent={fetchGroups}
           />
         </>
       )}
@@ -609,22 +655,29 @@ export default function TeamDashboard() {
               </>
             )}
             
-            <button
-              onClick={() => setShowCreateGroup(true)}
-              disabled={creatingGroup}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors duration-200 flex items-center space-x-2"
-            >
-              {creatingGroup ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  <span>Creando...</span>
-                </>
-              ) : (
-                <span>Crear Grupo</span>
-              )}
-            </button>
           </div>
         </div>
+      </div>
+
+      {/* Botón para crear grupo al final */}
+      <div className="bg-white rounded-lg shadow-md p-6 text-center">
+        <button
+          onClick={() => setShowCreateGroup(true)}
+          disabled={creatingGroup}
+          className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors duration-200 flex items-center space-x-2 mx-auto"
+        >
+          {creatingGroup ? (
+            <>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              <span>Creando...</span>
+            </>
+          ) : (
+            <>
+              <span>➕</span>
+              <span>Crear Nuevo Grupo</span>
+            </>
+          )}
+        </button>
       </div>
 
     </div>
