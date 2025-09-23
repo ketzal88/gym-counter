@@ -62,6 +62,9 @@ export async function GET(request: Request) {
     // Obtener mediciones corporales
     if (type === 'body') {
       try {
+        const userId = searchParams.get('userId'); // Nuevo parámetro para filtrar por usuario
+        console.log(`[API] Obteniendo mediciones - userId: ${userId}`);
+        
         // Buscar todas las hojas que empiecen con "Usuario_"
         const userSheetTitles = Object.keys(doc.sheetsByTitle).filter(title => 
           title.startsWith('Usuario_')
@@ -92,10 +95,18 @@ export async function GET(request: Request) {
                 fat: Number(String(row.get('fat')).replace(',', '.'))
               }));
             
-            allBodyMeasurements = allBodyMeasurements.concat(measurementsFromSheet);
+            // Si se especifica userId, filtrar solo las mediciones de ese usuario
+            if (userId) {
+              const filteredMeasurements = measurementsFromSheet.filter(measurement => measurement.userId === userId);
+              console.log(`[API] Hoja ${sheetTitle}: ${measurementsFromSheet.length} mediciones totales, ${filteredMeasurements.length} mediciones filtradas para userId ${userId}`);
+              allBodyMeasurements = allBodyMeasurements.concat(filteredMeasurements);
+            } else {
+              allBodyMeasurements = allBodyMeasurements.concat(measurementsFromSheet);
+            }
           }
         }
         
+        console.log(`[API] Total mediciones devueltas: ${allBodyMeasurements.length}`);
         return NextResponse.json({ bodyMeasurements: allBodyMeasurements });
       } catch (error) {
         console.error('[API] Error obteniendo mediciones corporales:', error);
@@ -132,6 +143,9 @@ export async function GET(request: Request) {
     // Obtener visitas
     if (type === 'visits' || type === 'all') {
       try {
+        const userId = searchParams.get('userId'); // Nuevo parámetro para filtrar por usuario
+        console.log(`[API] Obteniendo visitas - userId: ${userId}`);
+        
         // Buscar todas las hojas que empiecen con "Usuario_"
         const userSheetTitles = Object.keys(doc.sheetsByTitle).filter(title => 
           title.startsWith('Usuario_')
@@ -158,13 +172,20 @@ export async function GET(request: Request) {
                 date: row.get('date')
               }));
             
-            
-            allVisits = allVisits.concat(visitsFromSheet);
+            // Si se especifica userId, filtrar solo las visitas de ese usuario
+            if (userId) {
+              const filteredVisits = visitsFromSheet.filter(visit => visit.userId === userId);
+              console.log(`[API] Hoja ${sheetTitle}: ${visitsFromSheet.length} visitas totales, ${filteredVisits.length} visitas filtradas para userId ${userId}`);
+              allVisits = allVisits.concat(filteredVisits);
+            } else {
+              allVisits = allVisits.concat(visitsFromSheet);
+            }
           }
         }
         
         
         if (type === 'visits') {
+          console.log(`[API] Total visitas devueltas: ${allVisits.length}`);
           return NextResponse.json({ visits: allVisits });
         } else {
           return NextResponse.json({ 

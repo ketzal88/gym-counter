@@ -35,6 +35,36 @@ export interface BodyMeasurement {
   fat: number; // percentage
 }
 
+export interface Group {
+  id: string;
+  name: string;
+  description?: string;
+  adminId: string;
+  members: string[]; // user IDs
+  createdAt: Date;
+  isPublic: boolean;
+}
+
+export interface GroupInvitation {
+  id: string;
+  groupId: string;
+  inviterId: string; // quien invita
+  inviteeId: string; // quien recibe la invitación
+  status: 'pending' | 'accepted' | 'declined';
+  createdAt: Date;
+  respondedAt?: Date;
+}
+
+export interface GroupChallenge {
+  id: string;
+  groupId: string;
+  type: 'weekly_visits' | 'streak' | 'total_visits';
+  target: number;
+  startDate: Date;
+  endDate: Date;
+  reward: string;
+}
+
 export interface CounterState {
   users: User[];
   visits: GymVisit[];

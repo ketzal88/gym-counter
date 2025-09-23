@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { User, GymVisit, BodyMeasurement } from '@/data/types';
 import { loadUsers, deleteVisit } from '@/data/sheetsService';
+import TeamDashboard from './TeamDashboard';
+import InvitationNotifications from './InvitationNotifications';
+import ApiStatusBanner from './ApiStatusBanner';
 
 export default function UnifiedDashboard() {
   const { data: session } = useSession();
@@ -28,6 +31,9 @@ export default function UnifiedDashboard() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
+
+  // State for tabs
+  const [activeTab, setActiveTab] = useState<'personal' | 'team'>('personal');
 
   // Fecha de inicio del contador: 1 de enero de 2025
   const startDate = new Date(2025, 0, 1);
@@ -62,30 +68,26 @@ export default function UnifiedDashboard() {
 
         // Obtener visitas solo si tenemos un usuario
         if (currentUser) {
-          const visitsResponse = await fetch('/api/sheets?type=visits');
+          const visitsResponse = await fetch(`/api/sheets?type=visits&userId=${currentUser.id}`);
           if (visitsResponse.ok) {
             const visitsData = await visitsResponse.json();
             
             if (visitsData.visits && Array.isArray(visitsData.visits)) {
-              
-              // Filtrar solo las visitas del usuario actual
-              const userVisits = visitsData.visits
-                .filter((visit: { userId: string; id: string; date: string }) => {
-                  const visitUserId = visit.userId;
-                  const matches = visitUserId === currentUser.id;
-                  return matches;
-                });
-              
-              setVisits(userVisits);
+              setVisits(visitsData.visits);
             }
           }
         }
 
         // Cargar mediciones corporales desde Google Sheets
-        const measurementsResponse = await fetch('/api/sheets?type=body');
-        if (measurementsResponse.ok) {
-          const measurementsData = await measurementsResponse.json();
-          setBodyMeasurements(measurementsData.bodyMeasurements || []);
+        if (currentUser) {
+          const measurementsResponse = await fetch(`/api/sheets?type=body&userId=${currentUser.id}`);
+          if (measurementsResponse.ok) {
+            const measurementsData = await measurementsResponse.json();
+            
+            if (measurementsData.bodyMeasurements && Array.isArray(measurementsData.bodyMeasurements)) {
+              setBodyMeasurements(measurementsData.bodyMeasurements);
+            }
+          }
         }
 
       } catch (error) {
@@ -101,7 +103,35 @@ export default function UnifiedDashboard() {
   }, [session]);
 
   // Calcular estadísticas para el usuario actual
-  const totalVisits = visits.length;
+  const userVisits = visits.filter(v => v.userId === user?.id);
+  const totalVisits = userVisits.length;
+
+  // Debug temporal para verificar si sigue sumando
+  if (user?.id) {
+    const allUserIds = [...new Set(visits.map(v => v.userId))];
+    const allMeasurementUserIds = [...new Set(bodyMeasurements.map(m => m.userId))];
+    
+    console.log('🔍 Debug visitas Dashboard Personal:', {
+      userId: user.id,
+      totalVisits: visits.length,
+      allUserIds: allUserIds,
+      sampleVisit: visits[0] || 'No hay visitas',
+      isCorrect: allUserIds.length === 1 && allUserIds[0] === user.id,
+      problem: allUserIds.length > 1 ? 'Múltiples usuarios en visits' : 
+               allUserIds.length === 0 ? 'No hay visitas' : 'OK'
+    });
+    
+    console.log('🔍 Debug mediciones Dashboard Personal:', {
+      userId: user.id,
+      totalMeasurements: bodyMeasurements.length,
+      allMeasurementUserIds: allMeasurementUserIds,
+      sampleMeasurement: bodyMeasurements[0] || 'No hay mediciones',
+      isCorrect: allMeasurementUserIds.length === 1 && allMeasurementUserIds[0] === user.id,
+      problem: allMeasurementUserIds.length > 1 ? 'Múltiples usuarios en mediciones' : 
+               allMeasurementUserIds.length === 0 ? 'No hay mediciones' : 'OK'
+    });
+  }
+
 
   // Función para agregar visita
   const handleAddVisit = async () => {
@@ -380,8 +410,45 @@ export default function UnifiedDashboard() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      {/* Sección PersonalDashboard - Saludo y contador principal */}
-      <div className="bg-white rounded-lg shadow-md p-6">
+      {/* Tabs */}
+      <div className="bg-white rounded-lg shadow-md">
+        <div className="border-b border-gray-200">
+          <nav className="flex space-x-8 px-6" aria-label="Tabs">
+            <button
+              onClick={() => setActiveTab('personal')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'personal'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              📊 Dashboard Personal
+            </button>
+            <button
+              onClick={() => setActiveTab('team')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'team'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              👥 Team Attendance
+            </button>
+          </nav>
+        </div>
+      </div>
+
+      {/* Banner de estado de API */}
+      <ApiStatusBanner />
+
+      {/* Contenido de las pestañas */}
+      {activeTab === 'personal' && (
+        <>
+          {/* Notificaciones de invitaciones */}
+          <InvitationNotifications />
+          
+          {/* Sección PersonalDashboard - Saludo y contador principal */}
+          <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">
           ¡Hola, {user.name}! 👋
         </h2>
@@ -530,7 +597,7 @@ export default function UnifiedDashboard() {
           <details open={false}>
             <summary className="cursor-pointer font-medium text-gray-700 flex items-center">
               <span className="mr-2">▶️</span>
-              🔍 Depuración - Visitas recientes ({visits.length})
+              🔍 Depuración - Visitas recientes ({userVisits.length})
             </summary>
             <div className="mt-4 space-y-2">
               <div className="text-sm text-gray-600 mb-3">Últimos 10 días</div>
@@ -538,7 +605,7 @@ export default function UnifiedDashboard() {
                 const date = new Date();
                 date.setDate(date.getDate() - i);
                 const dateString = date.toLocaleDateString('en-CA'); // Formato YYYY-MM-DD en zona local
-                const visitsOnDate = visits.filter(v => {
+                const visitsOnDate = userVisits.filter(v => {
                   const visitDate = new Date(v.date);
                   const visitDateLocal = visitDate.toLocaleDateString('en-CA');
                   return visitDateLocal === dateString;
@@ -552,14 +619,14 @@ export default function UnifiedDashboard() {
                         // Solo mostrar datos para el usuario actual (Gabi)
                         if (userItem.id !== user?.id) return null;
                         
-                        const userVisits = visitsOnDate.filter(v => v.userId === userItem.id);
+                        const userVisitsOnDate = visitsOnDate.filter(v => v.userId === userItem.id);
                         return (
-                          <div key={userItem.id} className={`${userVisits.length > 0 ? 'text-green-600' : 'text-red-500'} flex justify-between items-center`}>
+                          <div key={userItem.id} className={`${userVisitsOnDate.length > 0 ? 'text-green-600' : 'text-red-500'} flex justify-between items-center`}>
                             <div>
-                              {userItem.name}: {userVisits.length > 0 ? `✅ (${userVisits.length} visitas)` : '❌ No registrado'}
-                              {userVisits.length > 0 && (
+                              {userItem.name}: {userVisitsOnDate.length > 0 ? `✅ (${userVisitsOnDate.length} visitas)` : '❌ No registrado'}
+                              {userVisitsOnDate.length > 0 && (
                                 <div className="text-xs text-gray-500 ml-4">
-                                  {userVisits.map((v, i) => (
+                                  {userVisitsOnDate.map((v, i) => (
                                     <div key={i} className="flex justify-between items-center">
                                       <div>ID: {v.id} - Hora: {new Date(v.date).toLocaleTimeString()}</div>
                                       <button 
@@ -649,13 +716,19 @@ export default function UnifiedDashboard() {
                       }
                     }
                     return (
-                      <tr key={userItem.id + m.id} className="border-t">
+                      <tr key={`${userItem.id}-${m.id}-${idx}`} className="border-t">
                         {idx === 0 && (
                           <td rowSpan={measurementsToShow.length} className="px-2 py-1 font-medium align-top text-gray-900">{userItem.name}
                             <button onClick={() => openModal(userItem.id)} className="ml-2 text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 px-2 py-1 rounded">+</button>
                           </td>
                         )}
-                        <td className="px-2 py-1 text-gray-800 font-medium text-xxs">{m.date}</td>
+                        <td className="px-2 py-1 text-gray-800 font-medium text-xs">
+                          {new Date(m.date).toLocaleDateString('es-ES', {
+                            year: '2-digit',
+                            month: '2-digit',
+                            day: '2-digit'
+                          })}
+                        </td>
                         <td className="px-2 py-1 text-gray-900 font-bold">
                           {typeof m.muscle === 'number' && !isNaN(m.muscle) ? m.muscle + '%' : <span className="text-gray-400">–</span>}
                           {muscleChange && (
@@ -849,6 +922,10 @@ export default function UnifiedDashboard() {
           </div>
         </div>
       )}
+        </>
+      )}
+
+      {activeTab === 'team' && <TeamDashboard />}
     </div>
   );
 }
