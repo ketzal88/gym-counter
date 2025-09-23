@@ -68,15 +68,19 @@ export async function GET() {
         const userGroups = rows.filter(row => {
           const members = row.get('members');
           return members && members.includes(session.user?.email);
-        }).map(row => ({
-          id: row.get('id'),
-          name: row.get('name'),
-          description: row.get('description'),
-          adminId: row.get('adminId'),
-          members: row.get('members').split(','),
-          createdAt: new Date(row.get('createdAt')),
-          isPublic: row.get('isPublic') === 'true'
-        }));
+        }).map(row => {
+          const group = {
+            id: row.get('id'),
+            name: row.get('name'),
+            description: row.get('description'),
+            adminId: row.get('adminId'),
+            members: row.get('members').split(','),
+            createdAt: new Date(row.get('createdAt')),
+            isPublic: row.get('isPublic') === 'true'
+          };
+          console.log('[DEBUG] Grupo encontrado:', group);
+          return group;
+        });
 
         // Guardar en cache por 2 minutos
         apiCache.set(cacheKey, userGroups, 120000);
@@ -162,7 +166,7 @@ export async function POST(request: Request) {
   }
 }
 
-// PUT /api/groups - Actualizar grupo (agregar/quitar miembros)
+// PUT /api/groups - Actualizar grupo (agregar/quitar miembros, editar, salir)
 export async function PUT(request: Request) {
   try {
     const session = await getServerSession();
@@ -171,9 +175,10 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const { groupId, action, memberEmail } = await request.json();
+    const body = await request.json();
+    const { groupId, action, memberEmail, name, description, userEmail } = body;
 
-    if (!groupId || !action || !memberEmail) {
+    if (!groupId || !action) {
       return NextResponse.json({ error: 'Faltan parámetros requeridos' }, { status: 400 });
     }
 
@@ -192,30 +197,99 @@ export async function PUT(request: Request) {
           return NextResponse.json({ error: 'Grupo no encontrado' }, { status: 404 });
         }
 
-        // Verificar que el usuario es admin del grupo
-        if (groupRow.get('adminId') !== session.user?.email) {
-          return NextResponse.json({ error: 'No tienes permisos para modificar este grupo' }, { status: 403 });
-        }
-
         const currentMembers = groupRow.get('members').split(',').filter((m: string) => m.trim());
         
         if (action === 'add') {
+          // Agregar miembro (solo admin)
+          if (groupRow.get('adminId') !== session.user?.email) {
+            return NextResponse.json({ error: 'No tienes permisos para modificar este grupo' }, { status: 403 });
+          }
           if (!currentMembers.includes(memberEmail)) {
             currentMembers.push(memberEmail);
           }
+          groupRow.set('members', currentMembers.join(','));
+          
         } else if (action === 'remove') {
+          // Remover miembro (solo admin)
+          if (groupRow.get('adminId') !== session.user?.email) {
+            return NextResponse.json({ error: 'No tienes permisos para modificar este grupo' }, { status: 403 });
+          }
           const index = currentMembers.indexOf(memberEmail);
           if (index > -1) {
             currentMembers.splice(index, 1);
           }
+          groupRow.set('members', currentMembers.join(','));
+          
+        } else if (action === 'update') {
+          // Actualizar nombre/descripción (cualquier miembro puede editar por ahora)
+          const adminId = groupRow.get('adminId');
+          const userEmail = session.user?.email;
+          console.log('[DEBUG] Admin ID:', adminId);
+          console.log('[DEBUG] User Email:', userEmail);
+          console.log('[DEBUG] Are they equal?', adminId === userEmail);
+          console.log('[DEBUG] Current members:', currentMembers);
+          console.log('[DEBUG] Is user a member?', currentMembers.includes(userEmail));
+          
+          // Permitir edición si es miembro del grupo (temporalmente)
+          if (!currentMembers.includes(userEmail)) {
+            return NextResponse.json({ 
+              error: 'No eres miembro de este grupo',
+              debug: {
+                adminId,
+                userEmail,
+                groupId,
+                members: currentMembers
+              }
+            }, { status: 403 });
+          }
+          if (name) {
+            groupRow.set('name', name);
+          }
+          if (description !== undefined) {
+            groupRow.set('description', description);
+          }
+          
+        } else if (action === 'leave') {
+          // Salir del grupo (cualquier miembro)
+          if (!currentMembers.includes(userEmail)) {
+            return NextResponse.json({ error: 'No eres miembro de este grupo' }, { status: 403 });
+          }
+          
+          // Si es el admin, no puede salir (o transferir admin a otro miembro)
+          if (groupRow.get('adminId') === userEmail) {
+            return NextResponse.json({ error: 'El administrador no puede salir del grupo. Transfiere la administración primero.' }, { status: 403 });
+          }
+          
+          const index = currentMembers.indexOf(userEmail);
+          if (index > -1) {
+            currentMembers.splice(index, 1);
+          }
+          groupRow.set('members', currentMembers.join(','));
         }
 
-        groupRow.set('members', currentMembers.join(','));
         await groupRow.save();
 
-        return NextResponse.json({ 
-          message: `Miembro ${action === 'add' ? 'agregado' : 'removido'} exitosamente` 
-        });
+        // Limpiar cache
+        const cacheKey = `groups_${session.user.email}`;
+        apiCache.delete(cacheKey);
+
+        let message = '';
+        switch (action) {
+          case 'add':
+            message = 'Miembro agregado exitosamente';
+            break;
+          case 'remove':
+            message = 'Miembro removido exitosamente';
+            break;
+          case 'update':
+            message = 'Grupo actualizado exitosamente';
+            break;
+          case 'leave':
+            message = 'Has salido del grupo exitosamente';
+            break;
+        }
+
+        return NextResponse.json({ message });
       }
     } catch (error) {
       console.error('[API] Error actualizando grupo:', error);

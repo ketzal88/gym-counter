@@ -6,6 +6,7 @@ import { GroupInvitation } from '@/data/types';
 export default function InvitationNotifications() {
   const [invitations, setInvitations] = useState<GroupInvitation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [respondingToInvitation, setRespondingToInvitation] = useState<string | null>(null);
 
   useEffect(() => {
     fetchInvitations();
@@ -26,6 +27,7 @@ export default function InvitationNotifications() {
   };
 
   const respondToInvitation = async (invitationId: string, response: 'accepted' | 'declined') => {
+    setRespondingToInvitation(invitationId);
     try {
       const apiResponse = await fetch('/api/invitations', {
         method: 'PUT',
@@ -49,11 +51,22 @@ export default function InvitationNotifications() {
       }
     } catch (error) {
       console.error('Error respondiendo invitación:', error);
+    } finally {
+      setRespondingToInvitation(null);
     }
   };
 
   if (loading) {
-    return null;
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="flex items-center justify-center py-4">
+          <div className="flex items-center space-x-2 text-gray-500">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            <span>Cargando invitaciones...</span>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (invitations.length === 0) {
@@ -96,15 +109,37 @@ export default function InvitationNotifications() {
               <div className="flex space-x-2">
                 <button
                   onClick={() => respondToInvitation(invitation.id, 'declined')}
-                  className="bg-red-100 hover:bg-red-200 text-red-800 px-3 py-2 rounded-md text-sm transition-colors duration-200"
+                  disabled={respondingToInvitation === invitation.id}
+                  className="bg-red-100 hover:bg-red-200 disabled:bg-gray-100 text-red-800 px-3 py-2 rounded-md text-sm transition-colors duration-200 flex items-center space-x-2"
                 >
-                  ❌ Rechazar
+                  {respondingToInvitation === invitation.id ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                      <span>Procesando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>❌</span>
+                      <span>Rechazar</span>
+                    </>
+                  )}
                 </button>
                 <button
                   onClick={() => respondToInvitation(invitation.id, 'accepted')}
-                  className="bg-green-100 hover:bg-green-200 text-green-800 px-3 py-2 rounded-md text-sm transition-colors duration-200"
+                  disabled={respondingToInvitation === invitation.id}
+                  className="bg-green-100 hover:bg-green-200 disabled:bg-gray-100 text-green-800 px-3 py-2 rounded-md text-sm transition-colors duration-200 flex items-center space-x-2"
                 >
-                  ✅ Aceptar
+                  {respondingToInvitation === invitation.id ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                      <span>Procesando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>✅</span>
+                      <span>Aceptar</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>

@@ -13,11 +13,22 @@ export default function TeamDashboard() {
   const [groupMembers, setGroupMembers] = useState<User[]>([]);
   const [groupVisits, setGroupVisits] = useState<GymVisit[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingGroups, setLoadingGroups] = useState(false);
+  const [loadingGroupData, setLoadingGroupData] = useState(false);
+  const [creatingGroup, setCreatingGroup] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupDescription, setNewGroupDescription] = useState('');
+  
+  // Estados para editar grupo
+  const [showEditGroup, setShowEditGroup] = useState(false);
+  const [editGroupName, setEditGroupName] = useState('');
+  const [editGroupDescription, setEditGroupDescription] = useState('');
+  const [updatingGroup, setUpdatingGroup] = useState(false);
+  const [leavingGroup, setLeavingGroup] = useState(false);
 
   const fetchGroups = useCallback(async () => {
+    setLoadingGroups(true);
     try {
       const response = await fetch('/api/groups');
       if (response.ok) {
@@ -32,6 +43,7 @@ export default function TeamDashboard() {
     } catch (error) {
       console.error('Error cargando grupos:', error);
     } finally {
+      setLoadingGroups(false);
       setLoading(false);
     }
   }, [selectedGroup]);
@@ -39,6 +51,7 @@ export default function TeamDashboard() {
   const fetchGroupData = useCallback(async () => {
     if (!selectedGroup) return;
 
+    setLoadingGroupData(true);
     try {
       const response = await fetch(`/api/groups/${selectedGroup.id}/members`);
       if (response.ok) {
@@ -64,6 +77,8 @@ export default function TeamDashboard() {
       );
       setGroupMembers(members);
       setGroupVisits([]);
+    } finally {
+      setLoadingGroupData(false);
     }
   }, [selectedGroup]);
 
@@ -82,6 +97,7 @@ export default function TeamDashboard() {
   const createGroup = async () => {
     if (!newGroupName.trim()) return;
 
+    setCreatingGroup(true);
     try {
       const response = await fetch('/api/groups', {
         method: 'POST',
@@ -103,6 +119,77 @@ export default function TeamDashboard() {
       }
     } catch (error) {
       console.error('Error creando grupo:', error);
+    } finally {
+      setCreatingGroup(false);
+    }
+  };
+
+  const updateGroup = async () => {
+    if (!selectedGroup || !editGroupName.trim()) return;
+
+    setUpdatingGroup(true);
+    try {
+      const response = await fetch('/api/groups', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          groupId: selectedGroup.id,
+          action: 'update',
+          name: editGroupName.trim(),
+          description: editGroupDescription.trim(),
+        }),
+      });
+
+      if (response.ok) {
+        await fetchGroups();
+        setShowEditGroup(false);
+        setEditGroupName('');
+        setEditGroupDescription('');
+        // Actualizar el grupo seleccionado
+        const updatedGroups = groups.map(g => 
+          g.id === selectedGroup.id 
+            ? { ...g, name: editGroupName.trim(), description: editGroupDescription.trim() }
+            : g
+        );
+        setGroups(updatedGroups);
+        setSelectedGroup({ ...selectedGroup, name: editGroupName.trim(), description: editGroupDescription.trim() });
+      }
+    } catch (error) {
+      console.error('Error actualizando grupo:', error);
+    } finally {
+      setUpdatingGroup(false);
+    }
+  };
+
+  const leaveGroup = async () => {
+    if (!selectedGroup || !session?.user?.email) return;
+
+    setLeavingGroup(true);
+    try {
+      const response = await fetch('/api/groups', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          groupId: selectedGroup.id,
+          action: 'leave',
+          userEmail: session.user.email,
+        }),
+      });
+
+      if (response.ok) {
+        await fetchGroups();
+        setSelectedGroup(null);
+        setGroupMembers([]);
+        setGroupVisits([]);
+      }
+    } catch (error) {
+      console.error('Error saliendo del grupo:', error);
+    } finally {
+      setLeavingGroup(false);
     }
   };
 
@@ -190,12 +277,81 @@ export default function TeamDashboard() {
                 >
                   Cancelar
                 </button>
+            <button
+              onClick={createGroup}
+              disabled={!newGroupName.trim() || creatingGroup}
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors duration-200 flex items-center justify-center"
+            >
+              {creatingGroup ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Creando...
+                </>
+              ) : (
+                'Crear Grupo'
+              )}
+            </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para editar grupo */}
+      {showEditGroup && selectedGroup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Editar Grupo</h3>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="editGroupName" className="block text-sm font-medium text-gray-700 mb-1">
+                  Nombre del grupo *
+                </label>
+                <input
+                  type="text"
+                  id="editGroupName"
+                  value={editGroupName}
+                  onChange={(e) => setEditGroupName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  placeholder="Mi Grupo de Gym"
+                />
+              </div>
+              <div>
+                <label htmlFor="editGroupDescription" className="block text-sm font-medium text-gray-700 mb-1">
+                  Descripción
+                </label>
+                <input
+                  type="text"
+                  id="editGroupDescription"
+                  value={editGroupDescription}
+                  onChange={(e) => setEditGroupDescription(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  placeholder="Grupo para motivarnos mutuamente"
+                />
+              </div>
+              <div className="flex space-x-3 pt-4">
                 <button
-                  onClick={createGroup}
-                  disabled={!newGroupName.trim()}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors duration-200"
+                  onClick={() => setShowEditGroup(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors duration-200"
                 >
-                  Crear Grupo
+                  Cancelar
+                </button>
+                <button
+                  onClick={updateGroup}
+                  disabled={!editGroupName.trim() || updatingGroup}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors duration-200 flex items-center justify-center"
+                >
+                  {updatingGroup ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Actualizando...
+                    </>
+                  ) : (
+                    'Actualizar Grupo'
+                  )}
                 </button>
               </div>
             </div>
@@ -203,6 +359,41 @@ export default function TeamDashboard() {
         </div>
       )}
 
+      {/* Modal de confirmación para salir del grupo */}
+      {leavingGroup && selectedGroup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">¿Salir del Grupo?</h3>
+            <p className="text-gray-600 mb-6">
+              ¿Estás seguro de que quieres salir del grupo <strong>&ldquo;{selectedGroup.name}&rdquo;</strong>?
+              <br />
+              <span className="text-sm text-red-600">Esta acción no se puede deshacer.</span>
+            </p>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setLeavingGroup(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={leaveGroup}
+                disabled={leavingGroup}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:bg-gray-400 transition-colors duration-200 flex items-center justify-center"
+              >
+                {leavingGroup ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Saliendo...
+                  </>
+                ) : (
+                  'Salir del Grupo'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {selectedGroup && (
         <>
@@ -212,35 +403,44 @@ export default function TeamDashboard() {
               📊 Contadores del Equipo
             </h3>
             
-            <div 
-              className="gap-4" 
-              style={{ 
-                display: 'grid',
-                gridTemplateColumns: `repeat(2, 1fr)`,
-                gap: '1rem'
-              }}
-            >
-              {groupMembers.map((member) => {
-                const totalVisits = getTotalVisits(member.id);
-                const attendedToday = didUserAttendOnDate(member.id, today);
-                
-                return (
-                  <div key={member.id} className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 text-center border-2 border-blue-100 hover:border-blue-200 transition-all duration-200 shadow-lg">
-                    <div className="text-lg font-bold text-gray-800 mb-3">
-                      {member.name}
+            {loadingGroupData ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center">
+                  <div className="text-4xl mb-4 animate-spin">⏳</div>
+                  <p className="text-gray-600">Cargando datos del equipo...</p>
+                </div>
+              </div>
+            ) : (
+              <div 
+                className="gap-4" 
+                style={{ 
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(2, 1fr)`,
+                  gap: '1rem'
+                }}
+              >
+                {groupMembers.map((member) => {
+                  const totalVisits = getTotalVisits(member.id);
+                  const attendedToday = didUserAttendOnDate(member.id, today);
+                  
+                  return (
+                    <div key={member.id} className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 text-center border-2 border-blue-100 hover:border-blue-200 transition-all duration-200 shadow-lg">
+                      <div className="text-lg font-bold text-gray-800 mb-3">
+                        {member.name}
+                      </div>
+                      <div className="text-4xl font-black text-blue-600 mb-3">
+                        {totalVisits} 🔥
+                      </div>
+                      <div className={`text-sm font-semibold px-3 py-1 rounded-full ${
+                        attendedToday ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                      }`}>
+                        {attendedToday ? '✅ Fue hoy' : '❌ No fue hoy'}
+                      </div>
                     </div>
-                    <div className="text-4xl font-black text-blue-600 mb-3">
-                      {totalVisits} 🔥
-                    </div>
-                    <div className={`text-sm font-semibold px-3 py-1 rounded-full ${
-                      attendedToday ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                    }`}>
-                      {attendedToday ? '✅ Fue hoy' : '❌ No fue hoy'}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* 2. Asistencia semanal del equipo */}
@@ -249,7 +449,15 @@ export default function TeamDashboard() {
               📅 Asistencia Semanal del Equipo
             </h3>
             
-            <div className="overflow-x-auto">
+            {loadingGroupData ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center">
+                  <div className="text-4xl mb-4 animate-spin">⏳</div>
+                  <p className="text-gray-600">Cargando asistencia semanal...</p>
+                </div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
               <div className="min-w-full">
                 {/* Header con días de la semana */}
                 <div className="grid gap-1 p-2 bg-indigo-50 border-b border-indigo-200 mb-2" 
@@ -303,6 +511,7 @@ export default function TeamDashboard() {
                 })}
               </div>
             </div>
+            )}
           </div>
 
           {/* 3. Búsqueda de miembros - Invitar amigos al grupo */}
@@ -322,9 +531,17 @@ export default function TeamDashboard() {
           </div>
           <button
             onClick={() => setShowCreateGroup(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-md transition-colors duration-200"
+            disabled={creatingGroup}
+            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-md transition-colors duration-200 flex items-center space-x-2 mx-auto"
           >
-            Crear Primer Grupo
+            {creatingGroup ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <span>Creando...</span>
+              </>
+            ) : (
+              <span>Crear Primer Grupo</span>
+            )}
           </button>
         </div>
       )}
@@ -334,7 +551,7 @@ export default function TeamDashboard() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              👥 Team Attendance
+              👥 Asistencia del equipo
             </h2>
             {selectedGroup && (
               <div className="text-gray-600">
@@ -354,9 +571,10 @@ export default function TeamDashboard() {
                   const group = groups.find(g => g.id === e.target.value);
                   setSelectedGroup(group || null);
                 }}
-                className="px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={loadingGroups}
+                className="px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
               >
-                <option value="">Seleccionar grupo</option>
+                <option value="">{loadingGroups ? 'Cargando...' : 'Seleccionar grupo'}</option>
                 {groups.map(group => (
                   <option key={group.id} value={group.id}>
                     {group.name}
@@ -364,11 +582,46 @@ export default function TeamDashboard() {
                 ))}
               </select>
             )}
+            
+            {selectedGroup && (
+              <>
+                <button
+                  onClick={() => {
+                    setEditGroupName(selectedGroup.name);
+                    setEditGroupDescription(selectedGroup.description || '');
+                    setShowEditGroup(true);
+                  }}
+                  className="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200 flex items-center space-x-1"
+                  title="Editar grupo"
+                >
+                  <span>✏️</span>
+                  <span className="hidden sm:inline">Editar</span>
+                </button>
+                
+                <button
+                  onClick={() => setLeavingGroup(true)}
+                  className="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors duration-200 flex items-center space-x-1"
+                  title="Salir del grupo"
+                >
+                  <span>🚪</span>
+                  <span className="hidden sm:inline">Salir</span>
+                </button>
+              </>
+            )}
+            
             <button
               onClick={() => setShowCreateGroup(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200"
+              disabled={creatingGroup}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors duration-200 flex items-center space-x-2"
             >
-              Crear Grupo
+              {creatingGroup ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Creando...</span>
+                </>
+              ) : (
+                <span>Crear Grupo</span>
+              )}
             </button>
           </div>
         </div>

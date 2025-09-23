@@ -95,14 +95,22 @@ export default function MemberSearch({ groupId, onInviteSent }: MemberSearchProp
           <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
             Buscar por nombre o email
           </label>
-          <input
-            type="text"
-            id="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-            placeholder="Escribe el nombre o email..."
-          />
+          <div className="relative">
+            <input
+              type="text"
+              id="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+              placeholder="Escribe el nombre o email..."
+              disabled={loading}
+            />
+            {loading && (
+              <div className="absolute right-3 top-2.5">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+              </div>
+            )}
+          </div>
         </div>
 
         {error && (
@@ -111,9 +119,12 @@ export default function MemberSearch({ groupId, onInviteSent }: MemberSearchProp
           </div>
         )}
 
-        {loading && (
+        {loading && query.length >= 2 && (
           <div className="flex items-center justify-center py-4">
-            <div className="text-gray-500">Buscando...</div>
+            <div className="flex items-center space-x-2 text-gray-500">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              <span>Buscando usuarios...</span>
+            </div>
           </div>
         )}
 
@@ -132,9 +143,16 @@ export default function MemberSearch({ groupId, onInviteSent }: MemberSearchProp
                 <button
                   onClick={() => sendInvitation(user.email)}
                   disabled={sendingInvite === user.email}
-                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-md text-sm transition-colors duration-200"
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-md text-sm transition-colors duration-200 flex items-center space-x-2"
                 >
-                  {sendingInvite === user.email ? 'Enviando...' : 'Invitar'}
+                  {sendingInvite === user.email ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Enviando...</span>
+                    </>
+                  ) : (
+                    <span>Invitar</span>
+                  )}
                 </button>
               </div>
             ))}
