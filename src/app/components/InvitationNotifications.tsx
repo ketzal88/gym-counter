@@ -3,8 +3,13 @@
 import { useState, useEffect } from 'react';
 import { GroupInvitation } from '@/data/types';
 
+interface ExtendedGroupInvitation extends GroupInvitation {
+  groupName?: string;
+  groupDescription?: string;
+}
+
 export default function InvitationNotifications() {
-  const [invitations, setInvitations] = useState<GroupInvitation[]>([]);
+  const [invitations, setInvitations] = useState<ExtendedGroupInvitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [respondingToInvitation, setRespondingToInvitation] = useState<string | null>(null);
 
@@ -85,11 +90,11 @@ export default function InvitationNotifications() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium text-gray-900">
-                  Te invitaron al grupo <span className="text-blue-600">{(invitation as any).groupName || invitation.groupId}</span>
+                  Te invitaron al grupo <span className="text-blue-600">{invitation.groupName || invitation.groupId}</span>
                 </p>
-                {(invitation as any).groupDescription && (
+                {invitation.groupDescription && (
                   <p className="text-sm text-gray-600">
-                    {(invitation as any).groupDescription}
+                    {invitation.groupDescription}
                   </p>
                 )}
                 <p className="text-sm text-gray-500">

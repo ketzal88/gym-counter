@@ -17,7 +17,7 @@ export default function ApiStatusBanner() {
         } else {
           setShowBanner(false);
         }
-      } catch (error) {
+      } catch {
         // No mostrar banner por errores de red
         setShowBanner(false);
       } finally {

@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
-import { apiCache } from '@/lib/cache';
 
 // Configuración de Google Sheets
 const GROUPS_SPREADSHEET_ID = '1_f43T71BdLN5sky14zcdGEGp3sEEaBIjSD1v5v0myRU';
@@ -71,7 +70,7 @@ export async function GET(
       return NextResponse.json({ error: 'Error conectando con Google Sheets' }, { status: 500 });
     }
 
-    let groupsSheet = groupsDoc.sheetsByTitle['Groups'];
+    const groupsSheet = groupsDoc.sheetsByTitle['Groups'];
     if (!groupsSheet) {
       return NextResponse.json({ error: 'Hoja de grupos no encontrada' }, { status: 404 });
     }
@@ -98,7 +97,7 @@ export async function GET(
     }
     
     // Usar "Users" que es donde están los usuarios
-    let usersSheet = usersDoc.sheetsByTitle['Users'];
+    const usersSheet = usersDoc.sheetsByTitle['Users'];
                      
     if (!usersSheet) {
       return NextResponse.json({ error: 'Hoja de usuarios no encontrada' }, { status: 404 });
