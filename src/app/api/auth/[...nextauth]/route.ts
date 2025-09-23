@@ -4,6 +4,15 @@ import bcrypt from 'bcryptjs';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
 
+// Validar variables de entorno requeridas
+if (!process.env.NEXTAUTH_SECRET) {
+  console.error('[AUTH] Error: NEXTAUTH_SECRET no está definido');
+}
+
+if (!process.env.NEXTAUTH_URL && process.env.NODE_ENV === 'production') {
+  console.error('[AUTH] Error: NEXTAUTH_URL no está definido en producción');
+}
+
 // Configuración de Google Sheets para usuarios
 const USERS_SPREADSHEET_ID = '1_f43T71BdLN5sky14zcdGEGp3sEEaBIjSD1v5v0myRU';
 const CLIENT_EMAIL = 'gymcounter@possible-byte-351918.iam.gserviceaccount.com';
@@ -29,6 +38,10 @@ async function getUsersDoc() {
     return doc;
   } catch (error) {
     console.error('[AUTH] Error conectando con Google Sheets de usuarios:', error);
+    // En producción, no fallar completamente si Google Sheets no está disponible
+    if (process.env.NODE_ENV === 'production') {
+      console.log('[AUTH] Usando modo fallback en producción');
+    }
     return null;
   }
 }
@@ -39,7 +52,15 @@ const fallbackUsers: Array<{
   name: string;
   email: string;
   password: string;
-}> = [];
+}> = [
+  // Usuario temporal para pruebas en producción
+  {
+    id: '1758595778972',
+    name: 'Gabi',
+    email: 'gabrielucc@gmail.com',
+    password: '$2a$10$dummy.hash.for.testing' // Contraseña: "test123"
+  }
+];
 
 const handler = NextAuth({
   providers: [
@@ -86,25 +107,33 @@ const handler = NextAuth({
         const user = fallbackUsers.find(u => u.email === credentials.email);
         
         if (!user) {
+          console.log(`[AUTH] Usuario no encontrado: ${credentials.email}`);
           return null;
         }
 
-        // Por ahora aceptamos cualquier contraseña para usuarios existentes
+        // Para usuarios de prueba, aceptar contraseña específica
         if (user.password === '$2a$10$dummy.hash.for.testing') {
-          return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-          };
+          // Aceptar contraseña "test123" para usuario de prueba
+          if (credentials.password === 'test123') {
+            console.log(`[AUTH] Usuario autenticado desde fallback: ${user.email}`);
+            return {
+              id: user.id,
+              email: user.email,
+              name: user.name,
+            };
+          }
+          return null;
         }
 
-        // Verificar contraseña
+        // Verificar contraseña normal
         const isValidPassword = await bcrypt.compare(credentials.password, user.password);
         
         if (!isValidPassword) {
+          console.log(`[AUTH] Contraseña incorrecta para: ${credentials.email}`);
           return null;
         }
 
+        console.log(`[AUTH] Usuario autenticado desde fallback: ${user.email}`);
         return {
           id: user.id,
           email: user.email,

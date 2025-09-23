@@ -117,17 +117,7 @@ function SignInForm() {
             >
               {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
             </button>
-          </div>
-
-          <div className="text-center">
-            <p className="text-sm text-gray-600">
-              Credenciales de prueba:
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              Email: gabi@example.com<br />
-              Contraseña: cualquier cosa
-            </p>
-          </div>
+          </div>          
         </form>
       </div>
     </div>
