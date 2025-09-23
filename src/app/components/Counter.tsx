@@ -115,8 +115,7 @@ export default function Counter() {
   
   return (
     <div className="w-full max-w-md mx-auto">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold text-gray-800">🏆 Gym Counter</h2>
+      <div className="flex justify-between items-center mb-4">        
         <button
           onClick={handleReset}
           disabled={resetting}

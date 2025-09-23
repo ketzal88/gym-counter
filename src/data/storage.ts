@@ -5,10 +5,7 @@ const STORAGE_KEY = 'gym_counter_data';
 
 // Default state with two users
 const defaultState: CounterState = {
-  users: [
-    { id: '1', name: 'Gabi' },
-    { id: '2', name: 'Iña' }
-  ],
+  users: [],
   visits: [],
   bodyMeasurements: []
 };

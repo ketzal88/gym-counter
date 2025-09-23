@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { User, GymVisit, BodyMeasurement } from '@/data/types';
 import { loadUsers, loadVisits, saveVisit, deleteVisit } from '@/data/sheetsService';
-import { getBodyMeasurements, addBodyMeasurement } from '@/data/storage';
+import { addBodyMeasurement } from '@/data/storage';
 import { useRef } from 'react';
 
 export default function Stats() {
@@ -75,7 +75,14 @@ export default function Stats() {
 
   // Load body measurements on mount and when refreshCounter changes
   useEffect(() => {
-    getBodyMeasurements().then(setBodyMeasurements);
+    // Cargar mediciones corporales desde Google Sheets
+    fetch('/api/sheets?type=body')
+      .then(response => response.json())
+      .then(data => setBodyMeasurements(data.bodyMeasurements || []))
+      .catch(error => {
+        console.error('Error cargando mediciones corporales:', error);
+        setBodyMeasurements([]);
+      });
   }, [refreshCounter]);
 
   useEffect(() => {
@@ -428,7 +435,7 @@ export default function Stats() {
                         </div>
                         <div className={`${ina.length > 0 ? 'text-green-600' : 'text-red-500'} flex justify-between items-center`}>
                           <div>
-                            Iña: {ina.length > 0 ? `✅ (${ina.length} visitas)` : '❌ No registrado'}
+                            {/* Solo mostrar usuarios que existen en los datos */}
                             {ina.length > 0 && (
                               <div className="text-xs text-gray-500 ml-4">
                                 {ina.map((v, i) => (

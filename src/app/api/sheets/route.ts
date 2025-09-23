@@ -160,18 +160,22 @@ export async function GET(request: Request) {
                 date: row.get('date')
               }));
             
+            console.log(`[API] Visitas de ${sheetTitle}:`, visitsFromSheet);
+            
             allVisits = allVisits.concat(visitsFromSheet);
           }
         }
         
+        console.log('[API] Total visitas encontradas:', allVisits.length, allVisits);
+        
         if (type === 'visits') {
           return NextResponse.json({ visits: allVisits });
-                } else {
-                  return NextResponse.json({ 
-                    users: [], 
-                    visits: allVisits 
-                  });
-                }
+        } else {
+          return NextResponse.json({ 
+            users: [], 
+            visits: allVisits 
+          });
+        }
       } catch (error) {
         console.error('[API] Error obteniendo visitas:', error);
         return NextResponse.json({ visits: [] }, { status: 500 });

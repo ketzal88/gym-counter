@@ -14,32 +14,7 @@ const apiCache = {
 const CACHE_DURATION = 5 * 60 * 1000;
 
 // Valores predeterminados si no podemos cargar datos
-const DEFAULT_USERS: User[] = [
-  { 
-    id: '1', 
-    name: 'Gabi',
-    email: 'gabi@example.com',
-    createdAt: new Date('2024-01-01'),
-    streak: 0,
-    totalVisits: 0,
-    subscription: 'free',
-    weight: 75,
-    height: 175,
-    gender: 'male'
-  },
-  { 
-    id: '2', 
-    name: 'Iña',
-    email: 'ina@example.com',
-    createdAt: new Date('2024-01-01'),
-    streak: 0,
-    totalVisits: 0,
-    subscription: 'free',
-    weight: 60,
-    height: 165,
-    gender: 'female'
-  }
-];
+const DEFAULT_USERS: User[] = [];
 
 // Función para construir la URL completa de la API
 function getApiUrl(endpoint: string): string {

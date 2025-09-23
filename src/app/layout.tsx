@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "GymCounter - Track Your Gym Attendance",
   description: "A simple app to track and motivate your gym attendance with friends",
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({
