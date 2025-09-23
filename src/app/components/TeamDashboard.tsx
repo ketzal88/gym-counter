@@ -40,15 +40,9 @@ export default function TeamDashboard() {
     if (!selectedGroup) return;
 
     try {
-      // Limpiar cache añadiendo timestamp
-      const response = await fetch(`/api/groups/${selectedGroup.id}/members?t=${Date.now()}`);
+      const response = await fetch(`/api/groups/${selectedGroup.id}/members`);
       if (response.ok) {
         const data = await response.json();
-        console.log('🔍 Team Dashboard - Datos recibidos:', {
-          totalVisits: data.visits?.length || 0,
-          members: data.members?.length || 0,
-          sampleVisit: data.visits?.[0] || 'No hay visitas'
-        });
         setGroupMembers(data.members || []);
         setGroupVisits(data.visits || []);
       } else {
@@ -209,62 +203,22 @@ export default function TeamDashboard() {
         </div>
       )}
 
-      {/* Header con selección de grupo - AL PRINCIPIO */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              👥 Team Attendance
-            </h2>
-            {selectedGroup && (
-              <div className="text-gray-600">
-                <span className="font-medium">{selectedGroup.name}</span>
-                {selectedGroup.description && (
-                  <span className="ml-2">- {selectedGroup.description}</span>
-                )}
-              </div>
-            )}
-          </div>
-          
-          <div className="flex gap-2">
-            {groups.length > 0 && (
-              <select
-                value={selectedGroup?.id || ''}
-                onChange={(e) => {
-                  const group = groups.find(g => g.id === e.target.value);
-                  setSelectedGroup(group || null);
-                }}
-                className="px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Seleccionar grupo</option>
-                {groups.map(group => (
-                  <option key={group.id} value={group.id}>
-                    {group.name}
-                  </option>
-                ))}
-              </select>
-            )}
-            <button
-              onClick={() => setShowCreateGroup(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200"
-            >
-              Crear Grupo
-            </button>
-          </div>
-        </div>
-      </div>
 
       {selectedGroup && (
         <>
           {/* 1. Grid de contadores de miembros (1-4) - PRINCIPAL */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center justify-center">
-              📊 Contadores del Equipo ({groupMembers.length} miembros)
+              📊 Contadores del Equipo
             </h3>
             
             <div 
-              className="grid gap-4" 
-              style={{ gridTemplateColumns: `repeat(${Math.min(groupMembers.length, 4)}, 1fr)` }}
+              className="gap-4" 
+              style={{ 
+                display: 'grid',
+                gridTemplateColumns: `repeat(${groupMembers.length}, 1fr)`,
+                gap: '1rem'
+              }}
             >
               {groupMembers.map((member) => {
                 const totalVisits = getTotalVisits(member.id);
@@ -299,8 +253,8 @@ export default function TeamDashboard() {
               <div className="min-w-full">
                 {/* Header con días de la semana */}
                 <div className="grid gap-1 p-2 bg-indigo-50 border-b border-indigo-200 mb-2" 
-                     style={{ gridTemplateColumns: `150px repeat(7, 1fr)` }}>
-                  <div className="font-medium text-indigo-900 text-sm">Miembro</div>
+                     style={{ gridTemplateColumns: `50px repeat(7, 1fr)` }}>
+                  <div className="font-medium text-indigo-900 text-sm"></div>
                   {currentWeekDays.map((date, index) => (
                     <div key={index} className="text-center">
                       <div className="text-xs text-indigo-600 font-medium">
@@ -318,7 +272,7 @@ export default function TeamDashboard() {
                   return (
                     <div key={member.id} 
                          className="grid gap-1 p-2 border-b border-gray-100 hover:bg-gray-50"
-                         style={{ gridTemplateColumns: `150px repeat(7, 1fr)` }}>
+                         style={{ gridTemplateColumns: `50px repeat(7, 1fr)` }}>
                       <div className="font-medium text-gray-900 text-sm flex items-center">
                         {member.name}
                       </div>
@@ -374,6 +328,51 @@ export default function TeamDashboard() {
           </button>
         </div>
       )}
+
+      {/* Header con selección de grupo - AL FINAL */}
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              👥 Team Attendance
+            </h2>
+            {selectedGroup && (
+              <div className="text-gray-600">
+                <span className="font-medium">{selectedGroup.name}</span>
+                {selectedGroup.description && (
+                  <span className="ml-2">- {selectedGroup.description}</span>
+                )}
+              </div>
+            )}
+          </div>
+          
+          <div className="flex gap-2">
+            {groups.length > 0 && (
+              <select
+                value={selectedGroup?.id || ''}
+                onChange={(e) => {
+                  const group = groups.find(g => g.id === e.target.value);
+                  setSelectedGroup(group || null);
+                }}
+                className="px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Seleccionar grupo</option>
+                {groups.map(group => (
+                  <option key={group.id} value={group.id}>
+                    {group.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            <button
+              onClick={() => setShowCreateGroup(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200"
+            >
+              Crear Grupo
+            </button>
+          </div>
+        </div>
+      </div>
 
     </div>
   );

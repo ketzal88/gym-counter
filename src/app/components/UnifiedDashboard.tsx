@@ -106,31 +106,6 @@ export default function UnifiedDashboard() {
   const userVisits = visits.filter(v => v.userId === user?.id);
   const totalVisits = userVisits.length;
 
-  // Debug temporal para verificar si sigue sumando
-  if (user?.id) {
-    const allUserIds = [...new Set(visits.map(v => v.userId))];
-    const allMeasurementUserIds = [...new Set(bodyMeasurements.map(m => m.userId))];
-    
-    console.log('🔍 Debug visitas Dashboard Personal:', {
-      userId: user.id,
-      totalVisits: visits.length,
-      allUserIds: allUserIds,
-      sampleVisit: visits[0] || 'No hay visitas',
-      isCorrect: allUserIds.length === 1 && allUserIds[0] === user.id,
-      problem: allUserIds.length > 1 ? 'Múltiples usuarios en visits' : 
-               allUserIds.length === 0 ? 'No hay visitas' : 'OK'
-    });
-    
-    console.log('🔍 Debug mediciones Dashboard Personal:', {
-      userId: user.id,
-      totalMeasurements: bodyMeasurements.length,
-      allMeasurementUserIds: allMeasurementUserIds,
-      sampleMeasurement: bodyMeasurements[0] || 'No hay mediciones',
-      isCorrect: allMeasurementUserIds.length === 1 && allMeasurementUserIds[0] === user.id,
-      problem: allMeasurementUserIds.length > 1 ? 'Múltiples usuarios en mediciones' : 
-               allMeasurementUserIds.length === 0 ? 'No hay mediciones' : 'OK'
-    });
-  }
 
 
   // Función para agregar visita

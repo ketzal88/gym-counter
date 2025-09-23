@@ -63,15 +63,7 @@ export async function GET(
 
     const { groupId } = await params;
     
-    console.log('API: Buscando grupo con ID:', groupId);
 
-    // Verificar cache primero (deshabilitado temporalmente para usar datos actualizados)
-    // const cacheKey = `group_members_${groupId}`;
-    // const cachedData = apiCache.get(cacheKey);
-    // if (cachedData) {
-    //   console.log('API: Datos encontrados en cache para grupo:', groupId);
-    //   return NextResponse.json(cachedData);
-    // }
 
     // 1. Obtener información del grupo
     const groupsDoc = await getGroupsDoc();
@@ -85,50 +77,34 @@ export async function GET(
     }
 
     const groupRows = await groupsSheet.getRows();
-    console.log('API: Total de grupos encontrados:', groupRows.length);
-    console.log('API: IDs de grupos disponibles:', groupRows.map(row => row.get('id')));
     
     const group = groupRows.find(row => row.get('id') === groupId);
     
     if (!group) {
-      console.log('API: Grupo no encontrado con ID:', groupId);
       return NextResponse.json({ error: 'Grupo no encontrado' }, { status: 404 });
     }
-    
-    console.log('API: Grupo encontrado:', group.get('name'));
 
     // Verificar que el usuario es miembro del grupo
     const members = group.get('members').split(',');
-    console.log('API: Miembros del grupo:', members);
-    console.log('API: Usuario actual:', session.user.email);
     
     if (!members.includes(session.user.email)) {
-      console.log('API: Usuario no es miembro del grupo');
       return NextResponse.json({ error: 'No eres miembro de este grupo' }, { status: 403 });
     }
-    
-    console.log('API: Usuario es miembro del grupo, continuando...');
 
     // 2. Obtener información de usuarios de todos los miembros
-    console.log('API: Obteniendo documento de usuarios...');
     const usersDoc = await getUsersDoc();
     if (!usersDoc) {
-      console.log('API: Error conectando con Google Sheets de usuarios');
       return NextResponse.json({ error: 'Error conectando con Google Sheets de usuarios' }, { status: 500 });
     }
-    console.log('API: Documento de usuarios obtenido correctamente');
     
     // Usar "Users" que es donde están los usuarios
     let usersSheet = usersDoc.sheetsByTitle['Users'];
                      
     if (!usersSheet) {
-      console.log('API: Hoja Users no encontrada. Hojas disponibles:', Object.keys(usersDoc.sheetsByTitle));
       return NextResponse.json({ error: 'Hoja de usuarios no encontrada' }, { status: 404 });
     }
-    console.log('API: Hoja de usuarios encontrada:', usersSheet.title);
 
     const userRows = await usersSheet.getRows();
-    console.log('API: Total de usuarios encontrados:', userRows.length);
     
     const memberUsers = userRows.filter(row => {
       const email = row.get('email');
@@ -139,8 +115,6 @@ export async function GET(
       email: row.get('email'),
       googleSheetId: row.get('googleSheetId')
     }));
-    
-    console.log('API: Miembros encontrados:', memberUsers.length);
 
     // 3. Obtener visitas de todos los miembros
     const mainDoc = await getMainDoc();
@@ -167,7 +141,6 @@ export async function GET(
                 date: row.get('date')
               }));
             
-            console.log(`API: ${member.name} (${member.id}): ${visits.length} visitas encontradas`);
             memberVisits.push(...visits);
           }
         } catch (error) {
@@ -176,7 +149,6 @@ export async function GET(
       }
     }
 
-    console.log(`API: Total de visitas de todos los miembros: ${memberVisits.length}`);
 
     // 4. Calcular estadísticas de asistencia para cada miembro
     const memberStats = memberUsers.map(member => {
@@ -214,8 +186,6 @@ export async function GET(
       visits: memberVisits
     };
 
-    // Guardar en cache por 2 minutos (deshabilitado temporalmente)
-    // apiCache.set(cacheKey, responseData, 120000);
 
     return NextResponse.json(responseData);
 
