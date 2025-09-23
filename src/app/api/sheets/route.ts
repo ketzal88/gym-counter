@@ -47,7 +47,6 @@ export async function GET(request: Request) {
     if (type === 'check_structure') {
       try {
         const sheetTitles = Object.keys(doc.sheetsByTitle);
-        console.log('[API] Hojas disponibles:', sheetTitles);
         
         return NextResponse.json({ 
           availableSheets: sheetTitles,
@@ -97,7 +96,6 @@ export async function GET(request: Request) {
           }
         }
         
-        console.log('Mediciones corporales encontradas:', allBodyMeasurements);
         return NextResponse.json({ bodyMeasurements: allBodyMeasurements });
       } catch (error) {
         console.error('[API] Error obteniendo mediciones corporales:', error);
@@ -160,13 +158,11 @@ export async function GET(request: Request) {
                 date: row.get('date')
               }));
             
-            console.log(`[API] Visitas de ${sheetTitle}:`, visitsFromSheet);
             
             allVisits = allVisits.concat(visitsFromSheet);
           }
         }
         
-        console.log('[API] Total visitas encontradas:', allVisits.length, allVisits);
         
         if (type === 'visits') {
           return NextResponse.json({ visits: allVisits });
@@ -213,7 +209,6 @@ export async function POST(request: Request) {
             headerValues: ['id', 'name', 'email']
           });
           createdSheets.push('Users');
-          console.log('[API] Hoja Users creada');
         }
         
         // Crear hoja de visitas si no existe
@@ -223,7 +218,6 @@ export async function POST(request: Request) {
             headerValues: ['id', 'userId', 'date']
           });
           createdSheets.push('Visits');
-          console.log('[API] Hoja Visits creada');
         }
         
         // Crear hoja de mediciones corporales si no existe
@@ -233,7 +227,6 @@ export async function POST(request: Request) {
             headerValues: ['id', 'userId', 'date', 'muscle', 'fat']
           });
           createdSheets.push('BodyMeasurements');
-          console.log('[API] Hoja BodyMeasurements creada');
         }
         
         return NextResponse.json({ 
@@ -269,9 +262,7 @@ export async function POST(request: Request) {
             title: sheetTitle,
             headerValues: ['id', 'userId', 'date', 'type', 'muscle', 'fat']
           });
-          console.log(`[API] Hoja creada para usuario ${userName}: ${sheetTitle}`);
         } else {
-          console.log(`[API] Hoja ya existe para usuario ${userName}: ${sheetTitle}`);
         }
         
         return NextResponse.json({ 
@@ -320,7 +311,6 @@ export async function POST(request: Request) {
           muscle: bodyMeasurement.muscle,
           fat: bodyMeasurement.fat
         });
-        console.log(`[API] Medición corporal guardada en hoja personal del usuario: ${userSheetTitle}`);
         return NextResponse.json({ success: true });
       } catch (addRowError) {
         console.error('[API] Error al añadir fila a la hoja personal:', addRowError);
@@ -371,7 +361,6 @@ export async function POST(request: Request) {
         muscle: '',
         fat: ''
       });
-      console.log(`[API] Visita guardada en hoja personal del usuario: ${userSheetTitle}`);
       return NextResponse.json({ success: true });
     } catch (addRowError) {
       console.error('[API] Error al añadir fila a la hoja personal:', addRowError);

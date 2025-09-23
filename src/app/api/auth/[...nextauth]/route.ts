@@ -34,7 +34,12 @@ async function getUsersDoc() {
 }
 
 // Usuarios temporales (fallback) - solo para emergencias
-const fallbackUsers: any[] = [];
+const fallbackUsers: Array<{
+  id: string;
+  name: string;
+  email: string;
+  password: string;
+}> = [];
 
 const handler = NextAuth({
   providers: [
@@ -120,7 +125,7 @@ const handler = NextAuth({
     },
     async session({ session, token }) {
       if (token && session.user) {
-        (session.user as any).id = token.id as string;
+        (session.user as { id: string }).id = token.id as string;
       }
       return session;
     },

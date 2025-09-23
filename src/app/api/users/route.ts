@@ -70,7 +70,6 @@ export async function GET() {
             googleSheetId: user.get('googleSheetId')
           };
           
-          console.log('[API] Usuario encontrado en Google Sheets:', userData.email);
           return NextResponse.json({ user: userData });
         }
       }
@@ -200,7 +199,6 @@ export async function POST(request: Request) {
                 title: userSheetTitle,
                 headerValues: ['id', 'userId', 'date', 'type', 'muscle', 'fat']
               });
-              console.log(`[API] Hoja personal creada para usuario ${name}: ${userSheetTitle}`);
             }
           }
         } catch (error) {
@@ -217,7 +215,6 @@ export async function POST(request: Request) {
           googleSheetId: userSheetTitle
         });
         
-        console.log(`[API] Usuario guardado en Google Sheets: ${email}`);
         
         // Crear medición corporal inicial si se proporcionaron los porcentajes
         if (musclePercentage !== undefined || fatPercentage !== undefined && userSheetTitle) {
@@ -253,7 +250,6 @@ export async function POST(request: Request) {
                   fat: fatPercentage || 0
                 });
                 
-                console.log(`Medición corporal inicial guardada en hoja personal del usuario ${userId}`);
               } else {
                 console.error(`No se encontró la hoja personal del usuario: ${userSheetTitle}`);
               }
@@ -334,29 +330,80 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const session = await getServerSession();
-    
+
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const { name, avatar } = await request.json();
+    const { name, email, currentPassword, newPassword } = await request.json();
+
+    // Intentar actualizar en Google Sheets primero
+    try {
+      const doc = await getUsersDoc();
+      if (doc) {
+        const sheet = doc.sheetsByIndex[0];
+        const rows = await sheet.getRows();
+        
+        const userRow = rows.find(row => row.get('email') === session.user?.email);
+        
+        if (!userRow) {
+          return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+        }
+
+        // Si se está cambiando la contraseña, verificar la actual
+        if (newPassword && currentPassword) {
+          const storedPassword = userRow.get('password');
+          const isValidPassword = await bcrypt.compare(currentPassword, storedPassword);
+          
+          if (!isValidPassword) {
+            return NextResponse.json({ error: 'Contraseña actual incorrecta' }, { status: 400 });
+          }
+          
+          // Hashear la nueva contraseña
+          const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+          userRow.set('password', hashedNewPassword);
+        }
+
+        // Actualizar campos
+        if (name) userRow.set('name', name);
+        if (email) userRow.set('email', email);
+        
+        await userRow.save();
+
+        
+        return NextResponse.json({ 
+          message: 'Usuario actualizado exitosamente' 
+        });
+      }
+    } catch (error) {
+      console.error('[API] Error actualizando en Google Sheets:', error);
+    }
+
+    // Fallback: actualizar en memoria
     const userIndex = users.findIndex(u => u.email === session.user?.email);
     
     if (userIndex === -1) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
+    // Si se está cambiando la contraseña, verificar la actual
+    if (newPassword && currentPassword) {
+      const isValidPassword = await bcrypt.compare(currentPassword, users[userIndex].password || '');
+      
+      if (!isValidPassword) {
+        return NextResponse.json({ error: 'Contraseña actual incorrecta' }, { status: 400 });
+      }
+      
+      // Hashear la nueva contraseña
+      users[userIndex].password = await bcrypt.hash(newPassword, 10);
+    }
+
     // Actualizar campos
     if (name) users[userIndex].name = name;
-    if (avatar !== undefined) users[userIndex].avatar = avatar;
+    if (email) users[userIndex].email = email;
 
-    // No devolver la contraseña
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...userWithoutPassword } = users[userIndex];
-    
     return NextResponse.json({ 
-      user: userWithoutPassword,
-      message: 'Usuario actualizado exitosamente' 
+      message: 'Usuario actualizado exitosamente (fallback a memoria)' 
     });
 
   } catch (error) {

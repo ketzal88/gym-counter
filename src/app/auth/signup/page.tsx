@@ -103,7 +103,7 @@ export default function SignUp() {
         // Usuario creado exitosamente, redirigir al login
         router.push('/auth/signin?message=Usuario creado exitosamente. Inicia sesión.');
       }
-    } catch (error) {
+    } catch {
       setError('Error de conexión');
     } finally {
       setLoading(false);

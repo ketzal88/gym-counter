@@ -40,6 +40,18 @@ export default function Navbar() {
             </div>
             
             <button
+              onClick={() => {
+                // Trigger profile modal from parent component
+                const event = new CustomEvent('openProfileModal');
+                window.dispatchEvent(event);
+              }}
+              className="text-gray-500 hover:text-gray-700 text-sm px-3 py-1 rounded-md hover:bg-gray-100 transition-colors"
+              title="Editar perfil"
+            >
+              Perfil
+            </button>
+            
+            <button
               onClick={handleSignOut}
               className="text-gray-500 hover:text-gray-700 text-sm px-3 py-1 rounded-md hover:bg-gray-100 transition-colors"
             >

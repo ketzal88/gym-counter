@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { User, GymVisit, BodyMeasurement } from '@/data/types';
 import { loadUsers, deleteVisit } from '@/data/sheetsService';
@@ -20,6 +20,15 @@ export default function UnifiedDashboard() {
   const [savingMeasurement, setSavingMeasurement] = useState(false);
   const modalDateRef = useRef<HTMLInputElement>(null);
 
+  // State for profile modal
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [profileName, setProfileName] = useState('');
+  const [profileEmail, setProfileEmail] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
+
   // Fecha de inicio del contador: 1 de enero de 2025
   const startDate = new Date(2025, 0, 1);
   const today = new Date();
@@ -37,19 +46,15 @@ export default function UnifiedDashboard() {
         
         if (userResponse.ok) {
           const userData = await userResponse.json();
-          console.log('🔍 DEBUG - Datos del usuario recibidos:', userData);
-          console.log('🔍 DEBUG - ID del usuario:', userData.user.id, 'Tipo:', typeof userData.user.id);
           setUser(userData.user);
           currentUser = userData.user;
         }
 
         // Cargar todos los usuarios para estadísticas
         const usersData = await loadUsers();
-        console.log('🔍 DEBUG - Usuarios cargados:', usersData);
         
         // Si no hay usuarios cargados pero tenemos un usuario actual, usarlo
         if (usersData.length === 0 && currentUser) {
-          console.log('🔍 DEBUG - No hay usuarios cargados, usando usuario actual');
           setUsers([currentUser]);
         } else {
           setUsers(usersData);
@@ -60,23 +65,17 @@ export default function UnifiedDashboard() {
           const visitsResponse = await fetch('/api/sheets?type=visits');
           if (visitsResponse.ok) {
             const visitsData = await visitsResponse.json();
-            console.log('Datos de visitas recibidos:', visitsData);
             
             if (visitsData.visits && Array.isArray(visitsData.visits)) {
-              console.log('🔍 DEBUG - Usuario actual ID:', currentUser.id, 'Tipo:', typeof currentUser.id);
-              console.log('🔍 DEBUG - Total visitas recibidas:', visitsData.visits.length);
-              console.log('🔍 DEBUG - Primeras 3 visitas:', visitsData.visits.slice(0, 3));
               
               // Filtrar solo las visitas del usuario actual
               const userVisits = visitsData.visits
                 .filter((visit: { userId: string; id: string; date: string }) => {
                   const visitUserId = visit.userId;
                   const matches = visitUserId === currentUser.id;
-                  console.log(`🔍 Comparando ${visitUserId} === ${currentUser.id}: ${matches}`);
                   return matches;
                 });
               
-              console.log('🔍 DEBUG - Visitas filtradas para usuario:', userVisits.length, userVisits);
               setVisits(userVisits);
             }
           }
@@ -86,7 +85,6 @@ export default function UnifiedDashboard() {
         const measurementsResponse = await fetch('/api/sheets?type=body');
         if (measurementsResponse.ok) {
           const measurementsData = await measurementsResponse.json();
-          console.log('🔍 DEBUG - Mediciones corporales recibidas:', measurementsData);
           setBodyMeasurements(measurementsData.bodyMeasurements || []);
         }
 
@@ -259,6 +257,95 @@ export default function UnifiedDashboard() {
     }
   };
 
+  // Funciones para perfil
+  const openProfileModal = useCallback(() => {
+    if (user) {
+      setProfileName(user.name);
+      setProfileEmail(user.email);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setShowProfileModal(true);
+    }
+  }, [user]);
+
+  // Event listener para el botón de perfil del Navbar
+  useEffect(() => {
+    const handleOpenProfileModal = () => {
+      openProfileModal();
+    };
+
+    window.addEventListener('openProfileModal', handleOpenProfileModal);
+    
+    return () => {
+      window.removeEventListener('openProfileModal', handleOpenProfileModal);
+    };
+  }, [openProfileModal]);
+
+  const closeProfileModal = () => {
+    setShowProfileModal(false);
+    setProfileName('');
+    setProfileEmail('');
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+  };
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+
+    // Validaciones
+    if (!profileName || !profileEmail) {
+      alert('Por favor completa todos los campos requeridos');
+      return;
+    }
+
+    if (newPassword && newPassword !== confirmPassword) {
+      alert('Las nuevas contraseñas no coinciden');
+      return;
+    }
+
+    if (newPassword && newPassword.length < 6) {
+      alert('La nueva contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
+    try {
+      setSavingProfile(true);
+
+      const response = await fetch('/api/users', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: profileName,
+          email: profileEmail,
+          currentPassword: currentPassword || undefined,
+          newPassword: newPassword || undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || 'Error al actualizar el perfil');
+        return;
+      }
+
+      // Actualizar el usuario local
+      setUser({ ...user, name: profileName, email: profileEmail });
+      
+      alert('Perfil actualizado exitosamente');
+      closeProfileModal();
+    } catch (error) {
+      console.error('Error actualizando perfil:', error);
+      alert('Error de conexión');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
   // Calcular días de la semana actual
   const currentWeekDays: Date[] = [];
   const startOfWeek = new Date(today);
@@ -295,11 +382,11 @@ export default function UnifiedDashboard() {
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Sección PersonalDashboard - Saludo y contador principal */}
       <div className="bg-white rounded-lg shadow-md p-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">
+          ¡Hola, {user.name}! 👋
+        </h2>
+        
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            ¡Hola, {user.name}! 👋
-          </h2>
-          
           <div className="mb-6">
             <div className="text-6xl font-bold text-blue-600 mb-2">
               {totalVisits} 🔥
@@ -356,7 +443,6 @@ export default function UnifiedDashboard() {
               const userVisits = userItem.id === user?.id ? visits : [];
               const attendancePercentage = totalDays > 0 ? (userVisits.length / totalDays * 100).toFixed(1) : '0.0';
               
-              console.log(`🔍 DEBUG - Usuario: ${userItem.name}, ID: ${userItem.id}, Visitas: ${userVisits.length}`);
               
               return (
                 <div key={userItem.id} className="mb-4 last:mb-0">
@@ -389,7 +475,6 @@ export default function UnifiedDashboard() {
             <div className="grid grid-cols-8 gap-1 p-2 bg-indigo-50 border-b border-indigo-200">
               <div className="col-span-1 font-medium text-indigo-900 text-sm"></div>
               {currentWeekDays.map((date, index) => {
-                console.log(`🔍 DEBUG - Header ${index}: ${date.toLocaleDateString('en-CA')} (${date.toLocaleDateString('es-ES', {weekday: 'long'})})`);
                 return (
                   <div key={index} className="col-span-1 text-center">
                     <div className="text-xs text-indigo-600 font-medium">
@@ -415,7 +500,6 @@ export default function UnifiedDashboard() {
                     {currentWeekDays.map((date, index) => {
                       const attended = didUserAttendOnDate(userItem.id, date);
                       const isFuture = date > today;
-                      console.log(`🔍 DEBUG - ${userItem.name} ${date.toLocaleDateString('en-CA')} (${date.toLocaleDateString('es-ES', {weekday: 'long'})}): attended=${attended}, isFuture=${isFuture}`);
                       return (
                         <div key={index} className="col-span-1 flex justify-center items-center">
                           {isFuture ? (
@@ -537,7 +621,6 @@ export default function UnifiedDashboard() {
                     .sort((a, b) => b.date.localeCompare(a.date));
                   const measurementsToShow = userMeasurements; // Siempre mostrar todas
                   
-                  console.log(`🔍 DEBUG - Mediciones para ${userItem.name}:`, userMeasurements.length, userMeasurements);
                   
                   if (measurementsToShow.length === 0) {
                     return (
@@ -655,6 +738,114 @@ export default function UnifiedDashboard() {
                 {savingMeasurement ? 'Guardando...' : 'Guardar'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Perfil */}
+      {showProfileModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-gray-900">Editar Perfil</h3>
+              <button
+                onClick={closeProfileModal}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={(e) => { e.preventDefault(); handleSaveProfile(); }} className="space-y-4">
+              <div>
+                <label htmlFor="profileName" className="block text-sm font-medium text-gray-700 mb-1">
+                  Nombre
+                </label>
+                <input
+                  type="text"
+                  id="profileName"
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="profileEmail" className="block text-sm font-medium text-gray-700 mb-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  id="profileEmail"
+                  value={profileEmail}
+                  onChange={(e) => setProfileEmail(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                  Contraseña actual (para cambiar contraseña)
+                </label>
+                <input
+                  type="password"
+                  id="currentPassword"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  placeholder="Solo si quieres cambiar la contraseña"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                  Nueva contraseña
+                </label>
+                <input
+                  type="password"
+                  id="newPassword"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  placeholder="Mínimo 6 caracteres"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                  Confirmar nueva contraseña
+                </label>
+                <input
+                  type="password"
+                  id="confirmPassword"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  placeholder="Repite la nueva contraseña"
+                />
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={closeProfileModal}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingProfile}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors duration-200"
+                >
+                  {savingProfile ? 'Guardando...' : 'Guardar'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

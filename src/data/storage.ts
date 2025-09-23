@@ -1,5 +1,4 @@
 import { CounterState, GymVisit } from './types';
-import { saveBodyMeasurement, loadBodyMeasurements } from './sheetsService';
 
 const STORAGE_KEY = 'gym_counter_data';
 
@@ -58,16 +57,6 @@ export function addGymVisit(userId: string): CounterState {
 }
 
 // Add a new body measurement (API version)
-export async function addBodyMeasurement(userId: string, date: string, muscle: number, fat: number) {
-  const newMeasurement = {
-    id: Date.now().toString(),
-    userId,
-    date,
-    muscle,
-    fat
-  };
-  return await saveBodyMeasurement(newMeasurement);
-}
 
 // Get visits count for each user
 export function getVisitCounts(): Record<string, number> {
@@ -93,9 +82,4 @@ export function getVisitsByDate(): Record<string, { [userId: string]: boolean }>
   });
   
   return visitsMap;
-} 
-
-// Get all body measurements (API version)
-export async function getBodyMeasurements() {
-  return await loadBodyMeasurements();
 } 
