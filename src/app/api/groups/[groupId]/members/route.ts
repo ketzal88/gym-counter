@@ -121,7 +121,13 @@ export async function GET(
       return NextResponse.json({ error: 'Error conectando con Google Sheets principal' }, { status: 500 });
     }
 
-    const memberVisits = [];
+    const memberVisits: Array<{
+      id: string;
+      userId: string;
+      userName: string;
+      userEmail: string;
+      date: string;
+    }> = [];
     
     for (const member of memberUsers) {
       if (member.googleSheetId) {
