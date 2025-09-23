@@ -106,6 +106,26 @@ export default function UnifiedDashboard() {
   const userVisits = visits.filter(v => v.userId === user?.id);
   const totalVisits = userVisits.length;
 
+  // Calcular estadísticas mensuales
+  const currentDate = new Date();
+  const currentMonth = currentDate.getMonth();
+  const currentYear = currentDate.getFullYear();
+  
+  // Mes actual
+  const currentMonthVisits = userVisits.filter(visit => {
+    const visitDate = new Date(visit.date);
+    return visitDate.getMonth() === currentMonth && visitDate.getFullYear() === currentYear;
+  }).length;
+  
+  // Mes pasado
+  const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+  const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+  
+  const lastMonthVisits = userVisits.filter(visit => {
+    const visitDate = new Date(visit.date);
+    return visitDate.getMonth() === lastMonth && visitDate.getFullYear() === lastMonthYear;
+  }).length;
+
 
 
   // Función para agregar visita
@@ -456,6 +476,96 @@ export default function UnifiedDashboard() {
         </div>
       </div>
 
+            {/* Asistencia semana actual */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+        <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+          📅 Asistencia de la semana (lunes a domingo)
+        </h4>
+        <div className="bg-white border rounded-lg">
+          {/* Header con días de la semana */}
+          <div className="grid grid-cols-7 gap-1 p-2 bg-indigo-50 border-b border-indigo-200">
+            {currentWeekDays.map((date, index) => {
+              return (
+                <div key={index} className="col-span-1 text-center">
+                  <div className="text-xs text-indigo-600 font-medium">
+                    {['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'][index]}
+                  </div>
+                  <div className="text-xs text-indigo-800 font-bold">
+                    {date.getDate()}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          
+          {/* Contenido de la tabla con scroll */}
+          <div className="bg-white rounded-b-lg">
+            {users.map(userItem => {
+              // Solo mostrar datos para el usuario actual (Gabi)
+              if (userItem.id !== user?.id) return null;
+              
+              return (
+                <div key={userItem.id} className="grid grid-cols-7 gap-1 p-2 border-t border-indigo-100">
+                  {currentWeekDays.map((date, index) => {
+                    const attended = didUserAttendOnDate(userItem.id, date);
+                    const isFuture = date > today;
+                    return (
+                      <div key={index} className="col-span-1 flex justify-center items-center">
+                        {isFuture ? (
+                          <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                            <span className="text-gray-400 text-xl">–</span>
+                          </div>
+                        ) : attended ? (
+                          <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                            <span className="text-green-600 text-xl">✅</span>
+                          </div>
+                        ) : (
+                          <div className="w-10 h-10 bg-red-50 rounded-full flex items-center justify-center">
+                            <span className="text-red-500 text-xl">❌</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Estadísticas Mensuales */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Mes Actual */}
+        <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-6 border-2 border-green-100">
+          <div className="text-center">
+            <div className="text-3xl font-bold text-green-600 mb-2">
+              {currentMonthVisits} 🗓️
+            </div>
+            <p className="text-gray-700 font-medium mb-1">
+              Este mes ({new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(currentDate)})
+            </p>
+            <p className="text-sm text-gray-500">
+              Visitas al gym
+            </p>
+          </div>
+        </div>
+
+        {/* Mes Pasado */}
+        <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-6 border-2 border-purple-100">
+          <div className="text-center">
+            <div className="text-3xl font-bold text-purple-600 mb-2">
+              {lastMonthVisits} 📅
+            </div>
+            <p className="text-gray-700 font-medium mb-1">
+              Mes pasado ({new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(new Date(lastMonthYear, lastMonth))})
+            </p>
+            <p className="text-sm text-gray-500">
+              Visitas al gym
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* Sección de Estadísticas */}
       <div className="bg-white rounded-lg shadow-md p-6">
@@ -517,65 +627,6 @@ export default function UnifiedDashboard() {
           </div>
         </div>
 
-        {/* Asistencia semana actual */}
-        <div className="mb-6">
-          <h4 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
-            📅 Asistencia semana (lunes a domingo)
-          </h4>
-          <div className="bg-white border rounded-lg">
-            {/* Header con días de la semana */}
-            <div className="grid grid-cols-8 gap-1 p-2 bg-indigo-50 border-b border-indigo-200">
-              <div className="col-span-1 font-medium text-indigo-900 text-sm"></div>
-              {currentWeekDays.map((date, index) => {
-                return (
-                  <div key={index} className="col-span-1 text-center">
-                    <div className="text-xs text-indigo-600 font-medium">
-                      {['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'][index]}
-                    </div>
-                    <div className="text-xs text-indigo-800 font-bold">
-                      {date.getDate()}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            
-            {/* Contenido de la tabla con scroll */}
-            <div className="bg-white rounded-b-lg">
-              {users.map(userItem => {
-                // Solo mostrar datos para el usuario actual (Gabi)
-                if (userItem.id !== user?.id) return null;
-                
-                return (
-                  <div key={userItem.id} className="grid grid-cols-8 gap-1 p-2 border-t border-indigo-100">
-                    <div className="col-span-1 font-medium text-indigo-900 flex items-center">{userItem.name}</div>
-                    {currentWeekDays.map((date, index) => {
-                      const attended = didUserAttendOnDate(userItem.id, date);
-                      const isFuture = date > today;
-                      return (
-                        <div key={index} className="col-span-1 flex justify-center items-center">
-                          {isFuture ? (
-                            <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                              <span className="text-gray-400 text-xl">–</span>
-                            </div>
-                          ) : attended ? (
-                            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                              <span className="text-green-600 text-xl">✅</span>
-                            </div>
-                          ) : (
-                            <div className="w-10 h-10 bg-red-50 rounded-full flex items-center justify-center">
-                              <span className="text-red-500 text-xl">❌</span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
 
         {/* Componente de depuración - Últimas visitas */}
         <div className="mt-6 p-3 bg-gray-50 rounded-lg border border-gray-200">
@@ -626,7 +677,7 @@ export default function UnifiedDashboard() {
                                 </div>
                               )}
                             </div>
-                            {userVisits.length === 0 && (
+                            {userVisitsOnDate.length === 0 && (
                               <button 
                                 onClick={() => handleAddVisitForDate(userItem.id, dateString)}
                                 className="text-xs bg-green-100 hover:bg-green-200 text-green-800 px-2 py-1 rounded"
