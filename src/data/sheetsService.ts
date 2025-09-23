@@ -1,4 +1,4 @@
-import { GymVisit, User, BodyMeasurement } from './types';
+import { GymVisit, User } from './types';
 
 // Caché para limitar solicitudes repetidas
 const apiCache = {
