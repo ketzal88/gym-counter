@@ -216,7 +216,7 @@ export default function TeamDashboard() {
               className="gap-4" 
               style={{ 
                 display: 'grid',
-                gridTemplateColumns: `repeat(${groupMembers.length}, 1fr)`,
+                gridTemplateColumns: `repeat(2, 1fr)`,
                 gap: '1rem'
               }}
             >
