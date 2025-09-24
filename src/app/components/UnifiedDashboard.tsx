@@ -15,7 +15,7 @@ export default function UnifiedDashboard() {
   const [users, setUsers] = useState<User[]>([]);
   const [visits, setVisits] = useState<GymVisit[]>([]);
   const [bodyMeasurements, setBodyMeasurements] = useState<BodyMeasurement[]>([]);
-  const [personalRecords, setPersonalRecords] = useState<PersonalRecord[]>([]);
+  // const [personalRecords, setPersonalRecords] = useState<PersonalRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [modalUserId, setModalUserId] = useState('');
@@ -26,13 +26,13 @@ export default function UnifiedDashboard() {
   const modalDateRef = useRef<HTMLInputElement>(null);
 
   // States for Personal Records modal
-  const [showPRModal, setShowPRModal] = useState(false);
-  const [prModalExercise, setPRModalExercise] = useState('');
-  const [prModalWeight, setPRModalWeight] = useState('');
-  const [prModalReps, setPRModalReps] = useState('');
-  const [prModalNotes, setPRModalNotes] = useState('');
-  const [prModalDate, setPRModalDate] = useState('');
-  const [savingPR, setSavingPR] = useState(false);
+  // const [showPRModal, setShowPRModal] = useState(false);
+  // const [prModalExercise, setPRModalExercise] = useState('');
+  // const [prModalWeight, setPRModalWeight] = useState('');
+  // const [prModalReps, setPRModalReps] = useState('');
+  // const [prModalNotes, setPRModalNotes] = useState('');
+  // const [prModalDate, setPRModalDate] = useState('');
+  // const [savingPR, setSavingPR] = useState(false);
 
   // State for profile modal
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -102,17 +102,14 @@ export default function UnifiedDashboard() {
           }
 
           // Cargar registros personales (RMs) desde Google Sheets
-          const prResponse = await fetch(`/api/sheets?type=personal_records&userId=${currentUser.id}`);
-          if (prResponse.ok) {
-            const prData = await prResponse.json();
-            
-            console.log('[Frontend] Datos de RMs cargados:', prData);
-            
-            if (prData.personalRecords && Array.isArray(prData.personalRecords)) {
-              setPersonalRecords(prData.personalRecords);
-              console.log('[Frontend] RMs establecidos en estado:', prData.personalRecords);
-            }
-          }
+          // const prResponse = await fetch(`/api/sheets?type=personal_records&userId=${currentUser.id}`);
+          // if (prResponse.ok) {
+          //   const prData = await prResponse.json();
+          //   
+          //   if (prData.personalRecords && Array.isArray(prData.personalRecords)) {
+          //     setPersonalRecords(prData.personalRecords);
+          //   }
+          // }
         }
 
       } catch (error) {
@@ -296,68 +293,65 @@ export default function UnifiedDashboard() {
   };
 
   // Funciones para Personal Records
-  const openPRModal = () => {
-    setPRModalExercise('');
-    setPRModalWeight('');
-    setPRModalReps('');
-    setPRModalNotes('');
-    setPRModalDate(new Date().toISOString().split('T')[0]);
-    setShowPRModal(true);
-  };
+  // const openPRModal = () => {
+  //   setPRModalExercise('');
+  //   setPRModalWeight('');
+  //   setPRModalReps('');
+  //   setPRModalNotes('');
+  //   setPRModalDate(new Date().toISOString().split('T')[0]);
+  //   setShowPRModal(true);
+  // };
 
-  const closePRModal = () => {
-    setShowPRModal(false);
-    setPRModalExercise('');
-    setPRModalWeight('');
-    setPRModalReps('');
-    setPRModalNotes('');
-    setPRModalDate('');
-  };
+  // const closePRModal = () => {
+  //   setShowPRModal(false);
+  //   setPRModalExercise('');
+  //   setPRModalWeight('');
+  //   setPRModalReps('');
+  //   setPRModalNotes('');
+  //   setPRModalDate('');
+  // };
 
-  const savePersonalRecord = async () => {
-    if (!prModalExercise || !prModalWeight || !prModalDate || !user) return;
-    
-    const personalRecordData = {
-      id: Date.now().toString(),
-      userId: user.id,
-      date: new Date(prModalDate).toISOString(),
-      exercise: prModalExercise,
-      weight: parseFloat(prModalWeight),
-      reps: prModalReps ? parseInt(prModalReps) : undefined,
-      notes: prModalNotes || undefined,
-    };
-    
-    console.log('[Frontend] Enviando datos de RM:', JSON.stringify(personalRecordData));
-    
-    setSavingPR(true);
-    try {
-      const response = await fetch('/api/sheets', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type: 'personal_record',
-          personalRecord: personalRecordData,
-        }),
-      });
+  // const savePersonalRecord = async () => {
+  //   if (!prModalExercise || !prModalWeight || !prModalDate || !user) return;
+  //   
+  //   const personalRecordData = {
+  //     id: Date.now().toString(),
+  //     userId: user.id,
+  //     date: new Date(prModalDate).toISOString(),
+  //     exercise: prModalExercise,
+  //     weight: parseFloat(prModalWeight),
+  //     reps: prModalReps ? parseInt(prModalReps) : undefined,
+  //     notes: prModalNotes || undefined,
+  //   };
+  //   
+  //   setSavingPR(true);
+  //   try {
+  //     const response = await fetch('/api/sheets', {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: JSON.stringify({
+  //         type: 'personal_record',
+  //         personalRecord: personalRecordData,
+  //       }),
+  //     });
 
-      if (response.ok) {
-        // Recargar registros personales
-        const prResponse = await fetch(`/api/sheets?type=personal_records&userId=${user.id}`);
-        if (prResponse.ok) {
-          const prData = await prResponse.json();
-          console.log('[Frontend] RMs recargados después de guardar:', prData);
-          setPersonalRecords(prData.personalRecords || []);
-        }
-        closePRModal();
-      }
-    } catch (error) {
-      console.error('Error guardando registro personal:', error);
-    } finally {
-      setSavingPR(false);
-    }
-  };
+  //     if (response.ok) {
+  //       // Recargar registros personales
+  //       const prResponse = await fetch(`/api/sheets?type=personal_records&userId=${user.id}`);
+  //       if (prResponse.ok) {
+  //         const prData = await prResponse.json();
+  //         setPersonalRecords(prData.personalRecords || []);
+  //       }
+  //       closePRModal();
+  //     }
+  //   } catch (error) {
+  //     console.error('Error guardando registro personal:', error);
+  //   } finally {
+  //     setSavingPR(false);
+  //   }
+  // };
 
   // Funciones para perfil
   const openProfileModal = useCallback(() => {
@@ -999,7 +993,7 @@ export default function UnifiedDashboard() {
       )}
 
       {/* Modal para agregar registro personal (RM) */}
-      {showPRModal && (
+      {/* {showPRModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4 shadow-xl">
             <h3 className="text-xl font-bold text-gray-900 mb-6">💪 Agregar Resistencia Máxima</h3>
@@ -1083,7 +1077,7 @@ export default function UnifiedDashboard() {
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Modal de Perfil */}
       {showProfileModal && (
