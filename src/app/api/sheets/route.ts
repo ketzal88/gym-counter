@@ -111,6 +111,75 @@ export async function GET(request: Request) {
       }
     }
     
+    // Obtener registros personales (RMs)
+    if (type === 'personal_records') {
+      try {
+        const userId = searchParams.get('userId');
+        
+        console.log('[API] Obteniendo registros personales para userId:', userId);
+        
+        if (!userId) {
+          console.log('[API] No se especificó userId, retornando array vacío');
+          return NextResponse.json({ personalRecords: [] });
+        }
+        
+        // Buscar solo la hoja del usuario específico
+        const userSheetTitles = Object.keys(doc.sheetsByTitle).filter(title => 
+          title.startsWith('Usuario_') && title.includes(userId)
+        );
+        
+        console.log('[API] Hoja del usuario encontrada:', userSheetTitles);
+        
+        let allPersonalRecords: Array<{
+          id: string;
+          userId: string;
+          date: string;
+          exercise: string;
+          weight: number;
+          reps?: number;
+          notes?: string;
+        }> = [];
+        
+        // Solo procesar la hoja del usuario específico
+        for (const sheetTitle of userSheetTitles) {
+          const sheet = doc.sheetsByTitle[sheetTitle];
+          if (sheet) {
+            const rows = await sheet.getRows();
+            
+            console.log(`[API] Procesando hoja ${sheetTitle}, total filas: ${rows.length}`);
+            
+            // Filtrar solo las filas que son registros personales (type === 'personal_record')
+            const personalRecordRows = rows.filter(row => row.get('type') === 'personal_record');
+            console.log(`[API] Filas de personal_record encontradas en ${sheetTitle}:`, personalRecordRows.length);
+            
+            const recordsFromSheet = personalRecordRows.map(row => {
+              const record = {
+                id: row.get('id'),
+                userId: row.get('userId'),
+                date: row.get('date'),
+                exercise: row.get('exercise'),
+                weight: Number(String(row.get('weight')).replace(',', '.')),
+                reps: row.get('reps') ? Number(String(row.get('reps')).replace(',', '.')) : undefined,
+                notes: row.get('notes') || undefined
+              };
+              console.log(`[API] Procesando registro:`, record);
+              return record;
+            });
+            
+            allPersonalRecords = allPersonalRecords.concat(recordsFromSheet);
+          }
+        }
+        
+        console.log('[API] Total registros personales encontrados:', allPersonalRecords.length);
+        console.log('[API] Registros personales:', allPersonalRecords);
+        
+        return NextResponse.json({ personalRecords: allPersonalRecords });
+      } catch (error) {
+        console.error('[API] Error obteniendo registros personales:', error);
+        return NextResponse.json({ personalRecords: [] }, { status: 500 });
+      }
+    }
+    
     // Obtener usuarios
     if (type === 'users' || type === 'all') {
       try {
@@ -331,6 +400,85 @@ export async function POST(request: Request) {
         console.error('[API] Error al añadir fila a la hoja personal:', addRowError);
         return NextResponse.json({
           error: 'Error al guardar medición corporal',
+          details: String(addRowError)
+        }, { status: 500 });
+      }
+    }
+    
+    // Guardar registro personal (RM)
+    if (type === 'personal_record') {
+      const { personalRecord } = data;
+      
+      console.log('[API] Datos recibidos para personal_record:', JSON.stringify(personalRecord));
+      
+      if (!personalRecord || !personalRecord.id || !personalRecord.userId || !personalRecord.date || !personalRecord.exercise || !personalRecord.weight) {
+        console.error('[API] Datos de registro personal incompletos:', JSON.stringify(personalRecord));
+        return NextResponse.json({ error: 'Datos de registro personal incompletos' }, { status: 400 });
+      }
+      
+      const doc = await getDoc();
+      if (!doc) {
+        console.error('[API] No se pudo conectar con Google Sheets para guardar el registro personal');
+        return NextResponse.json({ error: 'No se pudo conectar con Google Sheets' }, { status: 500 });
+      }
+      
+      // Buscar la hoja personal del usuario (misma lógica que body measurements)
+      const userSheets = Object.keys(doc.sheetsByTitle).filter(title => 
+        title.startsWith('Usuario_') && title.includes(personalRecord.userId)
+      );
+      
+      console.log('[API] Hojas encontradas para userId', personalRecord.userId, ':', userSheets);
+      
+      if (userSheets.length === 0) {
+        console.error('[API] No se encontró la hoja personal del usuario:', personalRecord.userId);
+        return NextResponse.json({ error: 'No se encontró la hoja personal del usuario' }, { status: 500 });
+      }
+      
+      // Usar la misma lógica que body measurements para encontrar la hoja correcta
+      let userSheetTitle = '';
+      for (const sheetTitle of userSheets) {
+        const sheet = doc.sheetsByTitle[sheetTitle];
+        if (sheet) {
+          const rows = await sheet.getRows();
+          // Verificar si esta hoja tiene datos del usuario correcto
+          const hasUserData = rows.some(row => row.get('userId') === personalRecord.userId);
+          if (hasUserData) {
+            userSheetTitle = sheetTitle;
+            break;
+          }
+        }
+      }
+      
+      // Si no encontramos una hoja con datos del usuario, usar la primera disponible
+      if (!userSheetTitle && userSheets.length > 0) {
+        userSheetTitle = userSheets[0];
+      }
+      
+      console.log('[API] Usando hoja:', userSheetTitle);
+      const sheet = doc.sheetsByTitle[userSheetTitle];
+      
+      try {
+        const rowData = {
+          id: personalRecord.id,
+          userId: personalRecord.userId,
+          date: personalRecord.date,
+          type: 'personal_record',
+          exercise: personalRecord.exercise,
+          weight: personalRecord.weight,
+          reps: personalRecord.reps || '',
+          notes: personalRecord.notes || ''
+        };
+        
+        console.log('[API] Guardando fila en Google Sheets:', JSON.stringify(rowData));
+        
+        await sheet.addRow(rowData);
+        
+        console.log('[API] Registro personal guardado exitosamente');
+        return NextResponse.json({ success: true });
+      } catch (addRowError) {
+        console.error('[API] Error al añadir fila a la hoja personal:', addRowError);
+        return NextResponse.json({
+          error: 'Error al guardar registro personal',
           details: String(addRowError)
         }, { status: 500 });
       }

@@ -35,6 +35,16 @@ export interface BodyMeasurement {
   fat: number; // percentage
 }
 
+export interface PersonalRecord {
+  id: string;
+  userId: string;
+  date: string; // ISO string
+  exercise: string; // nombre del ejercicio
+  weight: number; // peso en kg
+  reps?: number; // repeticiones (opcional, para 1RM calculado)
+  notes?: string; // notas adicionales
+}
+
 export interface Group {
   id: string;
   name: string;

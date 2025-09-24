@@ -7,7 +7,7 @@ export default function ApiStatusBanner() {
   const [isChecking, setIsChecking] = useState(false);
 
   useEffect(() => {
-    // Verificar el estado de la API cada 30 segundos
+    // Verificar el estado de la API solo una vez al montar el componente
     const checkApiStatus = async () => {
       setIsChecking(true);
       try {
@@ -25,10 +25,8 @@ export default function ApiStatusBanner() {
       }
     };
 
+    // Solo verificar una vez al montar, no en intervalos
     checkApiStatus();
-    const interval = setInterval(checkApiStatus, 30000); // Cada 30 segundos
-
-    return () => clearInterval(interval);
   }, []);
 
   if (!showBanner) {
