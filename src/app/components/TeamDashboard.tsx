@@ -12,7 +12,18 @@ interface MemberStats extends User {
   visitedToday: boolean;
 }
 
-export default function TeamDashboard() {
+interface TeamDashboardProps {
+  currentUser?: {
+    id: string;
+    name: string;
+    email: string;
+    totalVisits: number;
+    visitedToday: boolean;
+  };
+  currentUserVisits?: GymVisit[];
+}
+
+export default function TeamDashboard({ currentUser, currentUserVisits = [] }: TeamDashboardProps) {
   const { data: session } = useSession();
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
@@ -58,38 +69,62 @@ export default function TeamDashboard() {
     if (groups.length === 0) return;
     setLoadingGroupData(true);
     try {
-      // Obtener datos de todos los grupos
-      const allMembers: MemberStats[] = [];
-      const allVisits: GymVisit[] = [];
+      console.log('[TeamDashboard] Iniciando carga de datos...');
+      console.log('[TeamDashboard] Grupos:', groups);
+      console.log('[TeamDashboard] Usuario actual:', currentUser);
       
-      for (const group of groups) {
-        try {
-          const response = await fetch(`/api/groups/${group.id}/members?t=${Date.now()}`);
-          if (response.ok) {
-            const data = await response.json();
-            if (data.members) {
-              allMembers.push(...data.members);
-            }
-            if (data.visits) {
-              allVisits.push(...data.visits);
-            }
+      // Usar la API de sheets directamente para obtener visitas (más eficiente)
+      const visitsResponse = await fetch('/api/sheets?type=visits');
+      const visitsData = await visitsResponse.json();
+      const allVisits = visitsData.visits || [];
+      
+      console.log('[TeamDashboard] Visitas cargadas:', allVisits.length);
+      
+      // Cargar usuarios básicos
+      const allUsers = await loadUsers();
+      console.log('[TeamDashboard] Usuarios cargados:', allUsers.length);
+      console.log('[TeamDashboard] Usuarios:', allUsers);
+      
+      // Crear miembros con estadísticas basadas en las visitas cargadas
+      const members: MemberStats[] = allUsers
+        .filter(user => groups.some(group => group.members.includes(user.email)))
+        .map(user => {
+          // Si es el usuario actual, usar los datos que ya tenemos
+          if (currentUser && user.id === currentUser.id) {
+            console.log('[TeamDashboard] Usando datos del usuario actual:', user.name, currentUser.totalVisits);
+            return {
+              ...user,
+              totalVisits: currentUser.totalVisits,
+              visitedToday: currentUser.visitedToday,
+              lastVisit: currentUserVisits.length > 0 ? currentUserVisits[currentUserVisits.length - 1].date : undefined
+            };
           }
-        } catch (err) {
-          console.error(`Error cargando datos del grupo ${group.name}:`, err);
-        }
-      }
+          
+          // Para otros usuarios, calcular desde las visitas
+          const userVisits = allVisits.filter((visit: any) => visit.userId === user.id);
+          const today = new Date().toLocaleDateString('en-CA');
+          
+          console.log('[TeamDashboard] Usuario:', user.name, 'Visitas:', userVisits.length);
+          
+          return {
+            ...user,
+            totalVisits: userVisits.length,
+            visitedToday: userVisits.some((visit: any) => 
+              new Date(visit.date).toLocaleDateString('en-CA') === today
+            ),
+            lastVisit: userVisits.length > 0 ? userVisits[userVisits.length - 1].date : undefined
+          };
+        });
       
-      // Remover duplicados basado en ID del usuario
-      const uniqueMembers = allMembers.filter((member, index, self) => 
-        index === self.findIndex(m => m.id === member.id)
-      );
+      console.log('[TeamDashboard] Miembros finales:', members.length);
+      console.log('[TeamDashboard] Miembros:', members.map(m => ({ name: m.name, visits: m.totalVisits })));
       
-      setGroupMembers(uniqueMembers);
+      setGroupMembers(members);
       setGroupVisits(allVisits);
       
     } catch (error) {
       console.error('Error cargando datos de grupos:', error);
-      // Fallback: cargar usuarios básicos
+      // Fallback: cargar usuarios básicos sin visitas
       const allUsers = await loadUsers();
       const members: MemberStats[] = allUsers
         .filter(user => groups.some(group => group.members.includes(user.email)))
@@ -103,7 +138,7 @@ export default function TeamDashboard() {
     } finally {
       setLoadingGroupData(false);
     }
-  }, [groups]);
+  }, [groups, currentUser, currentUserVisits]);
 
   useEffect(() => {
     if (session) {

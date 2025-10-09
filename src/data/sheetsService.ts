@@ -26,14 +26,18 @@ function getApiUrl(endpoint: string): string {
 // Cargar usuarios
 export async function loadUsers(): Promise<User[]> {
   try {
+    console.log('[loadUsers] Iniciando carga de usuarios...');
+    
     // Verificar si tenemos datos en caché recientes
     const now = Date.now();
     if (apiCache.users && (now - apiCache.lastFetched.users < CACHE_DURATION)) {
+      console.log('[loadUsers] Usando usuarios desde cache:', apiCache.users.length);
       return apiCache.users;
     }
     
     // Llamar a la API en lugar de conectarse directamente a Google Sheets
     const apiUrl = getApiUrl('/api/sheets?type=users');
+    console.log('[loadUsers] Llamando a:', apiUrl);
     
     const response = await fetch(apiUrl, {
       method: 'GET',
@@ -41,7 +45,10 @@ export async function loadUsers(): Promise<User[]> {
       credentials: 'same-origin'
     });
     
+    console.log('[loadUsers] Respuesta recibida:', response.status, response.ok);
+    
     const data = await response.json();
+    console.log('[loadUsers] Datos recibidos:', data);
     
     if (!response.ok) {
       console.error('Error cargando usuarios desde la API:', data.error);

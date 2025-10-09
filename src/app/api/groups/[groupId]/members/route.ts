@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
+import { apiCache } from '@/lib/cache';
 
 // Configuración de Google Sheets
 const GROUPS_SPREADSHEET_ID = '1_f43T71BdLN5sky14zcdGEGp3sEEaBIjSD1v5v0myRU';
@@ -62,7 +63,13 @@ export async function GET(
 
     const { groupId } = await params;
     
-
+    // Verificar cache primero
+    const cacheKey = `group_${groupId}_members`;
+    const cachedData = apiCache.get(cacheKey);
+    if (cachedData) {
+      console.log(`[API Groups] Usando datos desde cache para grupo ${groupId}`);
+      return NextResponse.json(cachedData);
+    }
 
     // 1. Obtener información del grupo
     const groupsDoc = await getGroupsDoc();
@@ -140,11 +147,12 @@ export async function GET(
               .filter(row => row.get('type') === 'visit')
               .map(row => ({
                 id: row.get('id'),
-                userId: member.id,
+                userId: row.get('userId'),
                 userName: member.name,
                 userEmail: member.email,
                 date: row.get('date')
               }));
+            
             
             memberVisits.push(...visits);
           }
@@ -158,6 +166,8 @@ export async function GET(
     // 4. Calcular estadísticas de asistencia para cada miembro
     const memberStats = memberUsers.map(member => {
       const memberVisitList = memberVisits.filter(v => v.userId === member.id);
+      
+      
       const today = new Date().toLocaleDateString('en-CA');
       const thisWeekStart = new Date();
       thisWeekStart.setDate(thisWeekStart.getDate() - thisWeekStart.getDay() + 1); // Lunes
@@ -191,6 +201,9 @@ export async function GET(
       visits: memberVisits
     };
 
+    // Cachear los resultados por 2 minutos para evitar llamadas repetidas
+    apiCache.set(cacheKey, responseData, 120000);
+    console.log(`[API Groups] Datos cacheados para grupo ${groupId}`);
 
     return NextResponse.json(responseData);
 

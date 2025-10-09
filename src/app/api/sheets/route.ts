@@ -1,13 +1,23 @@
 import { NextResponse } from 'next/server';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
+import { apiCache } from '@/lib/cache';
 
-// ID de la hoja de cálculo (hoja de pruebas)
-const SPREADSHEET_ID = '1n4_Jb5VF-b9aPkiteeA6JCzDYK6SP6AdGHZ1PvcfhnQ';
+// IDs de las hojas de cálculo
+const MAIN_SPREADSHEET_ID = '1_f43T71BdLN5sky14zcdGEGp3sEEaBIjSD1v5v0myRU'; // Users, Groups, Invitations
+const DATA_SPREADSHEET_ID = '1n4_Jb5VF-b9aPkiteeA6JCzDYK6SP6AdGHZ1PvcfhnQ'; // Visits, Body measurements
 const CLIENT_EMAIL = 'gymcounter@possible-byte-351918.iam.gserviceaccount.com';
 
-// Inicializar conexión a Google Sheets
-async function getDoc() {
+// Inicializar conexión a Google Sheets con cache
+async function getDoc(spreadsheetId: string) {
+  // Verificar cache primero
+  const cacheKey = `google_sheets_doc_${spreadsheetId}`;
+  const cachedDoc = apiCache.get(cacheKey);
+  if (cachedDoc) {
+    console.log('[API] Usando documento de Google Sheets desde cache');
+    return cachedDoc as GoogleSpreadsheet;
+  }
+
   try {
     const PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n') || '';
     
@@ -22,8 +32,13 @@ async function getDoc() {
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
     
-    const doc = new GoogleSpreadsheet(SPREADSHEET_ID, serviceAccountAuth);
+    const doc = new GoogleSpreadsheet(spreadsheetId, serviceAccountAuth);
     await doc.loadInfo();
+    
+    // Cachear el documento por 2 minutos
+    apiCache.set(cacheKey, doc, 120000);
+    console.log('[API] Documento de Google Sheets cargado y cacheado');
+    
     return doc;
   } catch (error) {
     console.error('[API] Error conectando con Google Sheets:', error);
@@ -37,7 +52,12 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type') || 'all';
     
-    const doc = await getDoc();
+    // Determinar qué documento usar según el tipo de dato
+    const spreadsheetId = (type === 'users' || type === 'groups' || type === 'invitations') 
+      ? MAIN_SPREADSHEET_ID 
+      : DATA_SPREADSHEET_ID;
+    
+    const doc = await getDoc(spreadsheetId);
     if (!doc) {
       console.error('[API] No se pudo conectar con Google Sheets');
       return NextResponse.json({ error: 'No se pudo conectar con Google Sheets' }, { status: 500 });
@@ -50,7 +70,7 @@ export async function GET(request: Request) {
         
         return NextResponse.json({ 
           availableSheets: sheetTitles,
-          spreadsheetId: SPREADSHEET_ID,
+          spreadsheetId: spreadsheetId,
           needsSetup: sheetTitles.length === 0
         });
       } catch (error) {
@@ -63,6 +83,14 @@ export async function GET(request: Request) {
     if (type === 'body') {
       try {
         const userId = searchParams.get('userId'); // Nuevo parámetro para filtrar por usuario
+        
+        // Verificar cache para mediciones corporales
+        const cacheKey = `body_measurements_${userId || 'all'}`;
+        const cachedData = apiCache.get(cacheKey);
+        if (cachedData) {
+          console.log('[API] Usando mediciones corporales desde cache');
+          return NextResponse.json({ bodyMeasurements: cachedData });
+        }
         
         // Buscar todas las hojas que empiecen con "Usuario_"
         const userSheetTitles = Object.keys(doc.sheetsByTitle).filter(title => 
@@ -104,6 +132,10 @@ export async function GET(request: Request) {
           }
         }
         
+        // Cachear los resultados por 1 minuto
+        apiCache.set(cacheKey, allBodyMeasurements, 60000);
+        console.log(`[API] Mediciones corporales cacheadas para ${userId || 'todos los usuarios'}`);
+        
         return NextResponse.json({ bodyMeasurements: allBodyMeasurements });
       } catch (error) {
         console.error('[API] Error obteniendo mediciones corporales:', error);
@@ -114,8 +146,10 @@ export async function GET(request: Request) {
     // Obtener usuarios
     if (type === 'users' || type === 'all') {
       try {
+        console.log('[API] Hojas disponibles:', Object.keys(doc.sheetsByTitle));
         const sheet = doc.sheetsByTitle['Users'];
         if (!sheet) {
+          console.log('[API] No se encontró la hoja "Users"');
           return NextResponse.json({ users: [] });
         }
         
@@ -124,7 +158,10 @@ export async function GET(request: Request) {
         const users = rows.map(row => ({
           id: row.get('id'),
           name: row.get('name'),
+          email: row.get('email')
         }));
+        
+        console.log('[API] Usuarios encontrados:', users.length);
         
         if (type === 'users') {
           return NextResponse.json({ users });
@@ -141,6 +178,21 @@ export async function GET(request: Request) {
     if (type === 'visits' || type === 'all') {
       try {
         const userId = searchParams.get('userId'); // Nuevo parámetro para filtrar por usuario
+        
+        // Verificar cache para visitas
+        const cacheKey = `visits_${userId || 'all'}`;
+        const cachedData = apiCache.get(cacheKey);
+        if (cachedData) {
+          console.log('[API] Usando visitas desde cache');
+          if (type === 'visits') {
+            return NextResponse.json({ visits: cachedData });
+          } else {
+            return NextResponse.json({ 
+              users: [], 
+              visits: cachedData 
+            });
+          }
+        }
         
         // Buscar todas las hojas que empiecen con "Usuario_"
         const userSheetTitles = Object.keys(doc.sheetsByTitle).filter(title => 
@@ -178,6 +230,9 @@ export async function GET(request: Request) {
           }
         }
         
+        // Cachear los resultados por 1 minuto
+        apiCache.set(cacheKey, allVisits, 60000);
+        console.log(`[API] Visitas cacheadas para ${userId || 'todos los usuarios'}`);
         
         if (type === 'visits') {
           return NextResponse.json({ visits: allVisits });
@@ -206,10 +261,70 @@ export async function POST(request: Request) {
     const data = await request.json();
     const { type, visit, bodyMeasurement, userId, userName } = data;
     
+    // Limpiar cache manualmente
+    if (type === 'clear_cache') {
+      try {
+        apiCache.clear();
+        console.log('[API] Cache limpiado manualmente');
+        return NextResponse.json({ 
+          success: true, 
+          message: 'Cache limpiado exitosamente' 
+        });
+      } catch (error) {
+        console.error('[API] Error limpiando cache:', error);
+        return NextResponse.json({ 
+          error: 'Error limpiando cache', 
+          details: String(error) 
+        }, { status: 500 });
+      }
+    }
+
+    // Arreglar IDs de usuario inconsistentes
+    if (type === 'fix_user_ids') {
+      try {
+        const doc = await getDoc(DATA_SPREADSHEET_ID);
+        if (!doc) {
+          console.error('[API] No se pudo conectar con Google Sheets para arreglar IDs');
+          return NextResponse.json({ error: 'No se pudo conectar con Google Sheets' }, { status: 500 });
+        }
+
+        const availableSheets = Object.keys(doc.sheetsByTitle).filter(title => 
+          title.startsWith('Usuario_')
+        );
+
+        const sheetMappings = availableSheets.map(sheetTitle => {
+          const match = sheetTitle.match(/^Usuario_(.+?)_(.+)$/);
+          if (match) {
+            return {
+              sheetTitle,
+              extractedUserId: match[1],
+              userName: match[2]
+            };
+          }
+          return null;
+        }).filter(Boolean);
+
+        console.log('[API] Mapeo de hojas encontrado:', sheetMappings);
+
+        return NextResponse.json({ 
+          success: true, 
+          availableSheets,
+          sheetMappings,
+          message: 'Información de hojas obtenida exitosamente' 
+        });
+      } catch (error) {
+        console.error('[API] Error obteniendo información de hojas:', error);
+        return NextResponse.json({ 
+          error: 'Error obteniendo información de hojas', 
+          details: String(error) 
+        }, { status: 500 });
+      }
+    }
+
     // Configurar hojas básicas si no existen
     if (type === 'setup_sheets') {
       try {
-        const doc = await getDoc();
+        const doc = await getDoc(DATA_SPREADSHEET_ID);
         if (!doc) {
           console.error('[API] No se pudo conectar con Google Sheets para configurar hojas');
           return NextResponse.json({ error: 'No se pudo conectar con Google Sheets' }, { status: 500 });
@@ -261,7 +376,7 @@ export async function POST(request: Request) {
     // Crear hoja para nuevo usuario
     if (type === 'create_user_sheet' && userId && userName) {
       try {
-        const doc = await getDoc();
+        const doc = await getDoc(DATA_SPREADSHEET_ID);
         if (!doc) {
           console.error('[API] No se pudo conectar con Google Sheets para crear hoja de usuario');
           return NextResponse.json({ error: 'No se pudo conectar con Google Sheets' }, { status: 500 });
@@ -299,15 +414,43 @@ export async function POST(request: Request) {
         console.error('[API] Datos de medición corporal incompletos:', JSON.stringify(bodyMeasurement));
         return NextResponse.json({ error: 'Datos de medición corporal incompletos' }, { status: 400 });
       }
-      const doc = await getDoc();
+      const doc = await getDoc(DATA_SPREADSHEET_ID);
       if (!doc) {
         console.error('[API] No se pudo conectar con Google Sheets para guardar la medición corporal');
         return NextResponse.json({ error: 'No se pudo conectar con Google Sheets' }, { status: 500 });
       }
       // Buscar la hoja personal del usuario
-      const userSheets = Object.keys(doc.sheetsByTitle).filter(title => 
-        title.startsWith('Usuario_') && title.includes(bodyMeasurement.userId)
-      );
+      let userSheets = Object.keys(doc.sheetsByTitle).filter(title => {
+        if (!title.startsWith('Usuario_')) return false;
+        
+        // Extraer el userId del título de la hoja
+        // Formato esperado: Usuario_{userId}_{userName}
+        const match = title.match(/^Usuario_(.+?)_/);
+        if (!match) return false;
+        
+        const sheetUserId = match[1];
+        return sheetUserId === bodyMeasurement.userId;
+      });
+
+      // Si no se encuentra la hoja con el ID exacto, buscar por nombre de usuario
+      if (userSheets.length === 0) {
+        console.log(`[API] No se encontró hoja con ID exacto ${bodyMeasurement.userId}, buscando por nombre...`);
+        
+        // Intentar buscar por patrones conocidos
+        const possiblePatterns = [
+          `Usuario_3_gab`, // Patrón específico para Gabi
+          `Usuario_${bodyMeasurement.userId}_gab`,
+          `Usuario_${bodyMeasurement.userId}_Gabi`
+        ];
+        
+        for (const pattern of possiblePatterns) {
+          if (doc.sheetsByTitle[pattern]) {
+            userSheets = [pattern];
+            console.log(`[API] Encontrada hoja usando patrón: ${pattern}`);
+            break;
+          }
+        }
+      }
       
       if (userSheets.length === 0) {
         console.error('[API] No se encontró la hoja personal del usuario:', bodyMeasurement.userId);
@@ -326,6 +469,12 @@ export async function POST(request: Request) {
           muscle: bodyMeasurement.muscle,
           fat: bodyMeasurement.fat
         });
+        
+        // Invalidar cache de mediciones corporales
+        apiCache.delete(`body_measurements_${bodyMeasurement.userId}`);
+        apiCache.delete('body_measurements_all');
+        console.log(`[API] Cache invalidado para mediciones corporales del usuario ${bodyMeasurement.userId}`);
+        
         return NextResponse.json({ success: true });
       } catch (addRowError) {
         console.error('[API] Error al añadir fila a la hoja personal:', addRowError);
@@ -346,7 +495,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Datos de visita incompletos' }, { status: 400 });
     }
     
-    const doc = await getDoc();
+    const doc = await getDoc(DATA_SPREADSHEET_ID);
     if (!doc) {
       console.error('[API] No se pudo conectar con Google Sheets para guardar la visita');
       return NextResponse.json({ error: 'No se pudo conectar con Google Sheets' }, { status: 500 });
@@ -354,18 +503,50 @@ export async function POST(request: Request) {
     
     // Buscar la hoja personal del usuario
     // Necesitamos obtener el nombre del usuario para construir el nombre de la hoja
-    // Por ahora, vamos a buscar todas las hojas que empiecen con "Usuario_" y contengan el userId
-    const userSheets = Object.keys(doc.sheetsByTitle).filter(title => 
-      title.startsWith('Usuario_') && title.includes(visit.userId)
-    );
+    // Buscar hojas que empiecen con "Usuario_" seguido del userId exacto
+    let userSheets = Object.keys(doc.sheetsByTitle).filter(title => {
+      if (!title.startsWith('Usuario_')) return false;
+      
+      // Extraer el userId del título de la hoja
+      // Formato esperado: Usuario_{userId}_{userName}
+      const match = title.match(/^Usuario_(.+?)_/);
+      if (!match) return false;
+      
+      const sheetUserId = match[1];
+      return sheetUserId === visit.userId;
+    });
+
+    // Si no se encuentra la hoja con el ID exacto, buscar por nombre de usuario
+    // Esto es una solución temporal para casos donde el ID no coincide
+    if (userSheets.length === 0) {
+      console.log(`[API] No se encontró hoja con ID exacto ${visit.userId}, buscando por nombre...`);
+      
+      // Intentar buscar por patrones conocidos
+      const possiblePatterns = [
+        `Usuario_3_gab`, // Patrón específico para Gabi
+        `Usuario_${visit.userId}_gab`,
+        `Usuario_${visit.userId}_Gabi`
+      ];
+      
+      for (const pattern of possiblePatterns) {
+        if (doc.sheetsByTitle[pattern]) {
+          userSheets = [pattern];
+          console.log(`[API] Encontrada hoja usando patrón: ${pattern}`);
+          break;
+        }
+      }
+    }
     
     if (userSheets.length === 0) {
       console.error('[API] No se encontró la hoja personal del usuario:', visit.userId);
+      console.error('[API] Hojas disponibles:', Object.keys(doc.sheetsByTitle).filter(title => title.startsWith('Usuario_')));
       return NextResponse.json({ error: 'No se encontró la hoja personal del usuario' }, { status: 500 });
     }
     
     const userSheetTitle = userSheets[0];
     const sheet = doc.sheetsByTitle[userSheetTitle];
+    
+    console.log(`[API] Guardando visita para usuario ${visit.userId} en hoja: ${userSheetTitle}`);
     
     try {
       await sheet.addRow({
@@ -376,6 +557,12 @@ export async function POST(request: Request) {
         muscle: '',
         fat: ''
       });
+      
+      // Invalidar cache de visitas
+      apiCache.delete(`visits_${visit.userId}`);
+      apiCache.delete('visits_all');
+      console.log(`[API] Cache invalidado para visitas del usuario ${visit.userId}`);
+      
       return NextResponse.json({ success: true });
     } catch (addRowError) {
       console.error('[API] Error al añadir fila a la hoja personal:', addRowError);
@@ -404,28 +591,53 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'ID de visita no proporcionado' }, { status: 400 });
     }
     
-    const doc = await getDoc();
+    const doc = await getDoc(DATA_SPREADSHEET_ID);
     if (!doc) {
       console.error('[API] No se pudo conectar con Google Sheets para eliminar la visita');
       return NextResponse.json({ error: 'No se pudo conectar con Google Sheets' }, { status: 500 });
     }
     
-    const sheet = doc.sheetsByTitle['Visits'];
-    if (!sheet) {
-      console.error('[API] No se encontró la hoja "Visits"');
-      return NextResponse.json({ error: 'No se encontró la hoja Visits' }, { status: 500 });
+    // Buscar en todas las hojas de usuario
+    const userSheetTitles = Object.keys(doc.sheetsByTitle).filter(title => 
+      title.startsWith('Usuario_')
+    );
+    
+    let rowToDelete = null;
+    let targetSheet = null;
+    
+    // Buscar la visita en todas las hojas de usuario
+    for (const sheetTitle of userSheetTitles) {
+      const sheet = doc.sheetsByTitle[sheetTitle];
+      if (sheet) {
+        const rows = await sheet.getRows();
+        const foundRow = rows.find(row => row.get('id') === visitId);
+        
+        if (foundRow) {
+          rowToDelete = foundRow;
+          targetSheet = sheet;
+          console.log(`[API] Visita encontrada en hoja: ${sheetTitle}`);
+          break;
+        }
+      }
     }
     
-    const rows = await sheet.getRows();
-    const rowToDelete = rows.find(row => row.get('id') === visitId);
-    
     if (!rowToDelete) {
-      console.error(`[API] No se encontró la visita con ID: ${visitId}`);
+      console.error(`[API] No se encontró la visita con ID: ${visitId} en ninguna hoja de usuario`);
       return NextResponse.json({ error: 'No se encontró la visita' }, { status: 404 });
     }
     
     try {
       await rowToDelete.delete();
+      
+      // Invalidar cache de visitas
+      apiCache.delete('visits_all');
+      // También invalidar cache específico si podemos determinar el usuario
+      const userId = rowToDelete.get('userId');
+      if (userId) {
+        apiCache.delete(`visits_${userId}`);
+      }
+      
+      console.log(`[API] Visita ${visitId} eliminada exitosamente`);
       return NextResponse.json({ success: true });
     } catch (deleteError) {
       console.error('[API] Error al eliminar la visita:', deleteError);

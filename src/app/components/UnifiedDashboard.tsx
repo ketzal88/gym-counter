@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { User, GymVisit, BodyMeasurement } from '@/data/types';
-import { loadUsers, deleteVisit } from '@/data/sheetsService';
+import { deleteVisit } from '@/data/sheetsService';
 import TeamDashboard from './TeamDashboard';
 import InvitationNotifications from './InvitationNotifications';
 import ApiStatusBanner from './ApiStatusBanner';
@@ -41,8 +41,7 @@ export default function UnifiedDashboard() {
   const diffTime = Math.abs(today.getTime() - startDate.getTime());
   const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-  useEffect(() => {
-    const fetchUserData = async () => {
+  const fetchUserData = async () => {
       try {
         setLoading(true);
         
@@ -56,14 +55,11 @@ export default function UnifiedDashboard() {
           currentUser = userData.user;
         }
 
-        // Cargar todos los usuarios para estadísticas
-        const usersData = await loadUsers();
-        
-        // Si no hay usuarios cargados pero tenemos un usuario actual, usarlo
-        if (usersData.length === 0 && currentUser) {
+        // Para estadísticas personales, solo usar el usuario actual
+        if (currentUser) {
           setUsers([currentUser]);
         } else {
-          setUsers(usersData);
+          setUsers([]);
         }
 
         // Obtener visitas solo si tenemos un usuario
@@ -95,8 +91,9 @@ export default function UnifiedDashboard() {
       } finally {
         setLoading(false);
       }
-    };
+  };
 
+  useEffect(() => {
     if (session) {
       fetchUserData();
     }
@@ -131,6 +128,8 @@ export default function UnifiedDashboard() {
   // Función para agregar visita
   const handleAddVisit = async () => {
     if (!user) return;
+    
+    console.log(`[CLIENT] Agregando visita para usuario: ${user.id} (${user.name})`);
     
     try {
       const response = await fetch('/api/sheets', {
@@ -247,6 +246,8 @@ export default function UnifiedDashboard() {
   const saveBodyMeasurement = async () => {
     if (!modalMuscle || !modalFat || !modalDate) return;
     
+    console.log(`[CLIENT] Guardando medición corporal para usuario: ${modalUserId}`);
+    
     setSavingMeasurement(true);
     try {
       const response = await fetch('/api/sheets', {
@@ -315,6 +316,7 @@ export default function UnifiedDashboard() {
     setNewPassword('');
     setConfirmPassword('');
   };
+
 
   const handleSaveProfile = async () => {
     if (!user) return;
@@ -455,23 +457,26 @@ export default function UnifiedDashboard() {
             </div>
             <p className="text-gray-600 mb-4">Total de visitas al gym</p>
             
-            <button
-              onClick={handleAddVisit}
-              disabled={loading}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center space-x-2 mx-auto"
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span>Agregando...</span>
-                </>
-              ) : (
-                <>
-                  <span>🏋️</span>
-                  <span>+1</span>
-                </>
-              )}
-            </button>
+            <div className="flex flex-col space-y-3">
+              <button
+                onClick={handleAddVisit}
+                disabled={loading}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center space-x-2 mx-auto"
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    <span>Agregando...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>🏋️</span>
+                    <span>+1</span>
+                  </>
+                )}
+              </button>
+              
+            </div>
           </div>
         </div>
       </div>
@@ -961,7 +966,22 @@ export default function UnifiedDashboard() {
         </>
       )}
 
-      {activeTab === 'team' && <TeamDashboard />}
+      {activeTab === 'team' && (
+        <TeamDashboard 
+          currentUser={user ? {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            totalVisits: totalVisits,
+            visitedToday: userVisits.some(v => {
+              const visitDate = new Date(v.date).toLocaleDateString('en-CA');
+              const today = new Date().toLocaleDateString('en-CA');
+              return visitDate === today;
+            })
+          } : undefined}
+          currentUserVisits={userVisits}
+        />
+      )}
     </div>
   );
 }
