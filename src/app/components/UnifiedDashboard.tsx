@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
-import { User, GymVisit, BodyMeasurement, PersonalRecord } from '@/data/types';
+import { User, GymVisit, BodyMeasurement } from '@/data/types';
 import { loadUsers, deleteVisit } from '@/data/sheetsService';
-import { EXERCISE_CATEGORIES, getExercisesByCategory } from '@/data/exercises';
 import TeamDashboard from './TeamDashboard';
 import InvitationNotifications from './InvitationNotifications';
 import ApiStatusBanner from './ApiStatusBanner';
@@ -15,7 +14,6 @@ export default function UnifiedDashboard() {
   const [users, setUsers] = useState<User[]>([]);
   const [visits, setVisits] = useState<GymVisit[]>([]);
   const [bodyMeasurements, setBodyMeasurements] = useState<BodyMeasurement[]>([]);
-  // const [personalRecords, setPersonalRecords] = useState<PersonalRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [modalUserId, setModalUserId] = useState('');
@@ -24,15 +22,6 @@ export default function UnifiedDashboard() {
   const [modalFat, setModalFat] = useState('');
   const [savingMeasurement, setSavingMeasurement] = useState(false);
   const modalDateRef = useRef<HTMLInputElement>(null);
-
-  // States for Personal Records modal
-  // const [showPRModal, setShowPRModal] = useState(false);
-  // const [prModalExercise, setPRModalExercise] = useState('');
-  // const [prModalWeight, setPRModalWeight] = useState('');
-  // const [prModalReps, setPRModalReps] = useState('');
-  // const [prModalNotes, setPRModalNotes] = useState('');
-  // const [prModalDate, setPRModalDate] = useState('');
-  // const [savingPR, setSavingPR] = useState(false);
 
   // State for profile modal
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -45,7 +34,6 @@ export default function UnifiedDashboard() {
 
   // State for tabs
   const [activeTab, setActiveTab] = useState<'personal' | 'team'>('personal');
-
 
   // Fecha de inicio del contador: 1 de enero de 2025
   const startDate = new Date(2025, 0, 1);
@@ -100,16 +88,6 @@ export default function UnifiedDashboard() {
               setBodyMeasurements(measurementsData.bodyMeasurements);
             }
           }
-
-          // Cargar registros personales (RMs) desde Google Sheets
-          // const prResponse = await fetch(`/api/sheets?type=personal_records&userId=${currentUser.id}`);
-          // if (prResponse.ok) {
-          //   const prData = await prResponse.json();
-          //   
-          //   if (prData.personalRecords && Array.isArray(prData.personalRecords)) {
-          //     setPersonalRecords(prData.personalRecords);
-          //   }
-          // }
         }
 
       } catch (error) {
@@ -124,17 +102,29 @@ export default function UnifiedDashboard() {
     }
   }, [session]);
 
-
   // Calcular estadísticas para el usuario actual
   const userVisits = visits.filter(v => v.userId === user?.id);
   const totalVisits = userVisits.length;
 
-  // Calcular variables para los grupos (mes actual y pasado)
+  // Calcular estadísticas mensuales
   const currentDate = new Date();
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
+  
+  // Mes actual
+  const currentMonthVisits = userVisits.filter(visit => {
+    const visitDate = new Date(visit.date);
+    return visitDate.getMonth() === currentMonth && visitDate.getFullYear() === currentYear;
+  }).length;
+  
+  // Mes pasado
   const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
   const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+  
+  const lastMonthVisits = userVisits.filter(visit => {
+    const visitDate = new Date(visit.date);
+    return visitDate.getMonth() === lastMonth && visitDate.getFullYear() === lastMonthYear;
+  }).length;
 
 
 
@@ -291,67 +281,6 @@ export default function UnifiedDashboard() {
       setSavingMeasurement(false);
     }
   };
-
-  // Funciones para Personal Records
-  // const openPRModal = () => {
-  //   setPRModalExercise('');
-  //   setPRModalWeight('');
-  //   setPRModalReps('');
-  //   setPRModalNotes('');
-  //   setPRModalDate(new Date().toISOString().split('T')[0]);
-  //   setShowPRModal(true);
-  // };
-
-  // const closePRModal = () => {
-  //   setShowPRModal(false);
-  //   setPRModalExercise('');
-  //   setPRModalWeight('');
-  //   setPRModalReps('');
-  //   setPRModalNotes('');
-  //   setPRModalDate('');
-  // };
-
-  // const savePersonalRecord = async () => {
-  //   if (!prModalExercise || !prModalWeight || !prModalDate || !user) return;
-  //   
-  //   const personalRecordData = {
-  //     id: Date.now().toString(),
-  //     userId: user.id,
-  //     date: new Date(prModalDate).toISOString(),
-  //     exercise: prModalExercise,
-  //     weight: parseFloat(prModalWeight),
-  //     reps: prModalReps ? parseInt(prModalReps) : undefined,
-  //     notes: prModalNotes || undefined,
-  //   };
-  //   
-  //   setSavingPR(true);
-  //   try {
-  //     const response = await fetch('/api/sheets', {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //       },
-  //       body: JSON.stringify({
-  //         type: 'personal_record',
-  //         personalRecord: personalRecordData,
-  //       }),
-  //     });
-
-  //     if (response.ok) {
-  //       // Recargar registros personales
-  //       const prResponse = await fetch(`/api/sheets?type=personal_records&userId=${user.id}`);
-  //       if (prResponse.ok) {
-  //         const prData = await prResponse.json();
-  //         setPersonalRecords(prData.personalRecords || []);
-  //       }
-  //       closePRModal();
-  //     }
-  //   } catch (error) {
-  //     console.error('Error guardando registro personal:', error);
-  //   } finally {
-  //     setSavingPR(false);
-  //   }
-  // };
 
   // Funciones para perfil
   const openProfileModal = useCallback(() => {
@@ -605,16 +534,13 @@ export default function UnifiedDashboard() {
         </div>
       </div>
 
-      {/* Estadísticas Mensuales Personales */}
+      {/* Estadísticas Mensuales */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Mes Actual */}
         <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-6 border-2 border-green-100">
           <div className="text-center">
             <div className="text-3xl font-bold text-green-600 mb-2">
-              {userVisits.filter(visit => {
-                const visitDate = new Date(visit.date);
-                return visitDate.getMonth() === currentMonth && visitDate.getFullYear() === currentYear;
-              }).length} 🗓️
+              {currentMonthVisits} 🗓️
             </div>
             <p className="text-gray-700 font-medium mb-1">
               Este mes ({new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(currentDate)})
@@ -629,10 +555,7 @@ export default function UnifiedDashboard() {
         <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-6 border-2 border-purple-100">
           <div className="text-center">
             <div className="text-3xl font-bold text-purple-600 mb-2">
-              {userVisits.filter(visit => {
-                const visitDate = new Date(visit.date);
-                return visitDate.getMonth() === lastMonth && visitDate.getFullYear() === lastMonthYear;
-              }).length} 📅
+              {lastMonthVisits} 📅
             </div>
             <p className="text-gray-700 font-medium mb-1">
               Mes pasado ({new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(new Date(lastMonthYear, lastMonth))})
@@ -866,70 +789,6 @@ export default function UnifiedDashboard() {
             </table>
           </div>
         </div>
-
-        {/* Tabla de registros personales (RMs) */}
-        {/* <div className="mt-6">
-          <div className="flex justify-between items-center mb-4">
-            <h4 className="text-lg font-semibold text-gray-900 flex items-center">
-              💪 Registros Personales (RMs)
-            </h4>
-            <button
-              onClick={openPRModal}
-              className="text-sm bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-md"
-            >
-              + Nuevo RM
-            </button>
-          </div>
-
-          <div className="bg-white border rounded-lg overflow-hidden">
-            <table className="min-w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                  <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase">Ejercicio</th>
-                  <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase">Peso (kg)</th>
-                  <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase">Reps</th>
-                  <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase">Notas</th>
-                </tr>
-              </thead>
-              <tbody>
-                {personalRecords
-                  .filter(pr => pr.userId === user?.id)
-                  .sort((a, b) => b.date.localeCompare(a.date))
-                  .map((pr) => (
-                    <tr key={pr.id} className="border-t">
-                      <td className="px-2 py-1 text-gray-800 font-medium text-xs">
-                        {new Date(pr.date).toLocaleDateString('es-ES', {
-                          year: '2-digit',
-                          month: '2-digit',
-                          day: '2-digit'
-                        })}
-                      </td>
-                      <td className="px-2 py-1 text-gray-900 font-bold">
-                        {pr.exercise}
-                      </td>
-                      <td className="px-2 py-1 text-gray-900 font-bold">
-                        {pr.weight} kg
-                      </td>
-                      <td className="px-2 py-1 text-gray-800">
-                        {pr.reps ? `${pr.reps} reps` : '1RM'}
-                      </td>
-                      <td className="px-2 py-1 text-gray-600 text-xs">
-                        {pr.notes || '–'}
-                      </td>
-                    </tr>
-                  ))}
-                {personalRecords.filter(pr => pr.userId === user?.id).length === 0 && (
-                  <tr className="border-t">
-                    <td colSpan={5} className="px-2 py-4 text-center text-gray-500">
-                      Sin registros personales
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div> */}
       </div>
 
       {/* Modal para agregar mediciones corporales */}
@@ -992,93 +851,6 @@ export default function UnifiedDashboard() {
         </div>
       )}
 
-      {/* Modal para agregar registro personal (RM) */}
-      {/* {showPRModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4 shadow-xl">
-            <h3 className="text-xl font-bold text-gray-900 mb-6">💪 Agregar Resistencia Máxima</h3>
-            <div className="space-y-5">
-              <div>
-                <label className="block text-base font-semibold text-gray-800 mb-2">Fecha</label>
-                <input
-                  type="date"
-                  value={prModalDate}
-                  onChange={(e) => setPRModalDate(e.target.value)}
-                  className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:border-green-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-base font-semibold text-gray-800 mb-2">Ejercicio</label>
-                <select
-                  value={prModalExercise}
-                  onChange={(e) => setPRModalExercise(e.target.value)}
-                  className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:border-green-500 focus:outline-none"
-                >
-                  <option value="">Seleccionar ejercicio...</option>
-                  {Object.values(EXERCISE_CATEGORIES).map(category => (
-                    <optgroup key={category} label={category}>
-                      {getExercisesByCategory(category).map(exercise => (
-                        <option key={exercise.name} value={exercise.name}>
-                          {exercise.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-base font-semibold text-gray-800 mb-2">Peso máximo (kg)</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  value={prModalWeight}
-                  onChange={(e) => setPRModalWeight(e.target.value)}
-                  className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:border-green-500 focus:outline-none"
-                  placeholder="ej. 110"
-                />
-              </div>
-              <div>
-                <label className="block text-base font-semibold text-gray-800 mb-2">Repeticiones (opcional)</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={prModalReps}
-                  onChange={(e) => setPRModalReps(e.target.value)}
-                  className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:border-green-500 focus:outline-none"
-                  placeholder="Dejar vacío para 1RM"
-                />
-              </div>
-              <div>
-                <label className="block text-base font-semibold text-gray-800 mb-2">Notas (opcional)</label>
-                <textarea
-                  value={prModalNotes}
-                  onChange={(e) => setPRModalNotes(e.target.value)}
-                  className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:border-green-500 focus:outline-none resize-none"
-                  rows={3}
-                  placeholder="ej. Con cinturón, muy cansado..."
-                />
-              </div>
-            </div>
-            <div className="flex justify-end space-x-3 mt-8">
-              <button
-                onClick={closePRModal}
-                className="px-6 py-3 text-gray-700 border-2 border-gray-300 rounded-lg hover:bg-gray-50 font-semibold"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={savePersonalRecord}
-                disabled={savingPR || !prModalExercise || !prModalWeight || !prModalDate}
-                className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 font-semibold"
-              >
-                {savingPR ? 'Guardando...' : 'Guardar RM'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )} */}
-
       {/* Modal de Perfil */}
       {showProfileModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1098,7 +870,7 @@ export default function UnifiedDashboard() {
             <form onSubmit={(e) => { e.preventDefault(); handleSaveProfile(); }} className="space-y-4">
               <div>
                 <label htmlFor="profileName" className="block text-sm font-medium text-gray-700 mb-1">
-                  Nombre
+                  Nombre 
                 </label>
                 <input
                   type="text"

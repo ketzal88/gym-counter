@@ -1,21 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import { Group, GymVisit } from '@/data/types';
+import { Group, User, GymVisit } from '@/data/types';
+import { loadUsers } from '@/data/sheetsService';
 import MemberSearch from './MemberSearch';
-import { useGroups } from '@/hooks/useGroups';
-import { useGroupData } from '@/hooks/useGroupData';
+
+interface MemberStats extends User {
+  totalVisits: number;
+  lastVisit?: Date;
+  visitedToday: boolean;
+}
 
 export default function TeamDashboard() {
   const { data: session } = useSession();
-  
-  // Usar hooks optimizados
-  const { groups, loading: loadingGroups, refreshGroups } = useGroups();
-  const { groupData, loading: loadingGroupData } = useGroupData(groups);
-  
-  // Estados locales
+  const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
+  const [groupMembers, setGroupMembers] = useState<MemberStats[]>([]);
+  const [groupVisits, setGroupVisits] = useState<GymVisit[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingGroups, setLoadingGroups] = useState(false);
+  const [loadingGroupData, setLoadingGroupData] = useState(false);
   const [creatingGroup, setCreatingGroup] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
@@ -28,12 +33,89 @@ export default function TeamDashboard() {
   const [updatingGroup, setUpdatingGroup] = useState(false);
   const [leavingGroup, setLeavingGroup] = useState(false);
 
-  // Efecto para seleccionar el primer grupo automáticamente
-  useEffect(() => {
-    if (groups.length > 0 && !selectedGroup) {
-      setSelectedGroup(groups[0]);
+  const fetchGroups = useCallback(async () => {
+    setLoadingGroups(true);
+    try {
+      const response = await fetch('/api/groups');
+      if (response.ok) {
+        const data = await response.json();
+        setGroups(data.groups || []);
+        if (data.groups.length > 0 && !selectedGroup) {
+          setSelectedGroup(data.groups[0]);
+        }
+      } else {
+        console.warn('Error cargando grupos, usando datos en cache si están disponibles');
+      }
+    } catch (error) {
+      console.error('Error cargando grupos:', error);
+    } finally {
+      setLoadingGroups(false);
+      setLoading(false);
     }
-  }, [groups, selectedGroup]);
+  }, [selectedGroup]);
+
+  const fetchGroupData = useCallback(async () => {
+    if (groups.length === 0) return;
+    setLoadingGroupData(true);
+    try {
+      // Obtener datos de todos los grupos
+      const allMembers: MemberStats[] = [];
+      const allVisits: GymVisit[] = [];
+      
+      for (const group of groups) {
+        try {
+          const response = await fetch(`/api/groups/${group.id}/members?t=${Date.now()}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.members) {
+              allMembers.push(...data.members);
+            }
+            if (data.visits) {
+              allVisits.push(...data.visits);
+            }
+          }
+        } catch (err) {
+          console.error(`Error cargando datos del grupo ${group.name}:`, err);
+        }
+      }
+      
+      // Remover duplicados basado en ID del usuario
+      const uniqueMembers = allMembers.filter((member, index, self) => 
+        index === self.findIndex(m => m.id === member.id)
+      );
+      
+      setGroupMembers(uniqueMembers);
+      setGroupVisits(allVisits);
+      
+    } catch (error) {
+      console.error('Error cargando datos de grupos:', error);
+      // Fallback: cargar usuarios básicos
+      const allUsers = await loadUsers();
+      const members: MemberStats[] = allUsers
+        .filter(user => groups.some(group => group.members.includes(user.email)))
+        .map(user => ({
+          ...user,
+          totalVisits: 0,
+          visitedToday: false
+        }));
+      setGroupMembers(members);
+      setGroupVisits([]);
+    } finally {
+      setLoadingGroupData(false);
+    }
+  }, [groups]);
+
+  useEffect(() => {
+    if (session) {
+      fetchGroups();
+    }
+  }, [session, fetchGroups]);
+
+  useEffect(() => {
+    if (groups.length > 0) {
+      fetchGroupData();
+    }
+  }, [groups, fetchGroupData]);
 
   const createGroup = async () => {
     if (!newGroupName.trim()) return;
@@ -53,7 +135,7 @@ export default function TeamDashboard() {
       });
 
       if (response.ok) {
-        await refreshGroups();
+        await fetchGroups();
         setShowCreateGroup(false);
         setNewGroupName('');
         setNewGroupDescription('');
@@ -84,11 +166,17 @@ export default function TeamDashboard() {
       });
 
       if (response.ok) {
-        await refreshGroups();
+        await fetchGroups();
         setShowEditGroup(false);
         setEditGroupName('');
         setEditGroupDescription('');
-        // Actualizar el grupo seleccionado localmente
+        // Actualizar el grupo seleccionado
+        const updatedGroups = groups.map(g => 
+          g.id === selectedGroup.id 
+            ? { ...g, name: editGroupName.trim(), description: editGroupDescription.trim() }
+            : g
+        );
+        setGroups(updatedGroups);
         setSelectedGroup({ ...selectedGroup, name: editGroupName.trim(), description: editGroupDescription.trim() });
       }
     } catch (error) {
@@ -116,8 +204,10 @@ export default function TeamDashboard() {
       });
 
       if (response.ok) {
-        await refreshGroups();
+        await fetchGroups();
         setSelectedGroup(null);
+        setGroupMembers([]);
+        setGroupVisits([]);
       }
     } catch (error) {
       console.error('Error saliendo del grupo:', error);
@@ -126,9 +216,9 @@ export default function TeamDashboard() {
     }
   };
 
-  const didUserAttendOnDate = (userId: string, date: Date, visits: GymVisit[]) => {
+  const didUserAttendOnDate = (userId: string, date: Date) => {
     const targetDateLocal = date.toLocaleDateString('en-CA');
-    return visits.some(v => {
+    return groupVisits.some(v => {
       if (v.userId !== userId) return false;
       
       const visitDate = new Date(v.date);
@@ -137,8 +227,8 @@ export default function TeamDashboard() {
     });
   };
 
-  const getTotalVisits = (userId: string, visits: GymVisit[]) => {
-    return visits.filter(v => v.userId === userId).length;
+  const getTotalVisits = (userId: string) => {
+    return groupVisits.filter(v => v.userId === userId).length;
   };
 
   const today = new Date();
@@ -157,7 +247,7 @@ export default function TeamDashboard() {
     currentWeekDays.push(day);
   }
 
-  if (loadingGroups) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="text-center">
@@ -328,8 +418,12 @@ export default function TeamDashboard() {
         </div>
       )}
 
-      {/* Cards por Equipo - Contadores Anuales + Tabla Semanal */}
-      <div className="space-y-6">
+      {/* 1. Contadores de todos los grupos - PRINCIPAL */}
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center justify-center">
+          📊 Contadores de los Equipos
+        </h3>
+        
         {loadingGroupData ? (
           <div className="flex items-center justify-center py-8">
             <div className="text-center">
@@ -338,148 +432,138 @@ export default function TeamDashboard() {
             </div>
           </div>
         ) : (
-          groups.map((group) => {
-            // Obtener datos de este grupo específico
-            const groupInfo = groupData[group.id];
-            if (!groupInfo) return null;
-            
-            const groupMembersList = groupInfo.members;
-            const groupVisitsList = groupInfo.visits;
-            
-            return (
-              <div key={group.id} className="bg-white rounded-lg shadow-md p-6 border-2 border-gray-100">
-                {/* Header del equipo */}
-                <div className="text-center mb-6">
-                  <h4 className="text-xl font-bold text-gray-800">{group.name}</h4>
-                  {group.description && (
-                    <p className="text-sm text-gray-600 mt-1">{group.description}</p>
-                  )}
-                </div>
-                
-                {/* Contadores de miembros (Asistencia Anual) */}
-                <div 
-                  className="gap-4 mb-6" 
-                  style={{ 
-                    display: 'grid',
-                    gridTemplateColumns: `repeat(${Math.min(groupMembersList.length, 2)}, 1fr)`,
-                    gap: '1rem'
-                  }}
-                >
-                  {groupMembersList.map((member) => {
-                    const totalVisits = getTotalVisits(member.id, groupVisitsList);
-                    const attendedToday = didUserAttendOnDate(member.id, today, groupVisitsList);
-                    
-                    return (
-                      <div key={member.id} className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 text-center border-2 border-blue-100 hover:border-blue-200 transition-all duration-200 shadow-lg">
-                        <div className="text-lg font-bold text-gray-800 mb-2">
-                          {member.name}
-                        </div>
-                        <div className="text-3xl font-black text-blue-600 mb-2">
-                          {totalVisits} 🔥
-                        </div>
-                        <div className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                          attendedToday ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                        }`}>
-                          {attendedToday ? '✅ Fue hoy' : '❌ No fue hoy'}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Tabla Semanal */}
-                <div>
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    📅 Asistencia semana (lunes a domingo)
-                  </h4>
+          <div className="space-y-6">
+            {groups.map((group) => {
+              // Obtener miembros de este grupo específico
+              const groupMembersList = groupMembers.filter(member => 
+                group.members.includes(member.email)
+              );
+              
+              return (
+                <div key={group.id} className="border-2 border-gray-200 rounded-lg p-4">
+                  {/* Nombre del grupo */}
+                  <div className="text-center mb-4">
+                    <h4 className="text-xl font-bold text-gray-800">{group.name}</h4>
+                    {group.description && (
+                      <p className="text-sm text-gray-600 mt-1">{group.description}</p>
+                    )}
+                  </div>
                   
-                  {/* Generar días de la semana actual */}
-                  {(() => {
-                    const today = new Date();
-                    const currentDay = today.getDay(); // 0 = domingo, 1 = lunes, etc.
-                    const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay; // Ajustar para que lunes sea el primer día
-                    const monday = new Date(today);
-                    monday.setDate(today.getDate() + mondayOffset);
-                    
-                    const currentWeekDays: Date[] = [];
-                    for (let i = 0; i < 7; i++) {
-                      const day = new Date(monday);
-                      day.setDate(monday.getDate() + i);
-                      currentWeekDays.push(day);
-                    }
-                    
-                    return (
-                      <>
-                        {/* Header con días de la semana */}
-                        <div className="grid grid-cols-8 gap-1 p-2 bg-indigo-50 border-b border-indigo-200">
-                          <div className="col-span-1 text-center font-medium text-indigo-900 text-sm">
-                            
+                  {/* Contadores de miembros */}
+                  <div 
+                    className="gap-4" 
+                    style={{ 
+                      display: 'grid',
+                      gridTemplateColumns: `repeat(${Math.min(groupMembersList.length, 2)}, 1fr)`,
+                      gap: '1rem'
+                    }}
+                  >
+                    {groupMembersList.map((member) => {
+                      const totalVisits = getTotalVisits(member.id);
+                      const attendedToday = didUserAttendOnDate(member.id, today);
+                      
+                      return (
+                        <div key={member.id} className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 text-center border-2 border-blue-100 hover:border-blue-200 transition-all duration-200 shadow-lg">
+                          <div className="text-lg font-bold text-gray-800 mb-2">
+                            {member.name}
                           </div>
-                          {currentWeekDays.map((date, index) => {
-                            return (
-                              <div key={index} className="col-span-1 text-center">
-                                <div className="text-xs text-indigo-600 font-medium">
-                                  {['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'][index]}
-                                </div>
-                                <div className="text-xs text-indigo-800 font-bold">
-                                  {date.getDate()}
-                                </div>
-                              </div>
-                            );
-                          })}
+                          <div className="text-3xl font-black text-blue-600 mb-2">
+                            {totalVisits} 🔥
+                          </div>
+                          <div className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                            attendedToday ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                          }`}>
+                            {attendedToday ? '✅ Fue hoy' : '❌ No fue hoy'}
+                          </div>
                         </div>
-                        
-                        {/* Contenido de la tabla */}
-                        <div>
-                          {groupMembersList.map(userItem => {
-                            return (
-                              <div key={userItem.id} className="grid grid-cols-8 gap-1 p-2 border-t border-indigo-100">
-                                <div className="col-span-1 font-medium text-indigo-900 flex items-center text-sm">
-                                  {userItem.name}
-                                </div>
-                                {currentWeekDays.map((date, index) => {
-                                  const attended = didUserAttendOnDate(userItem.id, date, groupVisitsList);
-                                  const isFuture = date > today;
-                                  return (
-                                    <div key={index} className="col-span-1 flex justify-center items-center">
-                                      {isFuture ? (
-                                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                                          <span className="text-gray-400 text-xl">–</span>
-                                        </div>
-                                      ) : attended ? (
-                                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                                          <span className="text-green-600 text-xl">✅</span>
-                                        </div>
-                                      ) : (
-                                        <div className="w-10 h-10 bg-red-50 rounded-full flex items-center justify-center">
-                                          <span className="text-red-500 text-xl">❌</span>
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </>
-                    );
-                  })()}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            );
-          })
+              );
+            })}
+          </div>
         )}
       </div>
 
       {selectedGroup && (
         <>
 
+          {/* 2. Asistencia semanal del equipo */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              📅 Asistencia Semanal del Equipo
+            </h3>
+            
+            {loadingGroupData ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center">
+                  <div className="text-4xl mb-4 animate-spin">⏳</div>
+                  <p className="text-gray-600">Cargando asistencia semanal...</p>
+                </div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+              <div className="min-w-full">
+                {/* Header con días de la semana */}
+                <div className="grid gap-1 p-2 bg-indigo-50 border-b border-indigo-200 mb-2" 
+                     style={{ gridTemplateColumns: `50px repeat(7, 1fr)` }}>
+                  <div className="font-medium text-indigo-900 text-sm"></div>
+                  {currentWeekDays.map((date, index) => (
+                    <div key={index} className="text-center">
+                      <div className="text-xs text-indigo-600 font-medium">
+                        {['L', 'M', 'X', 'J', 'V', 'S', 'D'][index]}
+                      </div>
+                      <div className="text-xs text-indigo-800 font-bold">
+                        {date.getDate()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Filas de miembros */}
+                {groupMembers.map((member) => {
+                  return (
+                    <div key={member.id} 
+                         className="grid gap-1 p-2 border-b border-gray-100 hover:bg-gray-50"
+                         style={{ gridTemplateColumns: `50px repeat(7, 1fr)` }}>
+                      <div className="font-medium text-gray-900 text-sm flex items-center">
+                        {member.name}
+                      </div>
+                      {currentWeekDays.map((date, index) => {
+                        const attended = didUserAttendOnDate(member.id, date);
+                        const isFuture = date > today;
+                        
+                        return (
+                          <div key={index} className="flex justify-center items-center">
+                            {isFuture ? (
+                              <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                                <span className="text-gray-400 text-sm">–</span>
+                              </div>
+                            ) : attended ? (
+                              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                <span className="text-green-600 text-sm">✅</span>
+                              </div>
+                            ) : (
+                              <div className="w-8 h-8 bg-red-50 rounded-full flex items-center justify-center">
+                                <span className="text-red-500 text-sm">❌</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            )}
+          </div>
 
           {/* 3. Búsqueda de miembros - Invitar amigos al grupo */}
           <MemberSearch 
             groupId={selectedGroup.id} 
-            onInviteSent={refreshGroups}
+            onInviteSent={fetchGroups}
           />
         </>
       )}
@@ -513,7 +597,7 @@ export default function TeamDashboard() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              👥 Equipos a los que perteneces
+              👥 Asistencia del equipo
             </h2>
             {selectedGroup && (
               <div className="text-gray-600">
