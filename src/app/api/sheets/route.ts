@@ -603,7 +603,6 @@ export async function DELETE(request: Request) {
     );
     
     let rowToDelete = null;
-    let targetSheet = null;
     
     // Buscar la visita en todas las hojas de usuario
     for (const sheetTitle of userSheetTitles) {
@@ -614,7 +613,6 @@ export async function DELETE(request: Request) {
         
         if (foundRow) {
           rowToDelete = foundRow;
-          targetSheet = sheet;
           console.log(`[API] Visita encontrada en hoja: ${sheetTitle}`);
           break;
         }

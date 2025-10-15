@@ -101,7 +101,7 @@ export default function TeamDashboard({ currentUser, currentUserVisits = [] }: T
           }
           
           // Para otros usuarios, calcular desde las visitas
-          const userVisits = allVisits.filter((visit: any) => visit.userId === user.id);
+          const userVisits = allVisits.filter((visit: GymVisit) => visit.userId === user.id);
           const today = new Date().toLocaleDateString('en-CA');
           
           console.log('[TeamDashboard] Usuario:', user.name, 'Visitas:', userVisits.length);
@@ -109,7 +109,7 @@ export default function TeamDashboard({ currentUser, currentUserVisits = [] }: T
           return {
             ...user,
             totalVisits: userVisits.length,
-            visitedToday: userVisits.some((visit: any) => 
+            visitedToday: userVisits.some((visit: GymVisit) => 
               new Date(visit.date).toLocaleDateString('en-CA') === today
             ),
             lastVisit: userVisits.length > 0 ? userVisits[userVisits.length - 1].date : undefined
