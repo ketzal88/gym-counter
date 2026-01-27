@@ -135,7 +135,7 @@ NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abc123
          allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
        }
        
-       match /bodyMeasurements/{measurementId} {
+       match /measurements/{measurementId} {
          allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
          allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
        }

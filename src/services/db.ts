@@ -66,23 +66,6 @@ export const subscribeToVisits = (userId: string | null, callback: (visits: Visi
     });
 };
 
-export const subscribeToAllVisits = (callback: (visits: Visit[]) => void) => {
-    // Caution: excessive reads if many users. For small team valid.
-    const q = query(
-        collection(db, 'visits'),
-        orderBy('timestamp', 'desc')
-    );
-
-    return onSnapshot(q, (snapshot) => {
-        const visits = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            timestamp: doc.data().timestamp?.toDate(),
-        })) as Visit[];
-        callback(visits);
-    });
-};
-
 export const addVisit = async (userId: string, date: Date) => {
     await addDoc(collection(db, 'visits'), {
         userId,

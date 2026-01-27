@@ -13,6 +13,7 @@ import {
 } from '@/services/db';
 import TotalVisitsChart from './TotalVisitsChart';
 import MaxWeightsSection from './MaxWeightsSection';
+import RecentVisitsManager from './RecentVisitsManager';
 import BottomNav from './BottomNav';
 
 export default function UnifiedDashboard() {
@@ -421,14 +422,8 @@ export default function UnifiedDashboard() {
               <h1 className="font-bold text-lg text-slate-900 dark:text-white">Corregir Asistencias</h1>
             </div>
           </header>
-          <div className="p-6">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-8 text-center">
-              <span className="material-symbols-rounded text-6xl text-slate-300 dark:text-slate-700 mb-4 block">history</span>
-              <h3 className="text-lg font-bold text-slate-700 dark:text-slate-300 mb-2">Gestión de Visitas</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Aquí podrás ver y gestionar todas tus visitas al gimnasio
-              </p>
-            </div>
+          <div className="p-4">
+            <RecentVisitsManager userId={user?.uid || ''} visits={visits} />
           </div>
         </div>
       )}
