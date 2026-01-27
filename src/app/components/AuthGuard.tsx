@@ -1,6 +1,6 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
@@ -9,19 +9,19 @@ interface AuthGuardProps {
 }
 
 export default function AuthGuard({ children }: AuthGuardProps) {
-  const { data: session, status } = useSession();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (status === 'loading') return; // Aún cargando
+    if (loading) return;
 
-    if (!session) {
+    if (!user) {
       router.push('/auth/signin');
     }
-  }, [session, status, router]);
+  }, [user, loading, router]);
 
   // Mostrar loading mientras verifica autenticación
-  if (status === 'loading') {
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
@@ -33,7 +33,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   }
 
   // No mostrar nada mientras redirige
-  if (!session) {
+  if (!user) {
     return null;
   }
 

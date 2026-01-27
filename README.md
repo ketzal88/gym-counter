@@ -1,115 +1,232 @@
-# GymCounter
+# GymCounter 🏋️
 
-A simple web application to track gym attendance with friends. Perfect for motivating each other to go to the gym regularly!
+Una aplicación web moderna para rastrear tu asistencia al gimnasio, récords personales y mediciones corporales. Perfecta para mantener la motivación y seguir tu progreso fitness.
 
-## Features
+## ✨ Características
 
-- Track gym visits for you and a friend
-- See the total count of gym visits for each person
-- View gym attendance history
-- Track consecutive days streak
-- Inspirational quotes with each visit
-- Data is stored in your browser's localStorage
-- Option to sync with Google Sheets (requires setup)
+### 📊 Dashboard Principal
+- **Asistencia Semanal**: Visualiza tu asistencia de los últimos 7 días
+- **Resumen Mensual**: Estadísticas de los últimos dos meses
+- **Porcentaje de Asistencia**: Calcula tu compromiso anual
+- **Registro Rápido**: FAB (Floating Action Button) para añadir visitas del día actual
+- **Mediciones Corporales**: Seguimiento de % músculo y % grasa con indicadores de tendencia
 
-## Getting Started
+### 📈 KPIs y Análisis
+- **Comparativa Anual**: Gráfico de líneas comparando año actual vs anterior
+- **Volumen Acumulado**: Total de visitas del año con porcentaje de asistencia
+- **Promedio Mensual**: Calcula automáticamente tu promedio de visitas
+- **Mes Pico**: Identifica tu mejor mes del año
 
-### Running Locally
+### 🏆 Récords Personales
+- **Sentadilla** (Piernas)
+- **Press de Banca** (Pecho)
+- **Peso Muerto** (Espalda)
+- **Press Militar** (Hombros)
+- Indicadores de progreso y tendencias
 
-1. Clone this repository
-2. Install dependencies:
+### 🎨 Diseño
+- **Dark Mode**: Soporte completo para modo oscuro/claro/automático
+- **Responsive**: Optimizado para móviles y tablets
+- **Material Symbols**: Iconografía moderna de Google
+- **Animaciones**: Transiciones suaves y micro-interacciones
+
+## 🚀 Tecnologías
+
+- **Framework**: Next.js 15 con React 19
+- **Estilos**: Tailwind CSS 4
+- **Base de Datos**: Firebase Firestore
+- **Autenticación**: Firebase Auth
+- **Gráficos**: Recharts
+- **Temas**: next-themes
+- **TypeScript**: Tipado estático completo
+
+## 📦 Instalación Local
+
+1. **Clona el repositorio**
+   ```bash
+   git clone https://github.com/tu-usuario/gymcounter.git
+   cd gymcounter
    ```
+
+2. **Instala dependencias**
+   ```bash
    npm install
    ```
-3. Configure environment variables:
-   - Copy `.env.example` to `.env.local`
-   - Replace the `GOOGLE_PRIVATE_KEY` value with your Service Account private key (see "Google Sheets Integration" section)
-4. Run the development server:
+
+3. **Configura Firebase**
+   - Crea un proyecto en [Firebase Console](https://console.firebase.google.com/)
+   - Habilita **Authentication** (Email/Password)
+   - Habilita **Firestore Database**
+   - Copia las credenciales de tu proyecto
+
+4. **Configura variables de entorno**
+   
+   Crea un archivo `.env.local` en la raíz del proyecto:
+   
+   ```env
+   NEXT_PUBLIC_FIREBASE_API_KEY=tu_api_key
+   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=tu_proyecto.firebaseapp.com
+   NEXT_PUBLIC_FIREBASE_PROJECT_ID=tu_proyecto_id
+   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=tu_proyecto.appspot.com
+   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=tu_sender_id
+   NEXT_PUBLIC_FIREBASE_APP_ID=tu_app_id
    ```
+
+5. **Ejecuta el servidor de desarrollo**
+   ```bash
    npm run dev
    ```
-5. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-### Deploying to Vercel
+6. **Abre tu navegador**
+   
+   Visita [http://localhost:3000](http://localhost:3000)
 
-To deploy this application to Vercel, follow these steps:
+## 🌐 Deploy en Vercel
 
-1. Fork this repository to your GitHub account
-2. Go to [Vercel](https://vercel.com) and sign up/login
-3. Click on "New Project"
-4. Import your GitHub repository
-5. Under "Environment Variables", add:
-   - `GOOGLE_PRIVATE_KEY` with your Service Account private key (make sure to replace newlines with `\n`)
-6. Vercel will detect it's a Next.js project and configure the build settings automatically
-7. Click "Deploy"
+### Paso 1: Preparar el Proyecto
 
-Once deployed, you'll get a URL where your app is accessible to everyone.
+1. Sube tu código a GitHub
+2. Asegúrate de tener tu proyecto de Firebase configurado
 
-## Google Sheets Integration
+### Paso 2: Importar en Vercel
 
-GymCounter can sync data with Google Sheets to enable sharing between devices. Follow these steps to set up the integration:
+1. Ve a [Vercel](https://vercel.com)
+2. Haz clic en **"Add New Project"**
+3. Importa tu repositorio de GitHub
+4. Vercel detectará automáticamente que es un proyecto Next.js
 
-### Step 1: Set Up a Google Cloud Project
+### Paso 3: Configurar Variables de Entorno
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project (or use an existing one)
-3. Enable the Google Sheets API for your project
+En la sección **Environment Variables** de Vercel, agrega:
 
-### Step 2: Create a Service Account
+```
+NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSy...
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=tu-proyecto.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=tu-proyecto-id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=tu-proyecto.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
+NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abc123
+```
 
-1. In your Google Cloud Project, go to "IAM & Admin" > "Service Accounts"
-2. Click "Create Service Account"
-3. Give it a name (e.g., "GymCounter")
-4. Grant it the "Editor" role for the project
-5. Click "Create and Continue"
-6. Click "Done"
+**Importante**: Asegúrate de agregar estas variables para los tres entornos:
+- ✅ Production
+- ✅ Preview
+- ✅ Development
 
-### Step 3: Create Service Account Key
+### Paso 4: Configurar Firebase para Vercel
 
-1. Find your service account in the list and click on it
-2. Go to the "Keys" tab
-3. Click "Add Key" > "Create new key"
-4. Select "JSON" and click "Create"
-5. A JSON file will be downloaded - keep it secure!
+1. **Autoriza el dominio de Vercel en Firebase**
+   - Ve a Firebase Console → Authentication → Settings
+   - En **Authorized domains**, agrega:
+     - `tu-proyecto.vercel.app`
+     - `tu-dominio-personalizado.com` (si tienes uno)
 
-### Step 4: Share the Google Sheet
-
-1. Use this Google Sheet: [GymCounter Spreadsheet](https://docs.google.com/spreadsheets/d/1sJmsAry32FM0A1jlyM1bWI9VyyBHedX65PyLUNVahXI/edit)  
-   (or make a copy of it for your own use)
-2. Click the "Share" button
-3. Add the email address of your service account (it looks like: `your-account@your-project.iam.gserviceaccount.com`)
-4. Give it "Editor" access
-5. Click "Share"
-
-### Step 5: Configure Environment Variables
-
-1. Open the JSON file you downloaded
-2. Find the `private_key` field (it starts with `-----BEGIN PRIVATE KEY-----` and ends with `-----END PRIVATE KEY-----`)
-3. Add it to your `.env.local` file as:
-
+2. **Configura reglas de Firestore**
+   
+   En Firebase Console → Firestore Database → Rules:
+   
+   ```javascript
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       // Usuarios solo pueden leer/escribir sus propios datos
+       match /visits/{visitId} {
+         allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+         allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+       }
+       
+       match /bodyMeasurements/{measurementId} {
+         allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+         allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+       }
+       
+       match /maxWeights/{weightId} {
+         allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+         allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+       }
+     }
+   }
    ```
-   GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEvgIB...[rest of your key]...1QIDAQaB\n-----END PRIVATE KEY-----\n"
-   ```
 
-   - Make sure all newlines in the key are replaced with `\n`
-   - Keep the quotes around the key value
+### Paso 5: Deploy
 
-4. If you're using your own spreadsheet, also update the `SPREADSHEET_ID` constant in `src/data/sheetsService.ts`
+1. Haz clic en **"Deploy"**
+2. Espera a que Vercel construya y despliegue tu aplicación
+3. ¡Listo! Tu app estará disponible en `https://tu-proyecto.vercel.app`
 
-## How It Works
+## 🔧 Comandos Disponibles
 
-- The app uses your browser's localStorage to keep track of gym visits (as a fallback)
-- It synchronizes data with Google Sheets for persistence across devices
-- Each person gets a counter with a "+1" button to record gym visits
-- The history section shows when each person went to the gym
-- The app tracks consecutive days to help maintain your gym streak
-- Random motivational quotes appear to keep you inspired
+```bash
+npm run dev      # Inicia el servidor de desarrollo
+npm run build    # Construye la aplicación para producción
+npm run start    # Inicia el servidor de producción
+npm run lint     # Ejecuta el linter
+```
 
-## Technologies Used
+## 📱 Estructura del Proyecto
 
-- Next.js 15
-- React
-- TypeScript
-- Tailwind CSS
-- localStorage for fallback data persistence
-- Google Sheets API for cloud storage and synchronization
+```
+gymcounter/
+├── src/
+│   ├── app/
+│   │   ├── components/        # Componentes React
+│   │   │   ├── UnifiedDashboard.tsx
+│   │   │   ├── MaxWeightsSection.tsx
+│   │   │   ├── TotalVisitsChart.tsx
+│   │   │   └── ...
+│   │   ├── layout.tsx         # Layout principal
+│   │   └── page.tsx           # Página de inicio
+│   ├── context/
+│   │   └── AuthContext.tsx    # Contexto de autenticación
+│   └── services/
+│       └── db.ts              # Servicios de Firebase
+├── public/                    # Archivos estáticos
+├── .env.local                 # Variables de entorno (no commitear)
+└── package.json
+```
+
+## 🎯 Uso de la Aplicación
+
+### Registro de Visitas
+1. Haz clic en el **FAB (+)** en la esquina inferior derecha para registrar la visita del día
+2. O toca un día en el calendario semanal para registrar/editar visitas
+
+### Añadir Récords
+1. Ve a la pestaña **"Récords"**
+2. Haz clic en el botón **"+"** del ejercicio
+3. Ajusta el peso y repeticiones
+4. Guarda tu nuevo récord
+
+### Mediciones Corporales
+1. En la pestaña **"Récords"**, busca la sección de mediciones
+2. Haz clic en **"+ Nuevo"**
+3. Ingresa tu % de músculo y % de grasa
+4. Las tendencias se calcularán automáticamente
+
+## 🔐 Seguridad
+
+- Autenticación requerida para todas las operaciones
+- Reglas de Firestore configuradas para acceso solo al usuario propietario
+- Variables de entorno para credenciales sensibles
+- HTTPS obligatorio en producción (Vercel lo maneja automáticamente)
+
+## 📄 Licencia
+
+MIT License - siéntete libre de usar este proyecto para tus propios propósitos.
+
+## 🤝 Contribuciones
+
+Las contribuciones son bienvenidas. Por favor:
+1. Haz fork del proyecto
+2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
+
+## 📞 Soporte
+
+Si encuentras algún problema o tienes sugerencias, por favor abre un issue en GitHub.
+
+---
+
+Hecho con 💪 para mantener la consistencia en el gym

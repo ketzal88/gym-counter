@@ -1,987 +1,669 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useSession } from 'next-auth/react';
-import { User, GymVisit, BodyMeasurement } from '@/data/types';
-import { deleteVisit } from '@/data/sheetsService';
-import TeamDashboard from './TeamDashboard';
-import InvitationNotifications from './InvitationNotifications';
-import ApiStatusBanner from './ApiStatusBanner';
+import { useState, useEffect, useMemo } from 'react';
+import { useTheme } from 'next-themes';
+import { useAuth } from '@/context/AuthContext';
+import {
+  Visit,
+  BodyMeasurement,
+  subscribeToVisits,
+  addVisit,
+  subscribeToBodyMeasurements,
+  addBodyMeasurement
+} from '@/services/db';
+import TotalVisitsChart from './TotalVisitsChart';
+import MaxWeightsSection from './MaxWeightsSection';
+import BottomNav from './BottomNav';
 
 export default function UnifiedDashboard() {
-  const { data: session } = useSession();
-  const [user, setUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
-  const [visits, setVisits] = useState<GymVisit[]>([]);
+  const { user } = useAuth();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Navigation State
+  const [activeTab, setActiveTab] = useState<'home' | 'logs' | 'kpis' | 'records'>('home');
+
+  // Data State
+  const [visits, setVisits] = useState<Visit[]>([]);
   const [bodyMeasurements, setBodyMeasurements] = useState<BodyMeasurement[]>([]);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [modalUserId, setModalUserId] = useState('');
-  const [modalDate, setModalDate] = useState('');
+
+  // Measurement Modal State
+  const [showMeasurementModal, setShowMeasurementModal] = useState(false);
+  const [modalDate, setModalDate] = useState(new Date().toISOString().split('T')[0]);
   const [modalMuscle, setModalMuscle] = useState('');
   const [modalFat, setModalFat] = useState('');
   const [savingMeasurement, setSavingMeasurement] = useState(false);
-  const modalDateRef = useRef<HTMLInputElement>(null);
 
-  // State for profile modal
-  const [showProfileModal, setShowProfileModal] = useState(false);
-  const [profileName, setProfileName] = useState('');
-  const [profileEmail, setProfileEmail] = useState('');
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [savingProfile, setSavingProfile] = useState(false);
-
-  // State for tabs
-  const [activeTab, setActiveTab] = useState<'personal' | 'team'>('personal');
-
-  // Fecha de inicio del contador: 1 de enero de 2025
-  const startDate = new Date(2025, 0, 1);
-  const today = new Date();
-  const diffTime = Math.abs(today.getTime() - startDate.getTime());
-  const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-  const fetchUserData = async () => {
-      try {
-        setLoading(true);
-        
-        // Obtener información del usuario actual
-        const userResponse = await fetch('/api/users');
-        let currentUser = null;
-        
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          setUser(userData.user);
-          currentUser = userData.user;
-        }
-
-        // Para estadísticas personales, solo usar el usuario actual
-        if (currentUser) {
-          setUsers([currentUser]);
-        } else {
-          setUsers([]);
-        }
-
-        // Obtener visitas solo si tenemos un usuario
-        if (currentUser) {
-          const visitsResponse = await fetch(`/api/sheets?type=visits&userId=${currentUser.id}`);
-          if (visitsResponse.ok) {
-            const visitsData = await visitsResponse.json();
-            
-            if (visitsData.visits && Array.isArray(visitsData.visits)) {
-              setVisits(visitsData.visits);
-            }
-          }
-        }
-
-        // Cargar mediciones corporales desde Google Sheets
-        if (currentUser) {
-          const measurementsResponse = await fetch(`/api/sheets?type=body&userId=${currentUser.id}`);
-          if (measurementsResponse.ok) {
-            const measurementsData = await measurementsResponse.json();
-            
-            if (measurementsData.bodyMeasurements && Array.isArray(measurementsData.bodyMeasurements)) {
-              setBodyMeasurements(measurementsData.bodyMeasurements);
-            }
-          }
-        }
-
-      } catch (error) {
-        console.error('Error cargando datos del usuario:', error);
-      } finally {
-        setLoading(false);
-      }
-  };
-
+  // Initial Data Load
   useEffect(() => {
-    if (session) {
-      fetchUserData();
+    if (!user) {
+      setLoading(false);
+      return;
     }
-  }, [session]);
 
-  // Calcular estadísticas para el usuario actual
-  const userVisits = visits.filter(v => v.userId === user?.id);
-  const totalVisits = userVisits.length;
+    setLoading(true);
 
-  // Calcular estadísticas mensuales
-  const currentDate = new Date();
-  const currentMonth = currentDate.getMonth();
-  const currentYear = currentDate.getFullYear();
-  
-  // Mes actual
-  const currentMonthVisits = userVisits.filter(visit => {
-    const visitDate = new Date(visit.date);
-    return visitDate.getMonth() === currentMonth && visitDate.getFullYear() === currentYear;
-  }).length;
-  
-  // Mes pasado
-  const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-  const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-  
-  const lastMonthVisits = userVisits.filter(visit => {
-    const visitDate = new Date(visit.date);
-    return visitDate.getMonth() === lastMonth && visitDate.getFullYear() === lastMonthYear;
-  }).length;
-
-
-
-  // Función para agregar visita
-  const handleAddVisit = async () => {
-    if (!user) return;
-    
-    console.log(`[CLIENT] Agregando visita para usuario: ${user.id} (${user.name})`);
-    
-    try {
-      const response = await fetch('/api/sheets', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type: 'visit',
-          visit: {
-            id: Date.now().toString(),
-            userId: user.id,
-            date: new Date().toISOString(),
-          },
-        }),
-      });
-
-      if (response.ok) {
-        // Recargar las visitas
-        const visitsResponse = await fetch('/api/sheets?type=visits');
-        if (visitsResponse.ok) {
-          const visitsData = await visitsResponse.json();
-          if (visitsData.visits && Array.isArray(visitsData.visits)) {
-            const userVisits = visitsData.visits
-              .filter((visit: { userId: string; id: string; date: string }) => visit.userId === user.id);
-            setVisits(userVisits);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error agregando visita:', error);
-    }
-  };
-
-  // Funciones para estadísticas y depurador
-  const didUserAttendOnDate = (userId: string, date: Date) => {
-    const targetDateLocal = date.toLocaleDateString('en-CA'); // Formato YYYY-MM-DD en zona local
-    return visits.some(v => {
-      if (v.userId !== userId) return false;
-      const visitDate = new Date(v.date);
-      const visitDateLocal = visitDate.toLocaleDateString('en-CA'); // Formato YYYY-MM-DD en zona local
-      return visitDateLocal === targetDateLocal;
+    const unsubscribeVisits = subscribeToVisits(user.uid, (data) => {
+      setVisits(data);
+      setLoading(false);
     });
-  };
 
-  const handleDeleteVisit = async (visitId: string) => {
-    try {
-      await deleteVisit(visitId);
-      // Recargar datos
-      const visitsResponse = await fetch('/api/sheets?type=visits');
-      if (visitsResponse.ok) {
-        const visitsData = await visitsResponse.json();
-        if (visitsData.visits && Array.isArray(visitsData.visits)) {
-          const userVisits = visitsData.visits
-            .filter((visit: { userId: string; id: string; date: string }) => visit.userId === user?.id);
-          setVisits(userVisits);
-        }
-      }
-    } catch (error) {
-      console.error('Error eliminando visita:', error);
-    }
-  };
+    const unsubscribeMeasurements = subscribeToBodyMeasurements(user.uid, (data) => {
+      setBodyMeasurements(data);
+    });
 
-  const handleAddVisitForDate = async (userId: string, dateString: string) => {
-    try {
-      const response = await fetch('/api/sheets', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type: 'visit',
-          visit: {
-            id: Date.now().toString(),
-            userId: userId,
-            date: new Date(dateString).toISOString(),
-          },
-        }),
-      });
-
-      if (response.ok) {
-        // Recargar datos
-        const visitsResponse = await fetch('/api/sheets?type=visits');
-        if (visitsResponse.ok) {
-          const visitsData = await visitsResponse.json();
-          if (visitsData.visits && Array.isArray(visitsData.visits)) {
-            const userVisits = visitsData.visits
-              .filter((visit: { userId: string; id: string; date: string }) => visit.userId === user?.id);
-            setVisits(userVisits);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error agregando visita:', error);
-    }
-  };
-
-  const openModal = (userId: string) => {
-    setModalUserId(userId);
-    setModalDate(new Date().toISOString().split('T')[0]);
-    setModalMuscle('');
-    setModalFat('');
-    setShowModal(true);
-  };
-
-  const closeModal = () => {
-    setShowModal(false);
-    setModalUserId('');
-    setModalDate('');
-    setModalMuscle('');
-    setModalFat('');
-  };
-
-  const saveBodyMeasurement = async () => {
-    if (!modalMuscle || !modalFat || !modalDate) return;
-    
-    console.log(`[CLIENT] Guardando medición corporal para usuario: ${modalUserId}`);
-    
-    setSavingMeasurement(true);
-    try {
-      const response = await fetch('/api/sheets', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type: 'body',
-          bodyMeasurement: {
-            id: Date.now().toString(),
-            userId: modalUserId,
-            date: new Date(modalDate).toISOString(),
-            muscle: parseFloat(modalMuscle),
-            fat: parseFloat(modalFat),
-          },
-        }),
-      });
-
-      if (response.ok) {
-        // Recargar mediciones
-        const measurementsResponse = await fetch('/api/sheets?type=body');
-        if (measurementsResponse.ok) {
-          const measurementsData = await measurementsResponse.json();
-          setBodyMeasurements(measurementsData.bodyMeasurements || []);
-        }
-        closeModal();
-      }
-    } catch (error) {
-      console.error('Error guardando medición:', error);
-    } finally {
-      setSavingMeasurement(false);
-    }
-  };
-
-  // Funciones para perfil
-  const openProfileModal = useCallback(() => {
-    if (user) {
-      setProfileName(user.name);
-      setProfileEmail(user.email);
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      setShowProfileModal(true);
-    }
+    return () => {
+      unsubscribeVisits();
+      unsubscribeMeasurements();
+    };
   }, [user]);
 
-  // Event listener para el botón de perfil del Navbar
-  useEffect(() => {
-    const handleOpenProfileModal = () => {
-      openProfileModal();
-    };
+  // --- Statistics Calculation ---
+  const currentYear = new Date().getFullYear();
+  const yearVisits = visits.filter(v => new Date(v.date).getFullYear() === selectedYear);
+  const totalVisitsYear = yearVisits.length;
 
-    window.addEventListener('openProfileModal', handleOpenProfileModal);
-    
-    return () => {
-      window.removeEventListener('openProfileModal', handleOpenProfileModal);
-    };
-  }, [openProfileModal]);
+  const currentDate = new Date();
+  const currentMonth = currentDate.getMonth(); // 0-11
+  const isCurrentYear = selectedYear === currentYear;
 
-  const closeProfileModal = () => {
-    setShowProfileModal(false);
-    setProfileName('');
-    setProfileEmail('');
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-  };
+  // Monthly Stats (Selected Year)
+  // If current year, show current month and last month
+  // If past year, show December and November of that year
+  const displayMonth1 = isCurrentYear ? currentMonth : 11; // December for past years
+  const displayMonth2 = isCurrentYear ? (currentMonth === 0 ? 11 : currentMonth - 1) : 10; // November for past years
 
+  const month1Visits = yearVisits.filter(v => new Date(v.date).getMonth() === displayMonth1).length;
+  const month2Visits = yearVisits.filter(v => new Date(v.date).getMonth() === displayMonth2).length;
 
-  const handleSaveProfile = async () => {
-    if (!user) return;
+  const month1Name = new Date(selectedYear, displayMonth1, 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  const month2Name = new Date(selectedYear, displayMonth2, 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
 
-    // Validaciones
-    if (!profileName || !profileEmail) {
-      alert('Por favor completa todos los campos requeridos');
-      return;
-    }
+  // Attendance Percentage Calculation
+  const startOfYear = new Date(selectedYear, 0, 1);
+  const endOfYear = new Date(selectedYear, 11, 31, 23, 59, 59);
+  const now = new Date();
 
-    if (newPassword && newPassword !== confirmPassword) {
-      alert('Las nuevas contraseñas no coinciden');
-      return;
-    }
+  // Days elapsed in the selected year (up to today if current year, or full year if past)
+  const referenceDate = isCurrentYear ? now : endOfYear;
+  const daysElapsed = Math.floor((referenceDate.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
-    if (newPassword && newPassword.length < 6) {
-      alert('La nueva contraseña debe tener al menos 6 caracteres');
-      return;
-    }
+  // Total days in the year
+  const totalDaysInYear = Math.floor((endOfYear.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
-    try {
-      setSavingProfile(true);
+  // Attendance percentage
+  const attendancePercentage = daysElapsed > 0 ? ((totalVisitsYear / daysElapsed) * 100).toFixed(1) : '0.0';
 
-      const response = await fetch('/api/users', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: profileName,
-          email: profileEmail,
-          currentPassword: currentPassword || undefined,
-          newPassword: newPassword || undefined,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        alert(data.error || 'Error al actualizar el perfil');
-        return;
-      }
-
-      // Actualizar el usuario local
-      setUser({ ...user, name: profileName, email: profileEmail });
-      
-      alert('Perfil actualizado exitosamente');
-      closeProfileModal();
-    } catch (error) {
-      console.error('Error actualizando perfil:', error);
-      alert('Error de conexión');
-    } finally {
-      setSavingProfile(false);
-    }
-  };
-
-  // Calcular días de la semana actual
+  // Week Stats Logic (for Weekly Calendar)
+  const today = new Date();
   const currentWeekDays: Date[] = [];
   const startOfWeek = new Date(today);
-  const dayOfWeek = today.getDay(); // 0 = domingo, 1 = lunes, etc.
-  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Ajustar para que lunes sea el primer día
+  const dayOfWeek = today.getDay(); // 0 (Sun) - 6 (Sat)
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
   startOfWeek.setDate(today.getDate() + mondayOffset);
-  
+
   for (let i = 0; i < 7; i++) {
     const day = new Date(startOfWeek);
     day.setDate(startOfWeek.getDate() + i);
     currentWeekDays.push(day);
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-center">
-          <div className="text-4xl mb-4">⏳</div>
-          <p className="text-gray-600">Cargando tu información...</p>
-        </div>
-      </div>
-    );
-  }
+  const isSameDay = (d1: Date, d2: Date) =>
+    d1.getFullYear() === d2.getFullYear() &&
+    d1.getMonth() === d2.getMonth() &&
+    d1.getDate() === d2.getDate();
 
-  if (!user) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-red-600">Error cargando información del usuario</p>
+  const getDayStatus = (date: Date) => {
+    // Check if date is strictly in the future (tomorrow onwards)
+    const now = new Date();
+    // Reset time for accurate date comparison
+    const dateNoTime = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const todayNoTime = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    if (dateNoTime > todayNoTime) return 'future';
+
+    const attended = visits.some(v => isSameDay(new Date(v.date), date));
+
+    if (attended) return 'attended';
+    return dateNoTime.getTime() === todayNoTime.getTime() ? 'today' : 'missed';
+  };
+
+
+  const handleAddMeasurement = async () => {
+    if (!user || !modalMuscle || !modalFat) return;
+    setSavingMeasurement(true);
+    try {
+      await addBodyMeasurement(
+        user.uid,
+        new Date(modalDate),
+        parseFloat(modalMuscle),
+        parseFloat(modalFat)
+      );
+      setShowMeasurementModal(false);
+      setModalMuscle('');
+      setModalFat('');
+    } catch (error) {
+      console.error("Error adding measurement:", error);
+      alert("Error al guardar la medición");
+    } finally {
+      setSavingMeasurement(false);
+    }
+  };
+
+  // Process measurements to add diffs
+  const processedMeasurements = useMemo(() => {
+    const sorted = [...bodyMeasurements].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    return sorted.map((current, index) => {
+      const next = sorted[index + 1]; // next in text is previous in time
+      let muscleDiff = null;
+      let fatDiff = null;
+
+      if (next) {
+        muscleDiff = (current.muscle - next.muscle).toFixed(1);
+        fatDiff = (current.fat - next.fat).toFixed(1);
+      }
+
+      return {
+        ...current,
+        muscleDiff,
+        fatDiff
+      };
+    });
+  }, [bodyMeasurements]);
+
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-screen bg-slate-50 dark:bg-slate-900">
+      <div className="animate-pulse flex flex-col items-center">
+        <div className="h-12 w-12 bg-blue-500 rounded-full mb-4"></div>
+        <div className="text-slate-400 font-medium">Cargando GymCounter...</div>
       </div>
-    );
+    </div>;
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Tabs */}
-      <div className="bg-white rounded-lg shadow-md">
-        <div className="border-b border-gray-200">
-          <nav className="flex space-x-8 px-6" aria-label="Tabs">
-            <button
-              onClick={() => setActiveTab('personal')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'personal'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              📊 Tu asistencia
-            </button>
-            <button
-              onClick={() => setActiveTab('team')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'team'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              👥 Asistencia Equipo
-            </button>
-          </nav>
-        </div>
-      </div>
+    <div className="pb-24 max-w-lg mx-auto min-h-screen bg-slate-50 dark:bg-slate-950">
 
-      {/* Banner de estado de API */}
-      <ApiStatusBanner />
-
-      {/* Contenido de las pestañas */}
-      {activeTab === 'personal' && (
+      {/* ---------------- HOME TAB ---------------- */}
+      {activeTab === 'home' && (
         <>
-          {/* Notificaciones de invitaciones */}
-          <InvitationNotifications />
-          
-          {/* Sección PersonalDashboard - Saludo y contador principal */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">
-          ¡Hola, {user.name}! 👋
-        </h2>
-        
-        <div className="text-center">
-          <div className="mb-6">
-            <div className="text-6xl font-bold text-blue-600 mb-2">
-              {totalVisits} 🔥
-            </div>
-            <p className="text-gray-600 mb-4">Total de visitas al gym</p>
-            
-            <div className="flex flex-col space-y-3">
-              <button
-                onClick={handleAddVisit}
-                disabled={loading}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center space-x-2 mx-auto"
-              >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    <span>Agregando...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>🏋️</span>
-                    <span>+1</span>
-                  </>
-                )}
-              </button>
-              
-            </div>
-          </div>
-        </div>
-      </div>
-
-            {/* Asistencia semana actual */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-        <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          📅 Asistencia de la semana (lunes a domingo)
-        </h4>
-        <div className="bg-white border rounded-lg">
-          {/* Header con días de la semana */}
-          <div className="grid grid-cols-7 gap-1 p-2 bg-indigo-50 border-b border-indigo-200">
-            {currentWeekDays.map((date, index) => {
-              return (
-                <div key={index} className="col-span-1 text-center">
-                  <div className="text-xs text-indigo-600 font-medium">
-                    {['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'][index]}
-                  </div>
-                  <div className="text-xs text-indigo-800 font-bold">
-                    {date.getDate()}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          
-          {/* Contenido de la tabla con scroll */}
-          <div className="bg-white rounded-b-lg">
-            {users.map(userItem => {
-              // Solo mostrar datos para el usuario actual (Gabi)
-              if (userItem.id !== user?.id) return null;
-              
-              return (
-                <div key={userItem.id} className="grid grid-cols-7 gap-1 p-2 border-t border-indigo-100">
-                  {currentWeekDays.map((date, index) => {
-                    const attended = didUserAttendOnDate(userItem.id, date);
-                    const isFuture = date > today;
-                    return (
-                      <div key={index} className="col-span-1 flex justify-center items-center">
-                        {isFuture ? (
-                          <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                            <span className="text-gray-400 text-xl">–</span>
-                          </div>
-                        ) : attended ? (
-                          <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                            <span className="text-green-600 text-xl">✅</span>
-                          </div>
-                        ) : (
-                          <div className="w-10 h-10 bg-red-50 rounded-full flex items-center justify-center">
-                            <span className="text-red-500 text-xl">❌</span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Estadísticas Mensuales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Mes Actual */}
-        <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-6 border-2 border-green-100">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-green-600 mb-2">
-              {currentMonthVisits} 🗓️
-            </div>
-            <p className="text-gray-700 font-medium mb-1">
-              Este mes ({new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(currentDate)})
-            </p>
-            <p className="text-sm text-gray-500">
-              Visitas al gym
-            </p>
-          </div>
-        </div>
-
-        {/* Mes Pasado */}
-        <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-6 border-2 border-purple-100">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-purple-600 mb-2">
-              {lastMonthVisits} 📅
-            </div>
-            <p className="text-gray-700 font-medium mb-1">
-              Mes pasado ({new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(new Date(lastMonthYear, lastMonth))})
-            </p>
-            <p className="text-sm text-gray-500">
-              Visitas al gym
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Sección de Estadísticas */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-bold text-gray-900 flex items-center">
-            📊 Estadísticas
-          </h3>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full transition-colors duration-200"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Estadísticas generales y Porcentajes de asistencia unidos */}
-        <div className="mb-6">
-          <div className="bg-white border rounded-lg p-4">
-            {/* Título dentro de la card */}
-            <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              📈✔️ Porcentajes de asistencia
-            </h4>
-            
-            {/* Estadísticas generales dentro de la misma card */}
-            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-              <div className="text-sm text-gray-600 mb-2">
-                Inicio del conteo: 1 de enero de 2025
+          <header className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">💪</span>
+                <h1 className="font-extrabold text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-500">
+                  GymCounter
+                </h1>
               </div>
-              <div className="text-sm text-gray-600">
-                Días transcurridos: {totalDays} días
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowMeasurementModal(true)}
+                  className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs uppercase shadow-lg shadow-blue-500/30 hover:shadow-xl transition-all"
+                >
+                  {user?.displayName?.charAt(0) || 'G'}
+                </button>
               </div>
             </div>
-            {users.map(userItem => {
-              // Usar todas las visitas para el usuario actual (Gabi)
-              const userVisits = userItem.id === user?.id ? visits : [];
-              const attendancePercentage = totalDays > 0 ? (userVisits.length / totalDays * 100).toFixed(1) : '0.0';
-              
-              
-              return (
-                <div key={userItem.id} className="mb-4 last:mb-0">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-medium text-gray-900">{userItem.name}</span>
-                    <span className="text-sm text-gray-600">{attendancePercentage}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div 
-                      className="bg-green-500 h-3 rounded-full transition-all duration-300" 
-                      style={{ width: `${Math.min(parseFloat(attendancePercentage), 100)}%` }}
-                    ></div>
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    {userVisits.length} visitas de {totalDays} días posibles
-                  </div>
+          </header>
+
+          <main className="px-4 py-6 space-y-6 animate-fade-in">
+            <section>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+                ¡Hola, {user?.displayName?.split(' ')[0] || 'Atleta'}! 👋
+              </h2>
+              <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
+                Hoy es un buen día para entrenar.
+              </p>
+            </section>
+
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-700 p-5 text-white shadow-xl shadow-blue-900/20">
+              <div className="relative z-10">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="material-symbols-rounded text-sm bg-white/20 p-1 rounded">rocket_launch</span>
+                  <span className="text-[10px] uppercase tracking-widest font-bold opacity-90">Motivación diaria</span>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-
-
-        {/* Componente de depuración - Últimas visitas */}
-        <div className="mt-6 p-3 bg-gray-50 rounded-lg border border-gray-200">
-          <details open={false}>
-            <summary className="cursor-pointer font-medium text-gray-700 flex items-center">
-              <span className="mr-2">▶️</span>
-              🔍 Depuración - Visitas recientes ({userVisits.length})
-            </summary>
-            <div className="mt-4 space-y-2">
-              <div className="text-sm text-gray-600 mb-3">Últimos 10 días</div>
-              {Array.from({length: 10}, (_, i) => {
-                const date = new Date();
-                date.setDate(date.getDate() - i);
-                const dateString = date.toLocaleDateString('en-CA'); // Formato YYYY-MM-DD en zona local
-                const visitsOnDate = userVisits.filter(v => {
-                  const visitDate = new Date(v.date);
-                  const visitDateLocal = visitDate.toLocaleDateString('en-CA');
-                  return visitDateLocal === dateString;
-                });
-                
-                return (
-                  <div key={dateString} className="p-2 bg-white rounded border border-gray-200">
-                    <div className="font-medium">{dateString} ({new Intl.DateTimeFormat('es-ES', {weekday: 'long'}).format(date)})</div>
-                    <div className="mt-1 ml-2">
-                      {users.map(userItem => {
-                        // Solo mostrar datos para el usuario actual (Gabi)
-                        if (userItem.id !== user?.id) return null;
-                        
-                        const userVisitsOnDate = visitsOnDate.filter(v => v.userId === userItem.id);
-                        return (
-                          <div key={userItem.id} className={`${userVisitsOnDate.length > 0 ? 'text-green-600' : 'text-red-500'} flex justify-between items-center`}>
-                            <div>
-                              {userItem.name}: {userVisitsOnDate.length > 0 ? `✅ (${userVisitsOnDate.length} visitas)` : '❌ No registrado'}
-                              {userVisitsOnDate.length > 0 && (
-                                <div className="text-xs text-gray-500 ml-4">
-                                  {userVisitsOnDate.map((v, i) => (
-                                    <div key={i} className="flex justify-between items-center">
-                                      <div>ID: {v.id} - Hora: {new Date(v.date).toLocaleTimeString()}</div>
-                                      <button 
-                                        onClick={() => handleDeleteVisit(v.id)}
-                                        className="text-xs bg-red-100 hover:bg-red-200 text-red-800 px-2 py-1 rounded ml-2"
-                                        title="Eliminar esta visita"
-                                      >
-                                        Eliminar
-                                      </button>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                            {userVisitsOnDate.length === 0 && (
-                              <button 
-                                onClick={() => handleAddVisitForDate(userItem.id, dateString)}
-                                className="text-xs bg-green-100 hover:bg-green-200 text-green-800 px-2 py-1 rounded"
-                              >
-                                Registrar
-                              </button>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
+                <p className="text-sm font-medium leading-relaxed italic opacity-90">
+                  "¡No hay límites para quien se atreve a superarse!"
+                </p>
+              </div>
+              <div className="absolute -right-6 -bottom-6 opacity-10 rotate-12">
+                <span className="material-symbols-rounded text-[140px]">fitness_center</span>
+              </div>
             </div>
-          </details>
-        </div>
 
-        {/* Tabla de mediciones corporales */}
-        <div className="mt-6">
-          <div className="flex justify-between items-center mb-4">
-            <h4 className="text-lg font-semibold text-gray-900 flex items-center">
-              📏 Mediciones corporales
-            </h4>
-          </div>
+            <section className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 text-center relative overflow-hidden">
+              <div className="flex flex-col items-center justify-center">
+                <div className="flex items-center justify-center gap-3 mb-2">
+                  <span className="text-6xl font-black text-blue-600 tracking-tighter drop-shadow-sm">{totalVisitsYear}</span>
+                  <span className="text-5xl animate-pulse filter drop-shadow-lg">🔥</span>
+                </div>
+                <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">Total de visitas al gym ({currentYear})</p>
+              </div>
+            </section>
 
-          <div className="bg-white border rounded-lg overflow-hidden">
-            <table className="min-w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase">Usuario</th>
-                  <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                  <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase">% Masa muscular</th>
-                  <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase">% Grasa</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map(userItem => {
-                  // Solo mostrar datos para el usuario actual (Gabi)
-                  if (userItem.id !== user?.id) return null;
-                  
-                  const userMeasurements = bodyMeasurements
-                    .filter(m => m.userId === userItem.id)
-                    .sort((a, b) => b.date.localeCompare(a.date));
-                  const measurementsToShow = userMeasurements; // Siempre mostrar todas
-                  
-                  
-                  if (measurementsToShow.length === 0) {
-                    return (
-                      <tr key={userItem.id + '-empty'} className="border-t">
-                        <td className="px-2 py-1 font-medium align-top text-gray-900">{userItem.name}
-                          <button onClick={() => openModal(userItem.id)} className="ml-2 text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 px-2 py-1 rounded">+</button>
-                        </td>
-                        <td className="px-2 py-1 text-gray-500" colSpan={3}>Sin mediciones</td>
-                      </tr>
-                    );
+            <section className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="font-bold flex items-center gap-2 text-slate-800 dark:text-white">
+                  <div className="p-1.5 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-500">
+                    <span className="material-symbols-rounded text-lg">calendar_month</span>
+                  </div>
+                  Asistencia de la semana
+                </h3>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setActiveTab('logs')}
+                    className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
+                  >
+                    <span className="material-symbols-rounded text-lg">history</span>
+                  </button>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded">Lun - Dom</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-7 gap-2">
+                {currentWeekDays.map((date, index) => {
+                  const dayName = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'][index];
+                  const status = getDayStatus(date);
+
+                  let bgClass = "bg-slate-50 dark:bg-slate-800 text-slate-300";
+                  let icon = "remove"; // horizontal_rule
+                  let textColor = "text-slate-400";
+                  let isClickable = false;
+
+                  if (status === 'attended') {
+                    bgClass = "bg-green-100 dark:bg-green-900/20 text-green-500 shadow-sm";
+                    icon = "check";
+                    textColor = "text-green-600 dark:text-green-400";
+                  } else if (status === 'missed') {
+                    bgClass = "bg-red-50 dark:bg-red-900/10 text-red-400";
+                    icon = "close";
+                    textColor = "text-red-400";
+                  } else if (status === 'today') {
+                    bgClass = "border-2 border-dashed border-blue-500 text-blue-500 animate-pulse cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20";
+                    icon = "add";
+                    textColor = "text-blue-500 font-bold";
+                    isClickable = true;
                   }
-                  return measurementsToShow.map((m, idx) => {
-                    const prev = userMeasurements[userMeasurements.findIndex(mm => mm.id === m.id) + 1];
-                    let muscleChange: string | null = null;
-                    let fatChange: string | null = null;
-                    if (prev) {
-                      const muscleDiff = m.muscle - prev.muscle;
-                      const fatDiff = m.fat - prev.fat;
-                      if (muscleDiff !== 0) {
-                        const sign = muscleDiff > 0 ? '+' : '';
-                        muscleChange = `${sign}${muscleDiff.toFixed(1)}%`;
-                      }
-                      if (fatDiff !== 0) {
-                        const sign = fatDiff > 0 ? '+' : '';
-                        fatChange = `${sign}${fatDiff.toFixed(1)}%`;
-                      }
-                    }
-                    return (
-                      <tr key={`${userItem.id}-${m.id}-${idx}`} className="border-t">
-                        {idx === 0 && (
-                          <td rowSpan={measurementsToShow.length} className="px-2 py-1 font-medium align-top text-gray-900">{userItem.name}
-                            <button onClick={() => openModal(userItem.id)} className="ml-2 text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 px-2 py-1 rounded">+</button>
-                          </td>
-                        )}
-                        <td className="px-2 py-1 text-gray-800 font-medium text-xs">
-                          {new Date(m.date).toLocaleDateString('es-ES', {
-                            year: '2-digit',
-                            month: '2-digit',
-                            day: '2-digit'
-                          })}
-                        </td>
-                        <td className="px-2 py-1 text-gray-900 font-bold">
-                          {typeof m.muscle === 'number' && !isNaN(m.muscle) ? m.muscle + '%' : <span className="text-gray-400">–</span>}
-                          {muscleChange && (
-                            <span className={`ml-1 text-xxs ${parseFloat(muscleChange) > 0 ? 'text-green-600' : 'text-red-500'}`}>
-                              {muscleChange}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-2 py-1 text-gray-900 font-bold">
-                          {typeof m.fat === 'number' && !isNaN(m.fat) ? m.fat + '%' : <span className="text-gray-400">–</span>}
-                          {fatChange && (
-                            <span className={`ml-1 text-xxs ${parseFloat(fatChange) > 0 ? 'text-red-500' : 'text-green-600'}`}>
-                              {fatChange}
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  });
+
+                  return (
+                    <div key={index} className="flex flex-col items-center gap-2">
+                      <span className={`text-[10px] font-bold ${textColor}`}>
+                        {dayName}
+                      </span>
+                      <div
+                        onClick={() => {
+                          if (user && isClickable) {
+                            // Add visit for today immediately
+                            addVisit(user.uid, new Date());
+                          } else if (status === 'missed') {
+                            // If missed (past), maybe open logs tab or specific modal?
+                            // For now, let's redirect to logs to be safe/consistent
+                            setActiveTab('logs');
+                          }
+                        }}
+                        className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${bgClass}`}
+                      >
+                        <span className="material-symbols-rounded text-lg font-bold">{icon}</span>
+                      </div>
+                    </div>
+                  );
                 })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+              </div>
+            </section>
 
-      {/* Modal para agregar mediciones corporales */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96">
-            <h3 className="text-lg font-semibold mb-4">Agregar Medición Corporal</h3>
+            {/* Monthly Summary with Year Selector */}
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Fecha</label>
-                <input
-                  ref={modalDateRef}
-                  type="date"
-                  value={modalDate}
-                  onChange={(e) => setModalDate(e.target.value)}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                />
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400">Resumen mensual</h4>
+                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 shadow-sm">
+                  <button
+                    onClick={() => setSelectedYear(prev => prev - 1)}
+                    className="flex items-center justify-center text-slate-400 hover:text-blue-600 transition-colors"
+                  >
+                    <span className="material-symbols-rounded text-lg">chevron_left</span>
+                  </button>
+                  <span className="text-sm font-bold text-slate-700 dark:text-slate-200 px-2 min-w-[60px] text-center">{selectedYear}</span>
+                  <button
+                    onClick={() => setSelectedYear(prev => prev + 1)}
+                    disabled={selectedYear >= currentYear}
+                    className="flex items-center justify-center text-slate-400 hover:text-blue-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <span className="material-symbols-rounded text-lg">chevron_right</span>
+                  </button>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">% Masa muscular</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="100"
-                  value={modalMuscle}
-                  onChange={(e) => setModalMuscle(e.target.value)}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">% Grasa</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="100"
-                  value={modalFat}
-                  onChange={(e) => setModalFat(e.target.value)}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-green-50 dark:bg-green-900/10 p-4 rounded-2xl border border-green-100 dark:border-green-800/30">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-4xl font-black text-green-600 dark:text-green-400">{month1Visits}</span>
+                    <span className="material-symbols-rounded text-green-500/40 text-2xl">event_available</span>
+                  </div>
+                  <p className="text-[11px] font-bold text-green-800 dark:text-green-300 uppercase tracking-tight mb-0.5">{isCurrentYear ? 'Este mes' : 'Diciembre'}</p>
+                  <p className="text-[10px] text-green-600/70 dark:text-green-400/70 capitalize">{month1Name}</p>
+                </div>
+
+                <div className="bg-purple-50 dark:bg-purple-900/10 p-4 rounded-2xl border border-purple-100 dark:border-purple-800/30">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-4xl font-black text-purple-600 dark:text-purple-400">{month2Visits}</span>
+                    <span className="material-symbols-rounded text-purple-500/40 text-2xl">history</span>
+                  </div>
+                  <p className="text-[11px] font-bold text-purple-800 dark:text-purple-300 uppercase tracking-tight mb-0.5">{isCurrentYear ? 'Mes pasado' : 'Noviembre'}</p>
+                  <p className="text-[10px] text-purple-600/70 dark:text-purple-400/70 capitalize">{month2Name}</p>
+                </div>
               </div>
             </div>
-            <div className="flex justify-end space-x-2 mt-6">
-              <button
-                onClick={closeModal}
-                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={saveBodyMeasurement}
-                disabled={savingMeasurement || !modalMuscle || !modalFat || !modalDate}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
-              >
-                {savingMeasurement ? 'Guardando...' : 'Guardar'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Modal de Perfil */}
-      {showProfileModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-gray-900">Editar Perfil</h3>
-              <button
-                onClick={closeProfileModal}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <form onSubmit={(e) => { e.preventDefault(); handleSaveProfile(); }} className="space-y-4">
-              <div>
-                <label htmlFor="profileName" className="block text-sm font-medium text-gray-700 mb-1">
-                  Nombre 
-                </label>
-                <input
-                  type="text"
-                  id="profileName"
-                  value={profileName}
-                  onChange={(e) => setProfileName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  required
-                />
-              </div>
-
-              <div>
-                <label htmlFor="profileEmail" className="block text-sm font-medium text-gray-700 mb-1">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  id="profileEmail"
-                  value={profileEmail}
-                  onChange={(e) => setProfileEmail(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  required
-                />
-              </div>
-
-              <div>
-                <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                  Contraseña actual (para cambiar contraseña)
-                </label>
-                <input
-                  type="password"
-                  id="currentPassword"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  placeholder="Solo si quieres cambiar la contraseña"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                  Nueva contraseña
-                </label>
-                <input
-                  type="password"
-                  id="newPassword"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  placeholder="Mínimo 6 caracteres"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                  Confirmar nueva contraseña
-                </label>
-                <input
-                  type="password"
-                  id="confirmPassword"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  placeholder="Repite la nueva contraseña"
-                />
-              </div>
-
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={closeProfileModal}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors duration-200"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingProfile}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors duration-200"
-                >
-                  {savingProfile ? 'Guardando...' : 'Guardar'}
+            {/* Statistics Card */}
+            <section className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold flex items-center gap-2 text-slate-800 dark:text-white">
+                  <div className="p-1.5 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-500">
+                    <span className="material-symbols-rounded text-lg">bar_chart</span>
+                  </div>
+                  Estadísticas
+                </h3>
+                <button className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-blue-500 hover:bg-blue-50 transition-colors">
+                  <span className="material-symbols-rounded text-lg">refresh</span>
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+
+              <div className="space-y-3">
+                <div className="flex items-baseline justify-between">
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Porcentaje de asistencia</p>
+                  <span className="text-3xl font-black text-blue-600 dark:text-blue-400">{attendancePercentage}%</span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Meta: 80%</p>
+
+                {/* Progress Bar */}
+                <div className="relative w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <div
+                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(parseFloat(attendancePercentage), 100)}%` }}
+                  />
+                </div>
+
+                <p className="text-xs text-slate-500 dark:text-slate-400 text-center pt-1">
+                  {totalVisitsYear} visitas de {daysElapsed} días {isCurrentYear ? 'transcurridos' : 'del año'}
+                </p>
+              </div>
+            </section>
+
+            {/* Floating Action Button (FAB) */}
+            {user && !visits.some(v => isSameDay(new Date(v.date), new Date())) && (
+              <button
+                onClick={() => addVisit(user.uid, new Date())}
+                className="fixed bottom-24 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center z-40 animate-pulse"
+                aria-label="Agregar visita de hoy"
+              >
+                <span className="material-symbols-rounded text-3xl font-bold">add</span>
+              </button>
+            )}
+          </main>
         </>
       )}
 
-      {activeTab === 'team' && (
-        <TeamDashboard 
-          currentUser={user ? {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            totalVisits: totalVisits,
-            visitedToday: userVisits.some(v => {
-              const visitDate = new Date(v.date).toLocaleDateString('en-CA');
-              const today = new Date().toLocaleDateString('en-CA');
-              return visitDate === today;
-            })
-          } : undefined}
-          currentUserVisits={userVisits}
-        />
+      {/* ---------------- LOGS TAB (Recent Visits Debugger) ---------------- */}
+      {activeTab === 'logs' && (
+        <div className="animate-fade-in">
+          <header className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <button onClick={() => setActiveTab('home')} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">
+                <span className="material-symbols-rounded text-slate-500">arrow_back</span>
+              </button>
+              <h1 className="font-bold text-lg text-slate-900 dark:text-white">Corregir Asistencias</h1>
+            </div>
+          </header>
+          <div className="p-6">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-8 text-center">
+              <span className="material-symbols-rounded text-6xl text-slate-300 dark:text-slate-700 mb-4 block">history</span>
+              <h3 className="text-lg font-bold text-slate-700 dark:text-slate-300 mb-2">Gestión de Visitas</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Aquí podrás ver y gestionar todas tus visitas al gimnasio
+              </p>
+            </div>
+          </div>
+        </div>
       )}
+
+      {/* ---------------- KPIs TAB (Annual Comparison) ---------------- */}
+      {activeTab === 'kpis' && (
+        <div className="animate-fade-in px-6 pb-28 pt-6 space-y-6">
+          <header>
+            <h2 className="text-2xl font-extrabold text-primary dark:text-primary leading-tight">Comparativa Anual</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Análisis visual del rendimiento {selectedYear} vs {selectedYear - 1}</p>
+          </header>
+
+          {/* Volume Statistics Card with Integrated Chart */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-800/50 overflow-hidden">
+            <div className="p-6">
+              {/* Header with Volume and Legend */}
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Volumen Acumulado</span>
+                  <div className="flex items-baseline gap-2 mt-1">
+                    <span className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">{totalVisitsYear.toLocaleString()}</span>
+                    {yearVisits.length > 0 && (
+                      <span className="text-xs font-bold text-emerald-500 flex items-center bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-md">
+                        <span className="material-symbols-rounded text-sm mr-0.5">trending_up</span>
+                        {attendancePercentage}%
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-semibold text-primary">{selectedYear}</span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-primary ring-4 ring-primary/20"></span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-semibold text-slate-400">{selectedYear - 1}</span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-slate-600"></span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Integrated Chart */}
+              <TotalVisitsChart visits={visits} currentYear={selectedYear} />
+            </div>
+          </div>
+
+          {/* Insight Card */}
+          <div className="bg-blue-50 dark:bg-blue-500/10 p-5 rounded-2xl border border-blue-100 dark:border-blue-500/20 flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/20">
+              <span className="material-symbols-rounded text-white">auto_awesome</span>
+            </div>
+            <div className="pt-0.5">
+              <h3 className="text-sm font-bold text-blue-900 dark:text-blue-200">Visión de Progreso</h3>
+              <p className="text-xs text-blue-700 dark:text-blue-300/80 leading-relaxed mt-1">
+                Tu evolución muestra un crecimiento constante en tu compromiso con el entrenamiento.
+              </p>
+            </div>
+          </div>
+
+          {/* Analytics Cards */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800/50 shadow-sm">
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center mb-3">
+                <span className="material-symbols-rounded text-indigo-500 text-lg">equalizer</span>
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 block mb-1">Promedio Mensual</span>
+              <div className="text-xl font-black text-slate-900 dark:text-white">{Math.round(totalVisitsYear / 12).toLocaleString()}</div>
+              <div className="text-[10px] font-bold text-emerald-500 mt-2 flex items-center">
+                <span className="material-symbols-rounded text-[12px] mr-0.5">trending_up</span>
+                {attendancePercentage}% vs objetivo
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800/50 shadow-sm">
+              <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center mb-3">
+                <span className="material-symbols-rounded text-amber-500 text-lg">workspace_premium</span>
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 block mb-1">Mes Pico</span>
+              <div className="text-xl font-black text-slate-900 dark:text-white uppercase">
+                {month1Visits >= month2Visits ? (isCurrentYear ? 'Este mes' : 'DIC') : (isCurrentYear ? 'Mes pasado' : 'NOV')}
+              </div>
+              <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mt-2">
+                <span className="font-bold text-slate-700 dark:text-slate-300">{Math.max(month1Visits, month2Visits)}</span> visitas
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------- RECORDS TAB (Personal Records) ---------------- */}
+      {activeTab === 'records' && (
+        <div className="animate-fade-in">
+          <header className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-6 py-4">
+            <h1 className="font-bold text-lg text-slate-900 dark:text-white">Récords Personales</h1>
+          </header>
+
+          <main className="px-6 pb-28 pt-6 space-y-6">
+            {user && <MaxWeightsSection userId={user.uid} />}
+
+            {/* Body Measurements Section */}
+            <section className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+              <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                <h3 className="font-bold flex items-center gap-2 text-slate-800 dark:text-white">
+                  <span className="material-symbols-rounded text-orange-500">straighten</span>
+                  Mediciones corporales
+                </h3>
+                <button
+                  onClick={() => setShowMeasurementModal(true)}
+                  className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-lg font-bold hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                >
+                  + Nuevo
+                </button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead className="bg-slate-50 dark:bg-slate-800/50">
+                    <tr>
+                      <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Fecha</th>
+                      <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">% Músculo</th>
+                      <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">% Grasa</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {processedMeasurements.length === 0 ? (
+                      <tr><td colSpan={3} className="px-4 py-8 text-center text-slate-400 text-sm">Sin mediciones registradas</td></tr>
+                    ) : (
+                      processedMeasurements.slice(0, 10).map(m => (
+                        <tr key={m.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                          <td className="px-4 py-3 text-xs font-medium text-slate-700 dark:text-slate-300">
+                            {new Date(m.date).toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <span className="font-bold text-slate-700 dark:text-slate-300">{m.muscle}%</span>
+                              {m.muscleDiff && (
+                                <span className={`text-[10px] font-bold ${parseFloat(m.muscleDiff) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                  {parseFloat(m.muscleDiff) > 0 ? '+' : ''}{m.muscleDiff}%
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-xs text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <span className="font-bold text-slate-700 dark:text-slate-300">{m.fat}%</span>
+                              {m.fatDiff && (
+                                <span className={`text-[10px] font-bold ${parseFloat(m.fatDiff) <= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                  {parseFloat(m.fatDiff) > 0 ? '+' : ''}{m.fatDiff}%
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </main>
+        </div>
+      )}
+
+      {/* Measurement Modal (Bottom Sheet Style) */}
+      {showMeasurementModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center pointer-events-none">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto transition-opacity"
+            onClick={() => setShowMeasurementModal(false)}
+          ></div>
+
+          {/* Modal Content */}
+          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[2rem] shadow-2xl p-6 pointer-events-auto animate-[slide-up_0.3s_ease-out] relative">
+            <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-6"></div>
+
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Nueva Medición</h3>
+              <button onClick={() => setShowMeasurementModal(false)} className="text-slate-400 hover:text-slate-600">
+                <span className="material-symbols-rounded">close</span>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl">
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Fecha</label>
+                <input
+                  type="date"
+                  value={modalDate}
+                  onChange={e => setModalDate(e.target.value)}
+                  className="w-full bg-transparent border-none p-0 text-slate-900 dark:text-white font-bold focus:ring-0"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl">
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">% Músculo</label>
+                  <div className="flex items-end gap-1">
+                    <input
+                      type="number"
+                      placeholder="0.0"
+                      value={modalMuscle}
+                      onChange={e => setModalMuscle(e.target.value)}
+                      className="w-full bg-transparent border-none p-0 text-2xl font-bold text-slate-900 dark:text-white focus:ring-0 placeholder:text-slate-300"
+                    />
+                    <span className="text-slate-400 font-bold mb-1.5">%</span>
+                  </div>
+                </div>
+                <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl">
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">% Grasa</label>
+                  <div className="flex items-end gap-1">
+                    <input
+                      type="number"
+                      placeholder="0.0"
+                      value={modalFat}
+                      onChange={e => setModalFat(e.target.value)}
+                      className="w-full bg-transparent border-none p-0 text-2xl font-bold text-slate-900 dark:text-white focus:ring-0 placeholder:text-slate-300"
+                    />
+                    <span className="text-slate-400 font-bold mb-1.5">%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={handleAddMeasurement}
+              disabled={savingMeasurement}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl mt-8 shadow-lg shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            >
+              {savingMeasurement ? 'Guardando...' : 'Guardar Cambios'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
   );
 }

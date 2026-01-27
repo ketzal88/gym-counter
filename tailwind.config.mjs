@@ -7,6 +7,22 @@ export default {
   ],
   theme: {
     extend: {
+      colors: {
+        primary: "#3B82F6",
+        "background-light": "#F9FAFB",
+        "background-dark": "#0F172A",
+        "card-light": "#FFFFFF",
+        "card-dark": "#1E293B",
+      },
+      fontFamily: {
+        sans: ["var(--font-inter)", "sans-serif"],
+        display: ["var(--font-lexend)", "sans-serif"],
+      },
+      borderRadius: {
+        DEFAULT: "1rem",
+        "xl": "1.5rem",
+        "2xl": "2rem",
+      },
       animation: {
         "fade-in": "fadeIn 0.5s ease-in",
       },
@@ -22,4 +38,5 @@ export default {
     },
   },
   plugins: [],
+  darkMode: 'class',
 };

@@ -1,0 +1,155 @@
+import {
+    collection,
+    addDoc,
+    deleteDoc,
+    doc,
+    onSnapshot,
+    query,
+    where,
+    orderBy,
+    getDocs,
+    Timestamp,
+    limit
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
+export { db };
+export { deleteDoc, doc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
+
+export interface Visit {
+    id: string;
+    userId: string;
+    date: string; // ISO string
+    timestamp: Date;
+}
+
+export interface BodyMeasurement {
+    id: string;
+    userId: string;
+    date: string;
+    muscle: number;
+    fat: number;
+    timestamp: Date;
+}
+
+export interface MaxWeight {
+    id: string;
+    userId: string;
+    date: string;
+    exercise: string;
+    weight: number;
+    reps: number;
+    timestamp: Date;
+}
+
+// --- VISITS ---
+
+export const subscribeToVisits = (userId: string | null, callback: (visits: Visit[]) => void) => {
+    if (!userId) {
+        callback([]);
+        return () => { };
+    }
+
+    const q = query(
+        collection(db, 'visits'),
+        where('userId', '==', userId),
+        orderBy('timestamp', 'desc')
+    );
+
+    return onSnapshot(q, (snapshot) => {
+        const visits = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            timestamp: doc.data().timestamp?.toDate(),
+        })) as Visit[];
+        callback(visits);
+    });
+};
+
+export const subscribeToAllVisits = (callback: (visits: Visit[]) => void) => {
+    // Caution: excessive reads if many users. For small team valid.
+    const q = query(
+        collection(db, 'visits'),
+        orderBy('timestamp', 'desc')
+    );
+
+    return onSnapshot(q, (snapshot) => {
+        const visits = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            timestamp: doc.data().timestamp?.toDate(),
+        })) as Visit[];
+        callback(visits);
+    });
+};
+
+export const addVisit = async (userId: string, date: Date) => {
+    await addDoc(collection(db, 'visits'), {
+        userId,
+        date: date.toISOString(),
+        timestamp: Timestamp.fromDate(date)
+    });
+};
+
+export const deleteVisit = async (visitId: string) => {
+    await deleteDoc(doc(db, 'visits', visitId));
+};
+
+// --- BODY MEASUREMENTS ---
+
+export const subscribeToBodyMeasurements = (userId: string, callback: (measurements: BodyMeasurement[]) => void) => {
+    const q = query(
+        collection(db, 'measurements'),
+        where('userId', '==', userId),
+        orderBy('timestamp', 'desc')
+    );
+
+    return onSnapshot(q, (snapshot) => {
+        const measurements = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            timestamp: doc.data().timestamp?.toDate(),
+        })) as BodyMeasurement[];
+        callback(measurements);
+    });
+};
+
+export const addBodyMeasurement = async (userId: string, date: Date, muscle: number, fat: number) => {
+    await addDoc(collection(db, 'measurements'), {
+        userId,
+        date: date.toISOString(),
+        muscle,
+        fat,
+        timestamp: Timestamp.fromDate(date)
+    });
+};
+
+// --- MAX WEIGHTS ---
+
+export const subscribeToMaxWeights = (userId: string, callback: (weights: MaxWeight[]) => void) => {
+    const q = query(
+        collection(db, 'maxWeights'),
+        where('userId', '==', userId),
+        orderBy('timestamp', 'desc')
+    );
+
+    return onSnapshot(q, (snapshot) => {
+        const weights = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            timestamp: doc.data().timestamp?.toDate(),
+        })) as MaxWeight[];
+        callback(weights);
+    });
+};
+
+export const addMaxWeight = async (userId: string, date: Date, exercise: string, weight: number, reps: number) => {
+    await addDoc(collection(db, 'maxWeights'), {
+        userId,
+        date: date.toISOString(),
+        exercise,
+        weight,
+        reps,
+        timestamp: Timestamp.fromDate(date)
+    });
+};

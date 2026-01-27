@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
 
 function SignInForm() {
   const [email, setEmail] = useState('');
@@ -13,6 +13,7 @@ function SignInForm() {
   const [successMessage, setSuccessMessage] = useState('');
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { loginWithEmail, signInWithGoogle } = useAuth();
 
   useEffect(() => {
     const message = searchParams.get('message');
@@ -27,21 +28,30 @@ function SignInForm() {
     setError('');
 
     try {
-      const result = await signIn('credentials', {
-        email,
-        password,
-        redirect: false,
-      });
-
-      if (result?.error) {
+      await loginWithEmail(email, password);
+      // Login successful, redirect via auth state listener in context/Guard or just push here
+      router.push('/');
+    } catch (e: any) {
+      console.error(e);
+      if (e.code === 'auth/invalid-credential' || e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password') {
         setError('Credenciales inválidas');
       } else {
-        // Login exitoso, redirigir al home
-        router.push('/');
-        router.refresh();
+        setError('Error al iniciar sesión: ' + e.message);
       }
-    } catch {
-      setError('Error al iniciar sesión');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      await signInWithGoogle();
+      router.push('/');
+    } catch (e: any) {
+      console.error(e);
+      setError('Error iniciando sesión con Google');
     } finally {
       setLoading(false);
     }
@@ -117,7 +127,29 @@ function SignInForm() {
             >
               {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
             </button>
-          </div>          
+          </div>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-gray-100 text-gray-500">O continúa con</span>
+            </div>
+          </div>
+
+          <div>
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+              className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <img className="h-5 w-5 mr-2" src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google logo" loading="lazy" />
+              Google
+            </button>
+          </div>
+
         </form>
       </div>
     </div>
