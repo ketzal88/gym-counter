@@ -2,7 +2,6 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 
 function SignInForm() {
@@ -31,12 +30,13 @@ function SignInForm() {
       await loginWithEmail(email, password);
       // Login successful, redirect via auth state listener in context/Guard or just push here
       router.push('/');
-    } catch (e: any) {
-      console.error(e);
+    } catch (err: unknown) {
+      console.error(err);
+      const e = err as { code?: string; message?: string };
       if (e.code === 'auth/invalid-credential' || e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password') {
         setError('Credenciales inválidas');
       } else {
-        setError('Error al iniciar sesión: ' + e.message);
+        setError('Error al iniciar sesión: ' + (e.message || 'Desconocido'));
       }
     } finally {
       setLoading(false);
@@ -49,8 +49,8 @@ function SignInForm() {
     try {
       await signInWithGoogle();
       router.push('/');
-    } catch (e: any) {
-      console.error(e);
+    } catch (err: unknown) {
+      console.error(err);
       setError('Error iniciando sesión con Google');
     } finally {
       setLoading(false);
@@ -68,10 +68,7 @@ function SignInForm() {
             Accede a tu cuenta para continuar
           </p>
           <p className="mt-2 text-center text-sm text-gray-600">
-            ¿No tienes cuenta?{' '}
-            <Link href="/auth/signup" className="font-medium text-blue-600 hover:text-blue-500">
-              Regístrate aquí
-            </Link>
+            ¿Aún no tienes cuenta? Solo inicia sesión con Google.
           </p>
           {successMessage && (
             <div className="mt-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded text-sm text-center">

@@ -5,11 +5,11 @@ Una aplicación web moderna para rastrear tu asistencia al gimnasio, récords pe
 ## ✨ Características
 
 ### 📊 Dashboard Principal
-- **Asistencia Semanal**: Visualiza tu asistencia de los últimos 7 días
-- **Resumen Mensual**: Estadísticas de los últimos dos meses
-- **Porcentaje de Asistencia**: Calcula tu compromiso anual
-- **Registro Rápido**: FAB (Floating Action Button) para añadir visitas del día actual
-- **Mediciones Corporales**: Seguimiento de % músculo y % grasa con indicadores de tendencia
+- **Asistencia Semanal**: Visualiza tu asistencia de los últimos 7 días con indicadores interactivos.
+- **KPIs Mensuales**: Resumen comparativo de asistencias entre el mes actual y el anterior.
+- **Porcentaje de Fidelidad**: Calcula tu compromiso basado en la meta semanal.
+- **Registro Rápido**: FAB (Floating Action Button) para añadir la visita de hoy al instante.
+- **Mediciones Corporales**: Seguimiento de % músculo y % grasa con **indicadores inteligentes de tendencia** (+/- rojo/verde según corresponda).
 
 ### 📈 KPIs y Análisis
 - **Comparativa Anual**: Gráfico de líneas comparando año actual vs anterior
@@ -181,7 +181,8 @@ gymcounter/
 │   │   │   ├── UnifiedDashboard.tsx
 │   │   │   ├── MaxWeightsSection.tsx
 │   │   │   ├── TotalVisitsChart.tsx
-│   │   │   └── ...
+│   │   │   ├── RecentVisitsManager.tsx
+│   │   │   └── BottomNav.tsx
 │   │   ├── layout.tsx         # Layout principal
 │   │   └── page.tsx           # Página de inicio
 │   ├── context/

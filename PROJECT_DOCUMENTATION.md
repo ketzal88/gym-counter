@@ -1,106 +1,72 @@
-# GymCounter - Documentación del Proyecto
+# GymCounter - Documentación Técnica del Proyecto
 
-## 📋 **Estructura de Google Sheets**
+GymCounter es una aplicación progresiva (PWA Ready) diseñada para el seguimiento de la consistencia en el entrenamiento físico, gestión de récords personales y mediciones corporales.
 
-### **Documento Principal (Users, Groups, Invitations)**
+## 🏗️ Arquitectura del Sistema
 
-- **ID**: `1_f43T71BdLN5sky14zcdGEGp3sEEaBIjSD1v5v0myRU`
-- **URL**: https://docs.google.com/spreadsheets/d/1_f43T71BdLN5sky14zcdGEGp3sEEaBIjSD1v5v0myRU/edit
-- **Hojas**:
-  - **Users**: Datos de usuarios (id, name, email, password, createdAt, googleSheetId)
-  - **Groups**: Grupos/equipos del gym
-  - **Invitations**: Invitaciones a grupos
+- **Frontend**: Next.js 15 (App Router)
+- **Lenguaje**: TypeScript
+- **Estilos**: Tailwind CSS 4
+- **Backend / DB**: Firebase Firestore (NoSQL)
+- **Autenticación**: Firebase Auth (Google + Email/Password)
+- **Hosting**: Vercel
 
-### **Documento de Datos de Usuarios (Visitas, Mediciones)**
+## 📊 Modelo de Datos (Firestore)
 
-- **ID**: `1n4_Jb5VF-b9aPkiteeA6JCzDYK6SP6AdGHZ1PvcfhnQ`
-- **Hojas**: Hojas individuales por usuario
-  - `Usuario_1_gab` (Gabi)
-  - `Usuario_1758595778972_Iña` (Iña)
-  - `Usuario_1758657643627_Maria_carolina_` (Caro)
-  - etc.
+La aplicación utiliza las siguientes colecciones en Firestore:
 
-## 🔧 **Configuración de APIs**
+### 1. `users` (Perfiles Públicos)
+Almacena la información básica de los usuarios para permitir la visibilidad compartida (ranking).
+- `uid`: ID único del usuario (de Firebase Auth).
+- `displayName`: Nombre mostrado.
+- `email`: Correo electrónico.
+- `photoURL`: URL del avatar de Google.
+- `lastLogin`: Marca de tiempo del último inicio de sesión.
 
-### **API Principal (`/api/sheets/route.ts`)**
+### 2. `visits` (Registro de Asistencias)
+- `userId`: Referencia al `uid` del propietario.
+- `date`: Fecha en formato ISO String (ej. `2024-01-20T...`).
+- `timestamp`: Objeto `Timestamp` de Firestore para ordenamiento eficiente.
 
-- **SPREADSHEET_ID**: `1_f43T71BdLN5sky14zcdGEGp3sEEaBIjSD1v5v0myRU` (documento principal)
-- **Funciones**:
-  - `type=users`: Lee de la hoja "Users" (documento principal)
-  - `type=visits`: Lee de hojas individuales de usuarios (documento de datos)
-  - `type=body`: Lee mediciones corporales de hojas individuales (documento de datos)
+### 3. `measurements` (Mediciones Corporales)
+- `userId`: Referencia al `uid` del propietario.
+- `date`: Fecha en formato ISO String.
+- `muscle`: % de masa muscular (número).
+- `fat`: % de grasa corporal (número).
+- `timestamp`: Objeto `Timestamp` para consultas cronológicas.
 
-### **API de Grupos (`/api/groups/[groupId]/members/route.ts`)**
+### 4. `maxWeights` (Récords Personales)
+- `userId`: Referencia al `uid`.
+- `exercise`: Identificador del ejercicio (`Squat`, `Bench Press`, `Deadlift`, `Overhead Press`).
+- `weight`: Peso máximo levantado (kg).
+- `reps`: Repeticiones realizadas.
+- `timestamp`: Objeto `Timestamp`.
 
-- **SPREADSHEET_ID**: `1n4_Jb5VF-b9aPkiteeA6JCzDYK6SP6AdGHZ1PvcfhnQ` (documento de datos)
-- **Función**: Lee visitas de hojas individuales de usuarios
+## 🔐 Seguridad y Reglas
 
-### **Configuración de Documentos por Tipo de Dato**
+La seguridad está basada en **Firebase Rules**. La política general es:
+- **Lectura Pública de Perfiles**: Todos los usuarios autenticados pueden ver la colección `users` y `visits` (esto permite el scoreboard de equipo).
+- **Escritura Restringida**: Solo el dueño de un documento puede crearlo, editarlo o borrarlo.
+- **Privacidad Estricta**: Las colecciones `measurements` y `maxWeights` son accesibles **únicamente** por su propietario.
 
-| Tipo de Dato          | Documento           | ID                                             |
-| --------------------- | ------------------- | ---------------------------------------------- |
-| **Users**             | Documento Principal | `1_f43T71BdLN5sky14zcdGEGp3sEEaBIjSD1v5v0myRU` |
-| **Groups**            | Documento Principal | `1_f43T71BdLN5sky14zcdGEGp3sEEaBIjSD1v5v0myRU` |
-| **Invitations**       | Documento Principal | `1_f43T71BdLN5sky14zcdGEGp3sEEaBIjSD1v5v0myRU` |
-| **Visits**            | Documento de Datos  | `1n4_Jb5VF-b9aPkiteeA6JCzDYK6SP6AdGHZ1PvcfhnQ` |
-| **Body Measurements** | Documento de Datos  | `1n4_Jb5VF-b9aPkiteeA6JCzDYK6SP6AdGHZ1PvcfhnQ` |
+## 🎨 Componentes Principales
 
-## 👥 **Usuarios del Sistema**
+- `UnifiedDashboard.tsx`: El cerebro de la aplicación. Gestiona el estado de navegación y la lógica de negocio principal.
+- `RecentVisitsManager.tsx`: Herramienta para corregir asistencias de los últimos 30 días.
+- `MaxWeightsSection.tsx`: Gestión visual de PRs (Personal Records) con indicadores de tendencia.
+- `TotalVisitsChart.tsx`: Visualización comparativa anual usando Recharts.
+- `BottomNav.tsx`: Navegación táctil optimizada para móviles.
 
-| ID            | Nombre | Email                     | Hoja                                    |
-| ------------- | ------ | ------------------------- | --------------------------------------- |
-| 1             | Gabi   | gabrielucc@gmail.com      | Usuario_3_gab                           |
-| 1758591764603 | Cin    | cinthianpereira@gmail.com | Usuario_1758591764603_Cin               |
-| 1758595778972 | Iña    | inayabarb@gmail.com       | Usuario_1758595778972_Iña               |
-| 1758657643627 | Caro   | carolasoa1984@gmail.com   | Usuario*1758657643627_Maria_carolina*   |
-| 1758658608549 | Vivi   | vivipalladino@gmail.com   | Usuario_1758658608549_Viviana_Palladino |
-| 1758659922902 | Marian | mestrada160180@gmail.com  | Usuario_1758659922902_Mariano_Estrada   |
+## 🔄 Flujo de Autenticación (`AuthContext.tsx`)
 
-## 🏃‍♂️ **Grupos/Equipos**
+El `AuthContext` maneja el estado global del usuario. 
+1. Escucha cambios en `onAuthStateChanged`.
+2. Al iniciar sesión, verifica si el perfil en la colección `users` existe; si no, lo crea o lo actualiza (merge) con los datos más recientes de `displayName` y `photoURL`.
 
-1. **Bigote** - "Tengo casi 40 y le gano a iña"
-   - Miembros: gabrielucc@gmail.com, inayabarb@gmail.com
-2. **9am** - "Los crossfiteros de las 9"
-   - Miembros: gabrielucc@gmail.com, carolasoa1984@gmail.com
+## 🛠️ Mantenimiento
 
-## 🔄 **Flujo de Datos**
+### Limpieza de Código
+Se han eliminado todos los vestigios de la migración anterior desde Google Sheets. La aplicación es ahora puramente dependiente de Firebase.
 
-1. **UnifiedDashboard** carga datos del usuario actual desde cache
-2. **TeamDashboard** recibe `currentUser` y `currentUserVisits` como props
-3. **Para otros usuarios**: TeamDashboard llama a `/api/sheets?type=visits` y `/api/sheets?type=users`
-4. **Cache**: Datos cacheados por 2 minutos para evitar cuota excedida
-
-## ⚠️ **Problemas Conocidos y Soluciones**
-
-### **Problema**: Contadores duplicados en TeamDashboard
-
-**Solución**: Usar datos cacheados del usuario actual, solo cargar datos de otros usuarios
-
-### **Problema**: API quota exceeded (429)
-
-**Solución**: Implementar cache con TTL de 2 minutos
-
-### **Problema**: Datos guardados en hoja incorrecta
-
-**Solución**: Usar regex más preciso para identificar hojas de usuarios
-
-### **Problema**: TeamDashboard no carga datos
-
-**Solución**: Usar documento correcto para usuarios (`1_f43T71BdLN5sky14zcdGEGp3sEEaBIjSD1v5v0myRU`)
-
-## 🚀 **Estado Actual**
-
-- ✅ Contadores corregidos (158 visitas para Gabi)
-- ✅ Cache implementado para evitar quota exceeded
-- ✅ TeamDashboard optimizado (usa datos cacheados del usuario actual)
-- ✅ API de usuarios corregida (usa documento correcto)
-- ✅ Debug buttons removidos
-
-## 📁 **Archivos Principales**
-
-- `src/app/components/UnifiedDashboard.tsx` - Dashboard principal
-- `src/app/components/TeamDashboard.tsx` - Dashboard de equipos
-- `src/app/api/sheets/route.ts` - API principal de Google Sheets
-- `src/app/api/groups/[groupId]/members/route.ts` - API de miembros de grupos
-- `src/data/sheetsService.ts` - Servicio de datos con cache
-- `src/lib/cache.ts` - Sistema de cache simple
+### Despliegue
+Cualquier cambio en la rama principal dispara un build automático en Vercel. Asegurarse de que las variables de entorno de Firebase coincidan entre el entorno local y Vercel.
