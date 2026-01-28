@@ -42,6 +42,14 @@ export interface MaxWeight {
     timestamp: Date;
 }
 
+export interface UserProfile {
+    uid: string;
+    displayName: string;
+    email: string;
+    photoURL?: string;
+    lastLogin: Date;
+}
+
 // --- VISITS ---
 
 export const subscribeToVisits = (userId: string | null, callback: (visits: Visit[]) => void) => {
@@ -76,6 +84,43 @@ export const addVisit = async (userId: string, date: Date) => {
 
 export const deleteVisit = async (visitId: string) => {
     await deleteDoc(doc(db, 'visits', visitId));
+};
+
+export const subscribeToAllVisits = (callback: (visits: Visit[]) => void) => {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const q = query(
+        collection(db, 'visits'),
+        where('timestamp', '>=', startOfMonth),
+        orderBy('timestamp', 'desc')
+    );
+
+    return onSnapshot(q, (snapshot) => {
+        const visits = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            timestamp: doc.data().timestamp?.toDate(),
+        })) as Visit[];
+        callback(visits);
+    }, (error) => {
+        console.error("Error subscribing to all visits:", error);
+    });
+};
+
+export const subscribeToAllUsers = (callback: (users: UserProfile[]) => void) => {
+    const q = query(collection(db, 'users'), orderBy('lastLogin', 'desc'));
+
+    return onSnapshot(q, (snapshot) => {
+        const users = snapshot.docs.map(doc => ({
+            uid: doc.id,
+            ...doc.data(),
+            lastLogin: doc.data().lastLogin?.toDate(),
+        })) as UserProfile[];
+        callback(users);
+    }, (error) => {
+        console.error("Error subscribing to users:", error);
+    });
 };
 
 // --- BODY MEASUREMENTS ---

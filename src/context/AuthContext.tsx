@@ -12,6 +12,8 @@ import {
     UserCredential
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { db } from '@/services/db';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 interface AuthContextType {
     user: User | null;
@@ -38,7 +40,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // Create/Update user profile in Firestore
+                const userRef = doc(db, 'users', user.uid);
+                await setDoc(userRef, {
+                    uid: user.uid,
+                    displayName: user.displayName || 'Usuario',
+                    email: user.email,
+                    photoURL: user.photoURL,
+                    lastLogin: serverTimestamp()
+                }, { merge: true });
+            }
             setUser(user);
             setLoading(false);
         });

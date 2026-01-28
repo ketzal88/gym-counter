@@ -129,11 +129,19 @@ NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abc123
    rules_version = '2';
    service cloud.firestore {
      match /databases/{database}/documents {
-       // Usuarios solo pueden leer/escribir sus propios datos
-       match /visits/{visitId} {
-         allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
-         allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+       
+       // Perfiles de usuario
+       match /users/{userId} {
+         allow read: if request.auth != null;
+         allow write: if request.auth != null && request.auth.uid == userId;
        }
+
+        // Visitas
+        match /visits/{visitId} {
+          allow read: if request.auth != null; // Compartido para el ranking del equipo
+          allow write: if request.auth != null && (resource == null || resource.data.userId == request.auth.uid);
+          allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+        }
        
        match /measurements/{measurementId} {
          allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;

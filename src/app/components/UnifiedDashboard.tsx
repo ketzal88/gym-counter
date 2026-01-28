@@ -6,10 +6,13 @@ import { useAuth } from '@/context/AuthContext';
 import {
   Visit,
   BodyMeasurement,
+  UserProfile,
   subscribeToVisits,
   addVisit,
   subscribeToBodyMeasurements,
-  addBodyMeasurement
+  addBodyMeasurement,
+  subscribeToAllUsers,
+  subscribeToAllVisits
 } from '@/services/db';
 import TotalVisitsChart from './TotalVisitsChart';
 import MaxWeightsSection from './MaxWeightsSection';
@@ -31,6 +34,8 @@ export default function UnifiedDashboard() {
   // Data State
   const [visits, setVisits] = useState<Visit[]>([]);
   const [bodyMeasurements, setBodyMeasurements] = useState<BodyMeasurement[]>([]);
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
+  const [allVisits, setAllVisits] = useState<Visit[]>([]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [loading, setLoading] = useState(true);
 
@@ -59,9 +64,19 @@ export default function UnifiedDashboard() {
       setBodyMeasurements(data);
     });
 
+    const unsubscribeAllUsers = subscribeToAllUsers((data) => {
+      setAllUsers(data);
+    });
+
+    const unsubscribeAllVisits = subscribeToAllVisits((data) => {
+      setAllVisits(data);
+    });
+
     return () => {
       unsubscribeVisits();
       unsubscribeMeasurements();
+      unsubscribeAllUsers();
+      unsubscribeAllVisits();
     };
   }, [user]);
 
@@ -198,31 +213,40 @@ export default function UnifiedDashboard() {
           <header className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-2xl">💪</span>
+                <span className="text-2xl animate-bounce-slow">💪</span>
                 <h1 className="font-extrabold text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-500">
                   GymCounter
                 </h1>
               </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setShowMeasurementModal(true)}
-                  className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs uppercase shadow-lg shadow-blue-500/30 hover:shadow-xl transition-all"
-                >
-                  {user?.displayName?.charAt(0) || 'G'}
-                </button>
-              </div>
+              <button
+                onClick={() => setActiveTab('records')}
+                className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 font-bold border border-slate-200 dark:border-slate-700 hover:scale-105 active:scale-95 transition-all overflow-hidden"
+              >
+                {user?.photoURL ? (
+                  <img src={user.photoURL} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  user?.displayName?.charAt(0) || user?.email?.charAt(0) || '?'
+                )}
+              </button>
             </div>
           </header>
 
-          <main className="px-4 py-6 space-y-6 animate-fade-in">
-            <section>
+          <main className="px-6 py-8 space-y-8 animate-fade-in">
+            {/* --- Team Scoreboard (Hidden for now) --- */}
+            {/* 
+            <section className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl p-6 shadow-xl shadow-blue-500/20 text-white relative overflow-hidden">
+              ...
+            </section>
+            */}
+
+            <div className="space-y-2">
               <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
                 ¡Hola, {user?.displayName?.split(' ')[0] || 'Atleta'}! 👋
               </h2>
               <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
                 Hoy es un buen día para entrenar.
               </p>
-            </section>
+            </div>
 
             <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-700 p-5 text-white shadow-xl shadow-blue-900/20">
               <div className="relative z-10">
@@ -301,11 +325,8 @@ export default function UnifiedDashboard() {
                       <div
                         onClick={() => {
                           if (user && isClickable) {
-                            // Add visit for today immediately
                             addVisit(user.uid, new Date());
                           } else if (status === 'missed') {
-                            // If missed (past), maybe open logs tab or specific modal?
-                            // For now, let's redirect to logs to be safe/consistent
                             setActiveTab('logs');
                           }
                         }}
@@ -319,7 +340,6 @@ export default function UnifiedDashboard() {
               </div>
             </section>
 
-            {/* Monthly Summary with Year Selector */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400">Resumen mensual</h4>
@@ -362,7 +382,6 @@ export default function UnifiedDashboard() {
               </div>
             </div>
 
-            {/* Statistics Card */}
             <section className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold flex items-center gap-2 text-slate-800 dark:text-white">
@@ -371,47 +390,28 @@ export default function UnifiedDashboard() {
                   </div>
                   Estadísticas
                 </h3>
-                <button className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-blue-500 hover:bg-blue-50 transition-colors">
-                  <span className="material-symbols-rounded text-lg">refresh</span>
-                </button>
               </div>
-
               <div className="space-y-3">
                 <div className="flex items-baseline justify-between">
                   <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Porcentaje de asistencia</p>
                   <span className="text-3xl font-black text-blue-600 dark:text-blue-400">{attendancePercentage}%</span>
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Meta: 80%</p>
-
-                {/* Progress Bar */}
                 <div className="relative w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                   <div
                     className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500"
                     style={{ width: `${Math.min(parseFloat(attendancePercentage), 100)}%` }}
                   />
                 </div>
-
                 <p className="text-xs text-slate-500 dark:text-slate-400 text-center pt-1">
                   {totalVisitsYear} visitas de {daysElapsed} días {isCurrentYear ? 'transcurridos' : 'del año'}
                 </p>
               </div>
             </section>
-
-            {/* Floating Action Button (FAB) */}
-            {user && !visits.some(v => isSameDay(new Date(v.date), new Date())) && (
-              <button
-                onClick={() => addVisit(user.uid, new Date())}
-                className="fixed bottom-24 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center z-40 animate-pulse"
-                aria-label="Agregar visita de hoy"
-              >
-                <span className="material-symbols-rounded text-3xl font-bold">add</span>
-              </button>
-            )}
           </main>
         </>
       )}
 
-      {/* ---------------- LOGS TAB (Recent Visits Debugger) ---------------- */}
+      {/* ---------------- LOGS TAB ---------------- */}
       {activeTab === 'logs' && (
         <div className="animate-fade-in">
           <header className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 py-3">
@@ -428,127 +428,54 @@ export default function UnifiedDashboard() {
         </div>
       )}
 
-      {/* ---------------- KPIs TAB (Annual Comparison) ---------------- */}
+      {/* ---------------- KPIs TAB ---------------- */}
       {activeTab === 'kpis' && (
         <div className="animate-fade-in px-6 pb-28 pt-6 space-y-6">
           <header>
-            <h2 className="text-2xl font-extrabold text-primary dark:text-primary leading-tight">Comparativa Anual</h2>
+            <h2 className="text-2xl font-extrabold text-blue-600 dark:text-blue-400 leading-tight">Comparativa Anual</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Análisis visual del rendimiento {selectedYear} vs {selectedYear - 1}</p>
           </header>
-
-          {/* Volume Statistics Card with Integrated Chart */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-800/50 overflow-hidden">
-            <div className="p-6">
-              {/* Header with Volume and Legend */}
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Volumen Acumulado</span>
-                  <div className="flex items-baseline gap-2 mt-1">
-                    <span className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">{totalVisitsYear.toLocaleString()}</span>
-                    {yearVisits.length > 0 && (
-                      <span className="text-xs font-bold text-emerald-500 flex items-center bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-md">
-                        <span className="material-symbols-rounded text-sm mr-0.5">trending_up</span>
-                        {attendancePercentage}%
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex flex-col items-end gap-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-semibold text-primary">{selectedYear}</span>
-                    <span className="w-2.5 h-2.5 rounded-full bg-primary ring-4 ring-primary/20"></span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-semibold text-slate-400">{selectedYear - 1}</span>
-                    <span className="w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-slate-600"></span>
-                  </div>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Volumen Acumulado</span>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <span className="text-4xl font-black text-slate-900 dark:text-white">{totalVisitsYear}</span>
                 </div>
               </div>
-
-              {/* Integrated Chart */}
-              <TotalVisitsChart visits={visits} currentYear={selectedYear} />
             </div>
-          </div>
-
-          {/* Insight Card */}
-          <div className="bg-blue-50 dark:bg-blue-500/10 p-5 rounded-2xl border border-blue-100 dark:border-blue-500/20 flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/20">
-              <span className="material-symbols-rounded text-white">auto_awesome</span>
-            </div>
-            <div className="pt-0.5">
-              <h3 className="text-sm font-bold text-blue-900 dark:text-blue-200">Visión de Progreso</h3>
-              <p className="text-xs text-blue-700 dark:text-blue-300/80 leading-relaxed mt-1">
-                Tu evolución muestra un crecimiento constante en tu compromiso con el entrenamiento.
-              </p>
-            </div>
-          </div>
-
-          {/* Analytics Cards */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800/50 shadow-sm">
-              <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center mb-3">
-                <span className="material-symbols-rounded text-indigo-500 text-lg">equalizer</span>
-              </div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 block mb-1">Promedio Mensual</span>
-              <div className="text-xl font-black text-slate-900 dark:text-white">{Math.round(totalVisitsYear / 12).toLocaleString()}</div>
-              <div className="text-[10px] font-bold text-emerald-500 mt-2 flex items-center">
-                <span className="material-symbols-rounded text-[12px] mr-0.5">trending_up</span>
-                {attendancePercentage}% vs objetivo
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800/50 shadow-sm">
-              <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center mb-3">
-                <span className="material-symbols-rounded text-amber-500 text-lg">workspace_premium</span>
-              </div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 block mb-1">Mes Pico</span>
-              <div className="text-xl font-black text-slate-900 dark:text-white uppercase">
-                {month1Visits >= month2Visits ? (isCurrentYear ? 'Este mes' : 'DIC') : (isCurrentYear ? 'Mes pasado' : 'NOV')}
-              </div>
-              <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mt-2">
-                <span className="font-bold text-slate-700 dark:text-slate-300">{Math.max(month1Visits, month2Visits)}</span> visitas
-              </div>
-            </div>
+            <TotalVisitsChart visits={visits} currentYear={selectedYear} />
           </div>
         </div>
       )}
 
-      {/* ---------------- RECORDS TAB (Personal Records) ---------------- */}
+      {/* ---------------- RECORDS TAB ---------------- */}
       {activeTab === 'records' && (
         <div className="animate-fade-in">
           <header className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-6 py-4">
-            <h1 className="font-bold text-lg text-slate-900 dark:text-white">Récords Personales</h1>
+            <h1 className="font-bold text-lg text-slate-900 dark:text-white">Récords y Salud</h1>
           </header>
-
           <main className="px-6 pb-28 pt-6 space-y-6">
             {user && <MaxWeightsSection userId={user.uid} />}
-
-            {/* Body Measurements Section */}
             <section className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
               <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                <h3 className="font-bold flex items-center gap-2 text-slate-800 dark:text-white">
-                  <span className="material-symbols-rounded text-orange-500">straighten</span>
-                  Mediciones corporales
-                </h3>
-                <button
-                  onClick={() => setShowMeasurementModal(true)}
-                  className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-lg font-bold hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
-                >
+                <h3 className="font-bold flex items-center gap-2 text-slate-800 dark:text-white">Mediciones corporales</h3>
+                <button onClick={() => setShowMeasurementModal(true)} className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg font-bold">
                   + Nuevo
                 </button>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left">
                   <thead className="bg-slate-50 dark:bg-slate-800/50">
                     <tr>
-                      <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Fecha</th>
-                      <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">% Músculo</th>
-                      <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">% Grasa</th>
+                      <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase">Fecha</th>
+                      <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase text-center">% Músculo</th>
+                      <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase text-center">% Grasa</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {processedMeasurements.length === 0 ? (
-                      <tr><td colSpan={3} className="px-4 py-8 text-center text-slate-400 text-sm">Sin mediciones registradas</td></tr>
+                      <tr><td colSpan={3} className="px-4 py-8 text-center text-slate-400 text-sm">Sin mediciones registrados</td></tr>
                     ) : (
                       processedMeasurements.slice(0, 10).map(m => (
                         <tr key={m.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
@@ -556,21 +483,21 @@ export default function UnifiedDashboard() {
                             {new Date(m.date).toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: '2-digit' })}
                           </td>
                           <td className="px-4 py-3 text-xs text-center">
-                            <div className="flex items-center justify-center gap-1">
+                            <div className="flex flex-col items-center">
                               <span className="font-bold text-slate-700 dark:text-slate-300">{m.muscle}%</span>
                               {m.muscleDiff && (
                                 <span className={`text-[10px] font-bold ${parseFloat(m.muscleDiff) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                  {parseFloat(m.muscleDiff) > 0 ? '+' : ''}{m.muscleDiff}%
+                                  {parseFloat(m.muscleDiff) >= 0 ? '+' : ''}{m.muscleDiff}%
                                 </span>
                               )}
                             </div>
                           </td>
                           <td className="px-4 py-3 text-xs text-center">
-                            <div className="flex items-center justify-center gap-1">
+                            <div className="flex flex-col items-center">
                               <span className="font-bold text-slate-700 dark:text-slate-300">{m.fat}%</span>
                               {m.fatDiff && (
                                 <span className={`text-[10px] font-bold ${parseFloat(m.fatDiff) <= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                  {parseFloat(m.fatDiff) > 0 ? '+' : ''}{m.fatDiff}%
+                                  {parseFloat(m.fatDiff) >= 0 ? '+' : ''}{m.fatDiff}%
                                 </span>
                               )}
                             </div>
@@ -586,76 +513,47 @@ export default function UnifiedDashboard() {
         </div>
       )}
 
-      {/* Measurement Modal (Bottom Sheet Style) */}
+      {/* Measurement Modal */}
       {showMeasurementModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center pointer-events-none">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto transition-opacity"
-            onClick={() => setShowMeasurementModal(false)}
-          ></div>
-
-          {/* Modal Content */}
-          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[2rem] shadow-2xl p-6 pointer-events-auto animate-[slide-up_0.3s_ease-out] relative">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto" onClick={() => setShowMeasurementModal(false)}></div>
+          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[2rem] shadow-2xl p-6 pointer-events-auto relative">
             <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-6"></div>
-
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">Nueva Medición</h3>
-              <button onClick={() => setShowMeasurementModal(false)} className="text-slate-400 hover:text-slate-600">
-                <span className="material-symbols-rounded">close</span>
-              </button>
+              <button onClick={() => setShowMeasurementModal(false)} className="text-slate-400"><span className="material-symbols-rounded">close</span></button>
             </div>
-
             <div className="space-y-4">
               <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl">
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Fecha</label>
-                <input
-                  type="date"
-                  value={modalDate}
-                  onChange={e => setModalDate(e.target.value)}
-                  className="w-full bg-transparent border-none p-0 text-slate-900 dark:text-white font-bold focus:ring-0"
-                />
+                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Fecha</label>
+                <input type="date" value={modalDate} onChange={e => setModalDate(e.target.value)} className="w-full bg-transparent border-none p-0 text-slate-900 dark:text-white font-bold" />
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl">
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">% Músculo</label>
-                  <div className="flex items-end gap-1">
-                    <input
-                      type="number"
-                      placeholder="0.0"
-                      value={modalMuscle}
-                      onChange={e => setModalMuscle(e.target.value)}
-                      className="w-full bg-transparent border-none p-0 text-2xl font-bold text-slate-900 dark:text-white focus:ring-0 placeholder:text-slate-300"
-                    />
-                    <span className="text-slate-400 font-bold mb-1.5">%</span>
-                  </div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2">% Músculo</label>
+                  <input type="number" value={modalMuscle} onChange={e => setModalMuscle(e.target.value)} className="w-full bg-transparent border-none p-0 text-2xl font-bold" />
                 </div>
                 <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl">
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">% Grasa</label>
-                  <div className="flex items-end gap-1">
-                    <input
-                      type="number"
-                      placeholder="0.0"
-                      value={modalFat}
-                      onChange={e => setModalFat(e.target.value)}
-                      className="w-full bg-transparent border-none p-0 text-2xl font-bold text-slate-900 dark:text-white focus:ring-0 placeholder:text-slate-300"
-                    />
-                    <span className="text-slate-400 font-bold mb-1.5">%</span>
-                  </div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2">% Grasa</label>
+                  <input type="number" value={modalFat} onChange={e => setModalFat(e.target.value)} className="w-full bg-transparent border-none p-0 text-2xl font-bold" />
                 </div>
               </div>
             </div>
-
-            <button
-              onClick={handleAddMeasurement}
-              disabled={savingMeasurement}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl mt-8 shadow-lg shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-            >
+            <button onClick={handleAddMeasurement} disabled={savingMeasurement} className="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl mt-8 shadow-lg">
               {savingMeasurement ? 'Guardando...' : 'Guardar Cambios'}
             </button>
           </div>
         </div>
+      )}
+
+      {/* Floating Action Button (FAB) for Quick Visit */}
+      {activeTab === 'home' && user && !visits.some(v => isSameDay(new Date(v.date), new Date())) && (
+        <button
+          onClick={() => addVisit(user.uid, new Date())}
+          className="fixed bottom-24 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center z-40 animate-pulse"
+        >
+          <span className="material-symbols-rounded text-3xl font-bold">add</span>
+        </button>
       )}
 
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
