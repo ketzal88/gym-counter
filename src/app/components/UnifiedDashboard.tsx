@@ -1,18 +1,15 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useTheme } from 'next-themes';
+import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import {
   Visit,
   BodyMeasurement,
-  UserProfile,
   subscribeToVisits,
   addVisit,
   subscribeToBodyMeasurements,
-  addBodyMeasurement,
-  subscribeToAllUsers,
-  subscribeToAllVisits
+  addBodyMeasurement
 } from '@/services/db';
 import TotalVisitsChart from './TotalVisitsChart';
 import MaxWeightsSection from './MaxWeightsSection';
@@ -21,12 +18,7 @@ import BottomNav from './BottomNav';
 
 export default function UnifiedDashboard() {
   const { user } = useAuth();
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Navigation State
   const [activeTab, setActiveTab] = useState<'home' | 'logs' | 'kpis' | 'records'>('home');
@@ -34,8 +26,6 @@ export default function UnifiedDashboard() {
   // Data State
   const [visits, setVisits] = useState<Visit[]>([]);
   const [bodyMeasurements, setBodyMeasurements] = useState<BodyMeasurement[]>([]);
-  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
-  const [allVisits, setAllVisits] = useState<Visit[]>([]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [loading, setLoading] = useState(true);
 
@@ -64,19 +54,9 @@ export default function UnifiedDashboard() {
       setBodyMeasurements(data);
     });
 
-    const unsubscribeAllUsers = subscribeToAllUsers((data) => {
-      setAllUsers(data);
-    });
-
-    const unsubscribeAllVisits = subscribeToAllVisits((data) => {
-      setAllVisits(data);
-    });
-
     return () => {
       unsubscribeVisits();
       unsubscribeMeasurements();
-      unsubscribeAllUsers();
-      unsubscribeAllVisits();
     };
   }, [user]);
 
@@ -110,8 +90,6 @@ export default function UnifiedDashboard() {
   const referenceDate = isCurrentYear ? now : endOfYear;
   const daysElapsed = Math.floor((referenceDate.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
-  // Total days in the year
-  const totalDaysInYear = Math.floor((endOfYear.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
   // Attendance percentage
   const attendancePercentage = daysElapsed > 0 ? ((totalVisitsYear / daysElapsed) * 100).toFixed(1) : '0.0';
@@ -223,7 +201,7 @@ export default function UnifiedDashboard() {
                 className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 font-bold border border-slate-200 dark:border-slate-700 hover:scale-105 active:scale-95 transition-all overflow-hidden"
               >
                 {user?.photoURL ? (
-                  <img src={user.photoURL} alt="Profile" className="w-full h-full object-cover" />
+                  <Image src={user.photoURL} alt="Profile" width={40} height={40} className="w-full h-full object-cover" />
                 ) : (
                   user?.displayName?.charAt(0) || user?.email?.charAt(0) || '?'
                 )}
@@ -255,7 +233,7 @@ export default function UnifiedDashboard() {
                   <span className="text-[10px] uppercase tracking-widest font-bold opacity-90">Motivación diaria</span>
                 </div>
                 <p className="text-sm font-medium leading-relaxed italic opacity-90">
-                  "¡No hay límites para quien se atreve a superarse!"
+                  &quot;¡No hay límites para quien se atreve a superarse!&quot;
                 </p>
               </div>
               <div className="absolute -right-6 -bottom-6 opacity-10 rotate-12">

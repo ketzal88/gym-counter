@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { subscribeToMaxWeights, addMaxWeight, MaxWeight, deleteDoc, doc, db } from '@/services/db';
+import { subscribeToMaxWeights, addMaxWeight, MaxWeight } from '@/services/db';
 
 const EXERCISES = [
     { id: 'Squat', label: 'Sentadilla', muscle: 'Piernas', icon: 'directions_run', color: 'text-purple-600', bg: 'bg-purple-100' },
@@ -47,15 +46,6 @@ export default function MaxWeightsSection({ userId }: MaxWeightsSectionProps) {
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (confirm('¿Estás seguro de eliminar este registro?')) {
-            try {
-                await deleteDoc(doc(db, 'maxWeights', id));
-            } catch (error) {
-                console.error("Error deleting max weight", error);
-            }
-        }
-    };
 
     // Calculate Stats
     const exerciseStats = EXERCISES.map(ex => {
@@ -200,8 +190,8 @@ export default function MaxWeightsSection({ userId }: MaxWeightsSectionProps) {
                                             key={r}
                                             onClick={() => setFormReps(r)}
                                             className={`w-12 h-10 rounded-full font-bold transition-all ${formReps === r
-                                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
-                                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200'
+                                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200'
                                                 }`}
                                         >
                                             {r}
