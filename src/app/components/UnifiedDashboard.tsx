@@ -14,6 +14,7 @@ import {
 import TotalVisitsChart from './TotalVisitsChart';
 import MaxWeightsSection from './MaxWeightsSection';
 import RecentVisitsManager from './RecentVisitsManager';
+import RoutineTracker from './RoutineTracker';
 import BottomNav from './BottomNav';
 
 export default function UnifiedDashboard() {
@@ -21,7 +22,8 @@ export default function UnifiedDashboard() {
 
 
   // Navigation State
-  const [activeTab, setActiveTab] = useState<'home' | 'logs' | 'kpis' | 'records'>('home');
+  // Navigation State
+  const [activeTab, setActiveTab] = useState<'home' | 'routine' | 'logs' | 'kpis' | 'records'>('home');
 
   // Data State
   const [visits, setVisits] = useState<Visit[]>([]);
@@ -403,6 +405,13 @@ export default function UnifiedDashboard() {
           <div className="p-4">
             <RecentVisitsManager userId={user?.uid || ''} visits={visits} />
           </div>
+        </div>
+      )}
+
+      {/* ---------------- ROUTINE TAB ---------------- */}
+      {activeTab === 'routine' && (
+        <div className="animate-fade-in px-6 pb-28 pt-6">
+          <RoutineTracker userId={user?.uid || ''} />
         </div>
       )}
 

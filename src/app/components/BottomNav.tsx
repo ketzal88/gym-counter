@@ -2,7 +2,7 @@
 
 import React from 'react';
 
-type Tab = 'home' | 'logs' | 'kpis' | 'records';
+type Tab = 'home' | 'routine' | 'logs' | 'kpis' | 'records';
 
 interface BottomNavProps {
     activeTab: Tab;
@@ -12,6 +12,7 @@ interface BottomNavProps {
 export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
     const navItems = [
         { id: 'home', label: 'Resumen', icon: 'grid_view' },
+        { id: 'routine', label: 'Rutina', icon: 'fitness_center' },
         { id: 'logs', label: 'Registro', icon: 'history_edu' },
         { id: 'kpis', label: 'KPIs', icon: 'monitoring' },
         { id: 'records', label: 'Récords', icon: 'military_tech' },

@@ -40,6 +40,27 @@ export interface MaxWeight {
     timestamp: Date;
 }
 
+export interface ExerciseLog {
+    exerciseId: string;
+    exerciseName: string;
+    sets: {
+        reps: number;
+        weight: number;
+        completed: boolean;
+    }[];
+}
+
+export interface WorkoutLog {
+    id: string;
+    userId: string;
+    routineId: string;
+    routineName: string;
+    date: string;
+    exercises: ExerciseLog[];
+    finisherCompleted: boolean;
+    timestamp: Date;
+}
+
 export interface UserProfile {
     uid: string;
     displayName: string;
@@ -177,5 +198,31 @@ export const addMaxWeight = async (userId: string, date: Date, exercise: string,
         weight,
         reps,
         timestamp: Timestamp.fromDate(date)
+    });
+};
+
+// --- WORKOUT LOGS ---
+
+export const addWorkoutLog = async (workout: Omit<WorkoutLog, 'id' | 'timestamp'>) => {
+    await addDoc(collection(db, 'workouts'), {
+        ...workout,
+        timestamp: Timestamp.fromDate(new Date())
+    });
+};
+
+export const subscribeToWorkoutLogs = (userId: string, callback: (workouts: WorkoutLog[]) => void) => {
+    const q = query(
+        collection(db, 'workouts'),
+        where('userId', '==', userId),
+        orderBy('timestamp', 'desc')
+    );
+
+    return onSnapshot(q, (snapshot) => {
+        const workouts = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            timestamp: doc.data().timestamp?.toDate(),
+        })) as WorkoutLog[];
+        callback(workouts);
     });
 };
