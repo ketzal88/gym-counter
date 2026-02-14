@@ -2,7 +2,7 @@
 
 import React from 'react';
 
-type Tab = 'home' | 'routine' | 'logs' | 'kpis' | 'records';
+type Tab = 'home' | 'routine' | 'logs' | 'kpis' | 'records' | 'settings';
 
 interface BottomNavProps {
     activeTab: Tab;
@@ -16,6 +16,7 @@ export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
         { id: 'logs', label: 'Registro', icon: 'history_edu' },
         { id: 'kpis', label: 'KPIs', icon: 'monitoring' },
         { id: 'records', label: 'Récords', icon: 'military_tech' },
+        { id: 'settings', label: 'Ajustes', icon: 'settings' },
     ] as const;
 
     return (

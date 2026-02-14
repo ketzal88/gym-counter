@@ -1,33 +1,162 @@
 'use client';
 
-import { useState } from 'react';
-import { ROUTINES, FINISHER, Routine, Exercise } from '@/data/routines';
-import { addWorkoutLog } from '@/services/db';
+import { useState, useEffect } from 'react';
+import {
+    generateWorkout,
+    evaluateUnlock,
+    ProtocolWorkout,
+    WARMUP
+} from '@/services/protocolEngine';
+import {
+    addWorkoutLog,
+    subscribeToUserTrainingState,
+    initializeUserTrainingState,
+    updateUserTrainingState,
+    UserTrainingState
+} from '@/services/db';
+import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { db } from '@/services/db';
 
 interface RoutineTrackerProps {
     userId: string;
 }
 
 export default function RoutineTracker({ userId }: RoutineTrackerProps) {
-    const [selectedRoutine, setSelectedRoutine] = useState<Routine | null>(null);
+    const [userState, setUserState] = useState<UserTrainingState | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [workout, setWorkout] = useState<ProtocolWorkout | null>(null);
+
+    // Tracking state
     const [completedExercises, setCompletedExercises] = useState<Record<string, boolean>>({});
-    const [exerciseLogs, setExerciseLogs] = useState<Record<string, { reps: string, weight: string }[]>>({});
-    const [finisherCompleted, setFinisherCompleted] = useState(false);
+    const [exerciseLogs, setExerciseLogs] = useState<Record<string, { reps: string, weight: string, completed: boolean }[]>>({});
     const [saving, setSaving] = useState(false);
 
-    const handleRoutineSelect = (routine: Routine) => {
-        setSelectedRoutine(routine);
-        // Reset state for new routine
-        setCompletedExercises({});
-        const initialLogs: Record<string, { reps: string, weight: string }[]> = {};
-        routine.exercises.forEach(ex => {
-            initialLogs[ex.id] = Array(ex.series).fill({ reps: '', weight: '' });
+    // Initialization Modal State
+    const [showInitModal, setShowInitModal] = useState(false);
+    const [initLifts, setInitLifts] = useState({
+        bench: '',
+        squat: '',
+        deadlift: '',
+        ohp: '',
+        pullups: ''
+    });
+
+    // Helper: Round Numbers
+    const roundTo2_5 = (num: number) => Math.round(num / 2.5) * 2.5;
+    const roundTo5 = (num: number) => Math.round(num / 5) * 5;
+
+    // Load User State
+    useEffect(() => {
+        if (!userId) return;
+        const unsub = subscribeToUserTrainingState(userId, (state) => {
+            setUserState(state);
+            setLoading(false);
+            if (!state) {
+                setShowInitModal(true);
+            }
         });
-        setExerciseLogs(initialLogs);
+        return () => unsub();
+    }, [userId]);
+
+    // Fetch Last Accessory Performance (Smart Memory)
+    const fetchLastPerformance = async (exerciseId: string) => {
+        try {
+            const q = query(
+                collection(db, 'workouts'),
+                where('userId', '==', userId),
+                orderBy('timestamp', 'desc'),
+                limit(5) // Look at last 5 workouts to find this exercise
+            );
+            const snapshot = await getDocs(q);
+
+            for (const doc of snapshot.docs) {
+                const data = doc.data();
+                const ex = data.exercises.find((e: any) => e.exerciseId === exerciseId);
+
+                // If exercise found in this workout
+                if (ex && ex.sets && ex.sets.length > 0) {
+                    // FIND THE HEAVIEST SET (Not just the first one)
+                    // This avoids suggesting warmup weights
+                    const bestSet = ex.sets.reduce((max: any, current: any) => {
+                        return (parseFloat(current.weight) || 0) > (parseFloat(max.weight) || 0) ? current : max;
+                    }, ex.sets[0]);
+
+                    if (bestSet && bestSet.weight) {
+                        return { weight: bestSet.weight, reps: bestSet.reps };
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Error fetching history", e);
+        }
+        return null;
     };
 
-    const toggleExercise = (id: string) => {
-        setCompletedExercises(prev => ({ ...prev, [id]: !prev[id] }));
+    // Generate Workout & Prefill
+    useEffect(() => {
+        const prepareWorkout = async () => {
+            if (userState && userState.liftState) {
+                const generated = generateWorkout(userState.currentDay, userState.liftState);
+
+                // Prefill accessories with history
+                const logs: Record<string, any[]> = {};
+
+                for (const ex of generated.exercises) {
+                    let prefilledWeight = ex.weight ? ex.weight.toString() : '';
+                    let prefilledReps = '';
+
+                    // If not a calculated main lift and it's strength type, look for history
+                    if (ex.blockType === 'strength' && !ex.weight) {
+                        const lastPerf = await fetchLastPerformance(ex.id);
+                        if (lastPerf) {
+                            prefilledWeight = lastPerf.weight.toString();
+                            prefilledReps = lastPerf.reps ? lastPerf.reps.toString() : '';
+                        }
+                    }
+
+                    logs[ex.id] = Array(ex.sets).fill(null).map(() => ({
+                        reps: prefilledReps || ex.reps.split('-')[0], // Use target as default if no history
+                        weight: prefilledWeight,
+                        completed: false
+                    }));
+                }
+
+                setWorkout(generated);
+                setExerciseLogs(logs);
+                setCompletedExercises({});
+            }
+        };
+
+        if (userState) {
+            prepareWorkout();
+        }
+    }, [userState]);
+
+    const handleInitialize = async () => {
+        setLoading(true);
+        try {
+            const benchInput = parseFloat(initLifts.bench) || 0;
+            const squatInput = parseFloat(initLifts.squat) || 0;
+            const deadliftInput = parseFloat(initLifts.deadlift) || 0;
+            const ohpInput = parseFloat(initLifts.ohp) || 0;
+            const pullupsInput = parseInt(initLifts.pullups) || 0;
+
+            const lifts = {
+                bench: roundTo2_5(benchInput * 0.9),
+                squat: roundTo5(squatInput * 0.9),
+                deadlift: roundTo5(deadliftInput * 0.9),
+                ohp: roundTo2_5(ohpInput * 0.9),
+                pullupsLevel: pullupsInput
+            };
+
+            await initializeUserTrainingState(userId, lifts);
+            setShowInitModal(false);
+        } catch (error) {
+            console.error(error);
+            alert("Error initializing profile");
+        } finally {
+            setLoading(false);
+        }
     };
 
     const updateLog = (exId: string, setIndex: number, field: 'reps' | 'weight', value: string) => {
@@ -38,185 +167,371 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
         });
     };
 
+    const toggleSetComplete = (exId: string, setIndex: number) => {
+        setExerciseLogs(prev => {
+            const newLogs = [...(prev[exId] || [])];
+            newLogs[setIndex] = { ...newLogs[setIndex], completed: !newLogs[setIndex].completed };
+            return { ...prev, [exId]: newLogs };
+        });
+    };
+
+    const toggleExercise = (id: string, sets: number) => {
+        const isComplete = !completedExercises[id];
+        setCompletedExercises(prev => ({ ...prev, [id]: isComplete }));
+
+        setExerciseLogs(prev => {
+            const newLogs = [...(prev[id] || [])];
+            return {
+                ...prev,
+                [id]: newLogs.map(s => ({ ...s, completed: isComplete }))
+            };
+        });
+    };
+
     const handleSave = async () => {
-        if (!selectedRoutine || !userId) return;
+        if (!workout || !userState) return;
         setSaving(true);
+
         try {
-            const exercisesToLog = selectedRoutine.exercises.map(ex => ({
-                exerciseId: ex.id,
-                exerciseName: ex.name,
-                sets: exerciseLogs[ex.id].map(s => ({
-                    reps: parseInt(s.reps) || 0,
-                    weight: parseFloat(s.weight) || 0,
-                    completed: completedExercises[ex.id] || false
-                }))
+            const exercisesToLog = workout.exercises
+                .filter(ex => ex.blockType !== 'warmup') // Don't log warmup to history typically or do it as you wish
+                .map(ex => ({
+                    exerciseId: ex.id,
+                    exerciseName: ex.name,
+                    sets: exerciseLogs[ex.id]?.map(s => ({
+                        reps: parseInt(s.reps) || 0,
+                        weight: parseFloat(s.weight) || 0,
+                        completed: s.completed
+                    })) || []
+                }));
+
+            const performData = exercisesToLog.map(e => ({
+                exerciseId: e.exerciseId,
+                sets: e.sets
             }));
+
+            const unlockResult = evaluateUnlock(performData, userState.liftState, workout);
 
             await addWorkoutLog({
                 userId,
-                routineId: selectedRoutine.id,
-                routineName: selectedRoutine.name,
+                protocolDay: workout.dayNumber,
+                protocolDayType: workout.dayType,
+                cycleIndex: workout.cycleIndex,
+                isDeload: workout.isDeload,
+                unlockResult: unlockResult || null,
                 date: new Date().toISOString().split('T')[0],
+                routineId: `protocol_${workout.dayNumber}`,
+                routineName: workout.dayType,
                 exercises: exercisesToLog,
-                finisherCompleted
+                finisherCompleted: false
             });
 
-            alert('¡Rutina guardada con éxito! 💪');
-            setSelectedRoutine(null);
-            setCompletedExercises({});
-            setExerciseLogs({});
-            setFinisherCompleted(false);
+            const nextDay = userState.currentDay + 1;
+            const updates: Partial<UserTrainingState> = {
+                currentDay: nextDay,
+                completedProtocolSessions: userState.completedProtocolSessions + 1
+            };
+
+            if (unlockResult) {
+                updates.liftState = {
+                    ...userState.liftState,
+                    ...unlockResult
+                };
+            }
+
+            if (nextDay > 180) {
+                updates.protocolCompleted = true;
+            }
+
+            // 5. Benchmark Results Capture
+            const benchmarkResults: UserTrainingState['benchmarkResults'] = { ...userState.benchmarkResults };
+            const pushupLog = exercisesToLog.find(e => e.exerciseId === 'max_pushups');
+            const pullupLog = exercisesToLog.find(e => e.exerciseId === 'max_pullups');
+
+            if (pushupLog) {
+                const max = Math.max(...pushupLog.sets.map(s => s.reps));
+                if (max > 0) benchmarkResults.maxPushUps = max;
+            }
+            if (pullupLog) {
+                const max = Math.max(...pullupLog.sets.map(s => s.reps));
+                if (max > 0) benchmarkResults.maxPullUps = max;
+            }
+
+            if (Object.keys(benchmarkResults).length > 0) {
+                updates.benchmarkResults = benchmarkResults;
+            }
+
+            await updateUserTrainingState(userId, updates);
+
+            const successPhrases = unlockResult
+                ? ["¡TITÁN! Desbloqueaste +Carga 🚀", "¡GOAT! Subimos el nivel. 💪", "¡INTENSIDAD PURA! Nuevo PR desbloqueado."]
+                : ["Trabajo hecho. Mantenemos y atacamos.", "Sólido. La consistencia es clave.", "Buen trabajo. A recuperar."];
+
+            const phrase = successPhrases[Math.floor(Math.random() * successPhrases.length)];
+            alert(phrase);
+            window.scrollTo(0, 0);
+
         } catch (error) {
-            console.error("Error saving workout:", error);
-            alert('Error al guardar la rutina');
+            console.error("Error saving:", error);
+            alert("Error al guardar");
         } finally {
             setSaving(false);
         }
     };
 
-    if (!selectedRoutine) {
-        return (
-            <div className="space-y-6">
-                <header>
-                    <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white">Selecciona tu Rutina</h2>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm">Elige el entrenamiento de hoy</p>
-                </header>
+    if (loading) return <div className="p-10 text-center animate-pulse">Cargando protocolo...</div>;
 
-                <div className="grid gap-4">
-                    {ROUTINES.map(routine => (
-                        <button
-                            key={routine.id}
-                            onClick={() => handleRoutineSelect(routine)}
-                            className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 text-left hover:border-blue-500 transition-all group"
-                        >
-                            <div className="flex justify-between items-center mb-2">
-                                <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">{routine.id === 'A' ? 'Fuerza' : routine.id === 'B' ? 'Potencia' : 'Resistencia'}</span>
-                                <span className="material-symbols-rounded text-slate-300 group-hover:text-blue-500 transition-colors">arrow_forward</span>
+    // --- INITIALIZATION MODAL ---
+    if (showInitModal) {
+        return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/95 backdrop-blur-md p-6 overflow-y-auto">
+                <div className="bg-slate-900 w-full max-w-lg rounded-3xl p-8 shadow-2xl border border-slate-700">
+                    <div className="text-center mb-6">
+                        <span className="material-symbols-rounded text-5xl text-blue-500 mb-2">fitness_center</span>
+                        <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Seteo Inicial</h2>
+                        <p className="text-slate-400 text-sm mt-2 leading-relaxed">
+                            Ingresá el peso que <strong>HOY</strong> podés hacer para <strong className="text-white">5 repeticiones sólidas</strong> con técnica perfecta (sin llegar al fallo).
+                        </p>
+                    </div>
+
+                    <div className="space-y-4 mb-8">
+                        {[
+                            { id: 'bench', label: 'Bench Press' },
+                            { id: 'squat', label: 'Squat' },
+                            { id: 'deadlift', label: 'Deadlift' },
+                            { id: 'ohp', label: 'Overhead Press' }
+                        ].map((lift) => (
+                            <div key={lift.id} className="bg-slate-800/50 p-4 rounded-2xl flex justify-between items-center border border-slate-700/50 focus-within:border-blue-500/50 focus-within:bg-slate-800 transition-all">
+                                <label className="text-white font-bold text-lg">{lift.label}</label>
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="number"
+                                        value={initLifts[lift.id as keyof typeof initLifts]}
+                                        onChange={(e) => setInitLifts(prev => ({ ...prev, [lift.id]: e.target.value }))}
+                                        className="w-24 bg-slate-900 border border-slate-600 rounded-xl py-3 px-4 text-white text-xl font-bold text-center focus:border-blue-500 outline-none shadow-inner"
+                                        placeholder="0"
+                                    />
+                                    <span className="text-slate-500 font-bold text-sm w-4">KG</span>
+                                </div>
                             </div>
-                            <h3 className="font-bold text-slate-800 dark:text-white mb-1">{routine.name}</h3>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">{routine.exercises.length} ejercicios</p>
+                        ))}
+
+                        <div className="bg-slate-800/50 p-4 rounded-2xl flex justify-between items-center border border-slate-700/50 focus-within:border-blue-500/50 focus-within:bg-slate-800 transition-all">
+                            <div>
+                                <label className="text-white font-bold text-lg block">Pull-ups</label>
+                                <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Máximas Estrictas</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="number"
+                                    value={initLifts.pullups}
+                                    onChange={(e) => setInitLifts(prev => ({ ...prev, pullups: e.target.value }))}
+                                    className="w-24 bg-slate-900 border border-slate-600 rounded-xl py-3 px-4 text-white text-xl font-bold text-center focus:border-blue-500 outline-none shadow-inner"
+                                    placeholder="0"
+                                />
+                                <span className="text-slate-500 font-bold text-sm w-4">RPS</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="bg-blue-900/20 border border-blue-500/20 p-4 rounded-xl flex gap-3">
+                            <span className="material-symbols-rounded text-blue-400">info</span>
+                            <p className="text-xs text-blue-200">
+                                Calcularemos tus cargas de trabajo al <strong>90%</strong> de lo que ingreses para asegurar progreso constante.
+                            </p>
+                        </div>
+
+                        <button
+                            onClick={handleInitialize}
+                            disabled={!initLifts.bench || !initLifts.squat || !initLifts.deadlift || !initLifts.ohp}
+                            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-lg py-5 rounded-2xl shadow-xl shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform active:scale-[0.98]"
+                        >
+                            CONFIRMAR Y CRÉAR PROTOCOLO
                         </button>
-                    ))}
+                    </div>
                 </div>
             </div>
         );
     }
 
-    return (
-        <div className="space-y-8 pb-20">
-            <header className="flex items-center gap-4">
-                <button onClick={() => setSelectedRoutine(null)} className="p-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800">
-                    <span className="material-symbols-rounded">arrow_back</span>
+    if (userState?.protocolCompleted) {
+        return (
+            <div className="p-8 text-center space-y-6">
+                <div className="inline-block p-6 rounded-full bg-green-500/20 text-green-500 mb-4">
+                    <span className="material-symbols-rounded text-6xl">emoji_events</span>
+                </div>
+                <h2 className="text-3xl font-black text-white">¡PROTOCOLO COMPLETADO!</h2>
+                <p className="text-slate-400">Has completado los 180 días. Eres una máquina.</p>
+                <button
+                    className="bg-slate-800 text-white px-6 py-3 rounded-xl font-bold"
+                    onClick={() => {
+                        if (confirm("¿Reiniciar contadores? Tus cargas se mantendrán.")) {
+                            updateUserTrainingState(userId, { currentDay: 1, protocolCompleted: false });
+                        }
+                    }}
+                >
+                    Reiniciar Ciclo (Mantener Cargas)
                 </button>
+            </div>
+        );
+    }
+
+    if (!workout) return null;
+
+    return (
+        <div className="space-y-6 pb-20 animate-fade-in relative z-10">
+            {/* Header Info */}
+            <div className="flex justify-between items-end mb-2">
                 <div>
-                    <h2 className="font-bold text-slate-900 dark:text-white leading-tight">{selectedRoutine.name}</h2>
-                    <p className="text-[10px] text-blue-600 font-bold uppercase tracking-tighter">Entrenando ahora</p>
+                    <span className="text-[10px] font-black bg-blue-600/20 text-blue-400 px-2 py-0.5 rounded uppercase tracking-wider">
+                        DÍA {workout.dayNumber} / 180
+                    </span>
+                    <h2 className="text-2xl font-black text-white leading-none mt-1">
+                        {workout.dayType}
+                    </h2>
                 </div>
-            </header>
-
-            {selectedRoutine.note && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800/30 flex gap-3">
-                    <span className="material-symbols-rounded text-blue-500">psychology</span>
-                    <p className="text-xs text-blue-800 dark:text-blue-300 font-medium">{selectedRoutine.note}</p>
+                <div className="text-right">
+                    <p className="text-xs font-bold text-slate-500 uppercase">Ciclo {workout.cycleIndex}</p>
+                    {workout.isDeload && <span className="text-[10px] font-bold text-amber-500 bg-amber-900/20 px-2 py-1 rounded mt-1 inline-block">DELOAD</span>}
                 </div>
-            )}
+            </div>
 
+            {/* EXERCISES BLOCK RENDERING */}
             <div className="space-y-6">
-                {selectedRoutine.exercises.map((ex) => (
-                    <div key={ex.id} className={`bg-white dark:bg-slate-900 rounded-3xl p-5 border transition-all ${completedExercises[ex.id] ? 'border-green-500/50 shadow-lg shadow-green-500/5' : 'border-slate-100 dark:border-slate-800'}`}>
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => toggleExercise(ex.id)}
-                                    className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${completedExercises[ex.id] ? 'bg-green-500 text-white shadow-lg shadow-green-500/30' : 'bg-slate-50 dark:bg-slate-800 text-slate-300'}`}
-                                >
-                                    <span className="material-symbols-rounded font-bold">{completedExercises[ex.id] ? 'check' : 'fitness_center'}</span>
-                                </button>
-                                <div>
-                                    <h4 className="font-bold text-slate-800 dark:text-white">{ex.name}</h4>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{ex.series} series × {ex.reps} reps</p>
+                {workout.exercises.map((ex) => {
+                    const isMain = ex.id === workout.mainLift;
+
+                    // Renderer for WARMUP
+                    if (ex.blockType === 'warmup') {
+                        return (
+                            <div key={ex.id} className="bg-slate-800/30 rounded-2xl p-4 border border-slate-700/30 flex justify-between items-center">
+                                <div className="flex items-center gap-3">
+                                    <span className="material-symbols-rounded text-orange-400 text-sm">local_fire_department</span>
+                                    <span className="text-xs font-bold text-slate-300">{ex.name}</span>
+                                </div>
+                                <span className="text-xs font-black text-orange-500">{ex.reps}</span>
+                            </div>
+                        );
+                    }
+
+                    // Renderer for CONDITIONING
+                    if (ex.blockType === 'conditioning') {
+                        const meta = ex.conditioningMetadata;
+                        return (
+                            <div key={ex.id} className="bg-gradient-to-br from-indigo-900/20 to-slate-900 rounded-3xl p-6 border border-indigo-500/20 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                                    <span className="material-symbols-rounded text-7xl">timer</span>
+                                </div>
+                                <div className="flex justify-between items-start mb-4">
+                                    <div>
+                                        <div className="flex gap-2 items-center mb-1">
+                                            <span className="text-[10px] font-black bg-indigo-500 text-white px-2 py-0.5 rounded uppercase">{meta?.format || 'METCON'}</span>
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{meta?.duration}</span>
+                                        </div>
+                                        <h4 className="font-extrabold text-xl text-white">{ex.name}</h4>
+                                    </div>
+                                    <button
+                                        onClick={() => toggleExercise(ex.id, 1)}
+                                        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${completedExercises[ex.id] ? 'bg-green-500 text-white' : 'bg-slate-800 text-slate-500'}`}
+                                    >
+                                        <span className="material-symbols-rounded font-bold">{completedExercises[ex.id] ? 'check_circle' : 'play_arrow'}</span>
+                                    </button>
+                                </div>
+                                <div className="bg-slate-950/40 rounded-2xl p-4 border border-white/5">
+                                    <p className="text-xs text-slate-300 font-medium leading-relaxed whitespace-pre-line">
+                                        {meta?.instructions}
+                                    </p>
                                 </div>
                             </div>
-                            {ex.videoUrl && (
-                                <a href={ex.videoUrl} target="_blank" rel="noopener noreferrer" className="p-2 text-blue-500 bg-blue-50 dark:bg-blue-900/30 rounded-xl hover:scale-105 active:scale-95 transition-all">
-                                    <span className="material-symbols-rounded">play_circle</span>
-                                </a>
-                            )}
-                        </div>
+                        );
+                    }
 
-                        <div className="grid gap-2">
-                            {Array.from({ length: ex.series }).map((_, i) => (
-                                <div key={i} className="flex items-center gap-2">
-                                    <span className="text-[10px] font-bold text-slate-400 w-4">S{i + 1}</span>
-                                    <div className="flex-1 grid grid-cols-2 gap-2">
-                                        <div className="relative">
-                                            <input
-                                                type="number"
-                                                placeholder="Peso"
-                                                value={exerciseLogs[ex.id]?.[i]?.weight || ''}
-                                                onChange={(e) => updateLog(ex.id, i, 'weight', e.target.value)}
-                                                className="w-full bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl px-3 py-2 text-xs font-bold text-center"
-                                            />
-                                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-slate-400 font-bold">kg</span>
-                                        </div>
-                                        <div className="relative">
-                                            <input
-                                                type="number"
-                                                placeholder="Reps"
-                                                value={exerciseLogs[ex.id]?.[i]?.reps || ''}
-                                                onChange={(e) => updateLog(ex.id, i, 'reps', e.target.value)}
-                                                className="w-full bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl px-3 py-2 text-xs font-bold text-center"
-                                            />
-                                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-slate-400 font-bold">x</span>
+                    // Renderer for STRENGTH
+                    return (
+                        <div key={ex.id} className={`bg-slate-900 rounded-[2rem] p-6 border ${isMain ? 'border-blue-500/40 shadow-xl shadow-blue-900/10' : 'border-slate-800'} relative overflow-hidden transition-all`}>
+                            {isMain && <div className="absolute top-0 right-0 bg-blue-600 text-[9px] font-black text-white px-3 py-1 rounded-bl-xl uppercase tracking-widest">Main Block</div>}
+
+                            <div className="flex justify-between items-start mb-6">
+                                <div className="flex gap-4 items-center">
+                                    <button
+                                        onClick={() => toggleExercise(ex.id, ex.sets)}
+                                        className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all shadow-lg ${completedExercises[ex.id] ? 'bg-green-500 text-white shadow-green-500/20' : 'bg-slate-800 text-slate-500'}`}
+                                    >
+                                        <span className="material-symbols-rounded font-black text-2xl">{completedExercises[ex.id] ? 'check' : 'fitness_center'}</span>
+                                    </button>
+                                    <div>
+                                        <h4 className={`font-black text-xl tracking-tight ${isMain ? 'text-blue-400' : 'text-white'}`}>{ex.name}</h4>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <span className="text-[10px] font-black text-slate-500 bg-slate-800/50 px-2 py-0.5 rounded uppercase">{ex.sets}x{ex.reps}</span>
+                                            {ex.exerciseType === 'bodyweight_weighted' && <span className="text-[9px] font-black text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded uppercase">+ Lastre</span>}
                                         </div>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    </div>
-                ))}
-
-                {/* Finisher Section */}
-                <div className={`bg-gradient-to-br from-orange-500 to-red-600 rounded-3xl p-6 text-white shadow-xl shadow-orange-500/20 relative overflow-hidden transition-all ${finisherCompleted ? 'opacity-100 scale-100' : 'opacity-90'}`}>
-                    <div className="relative z-10">
-                        <div className="flex justify-between items-start mb-4">
-                            <div>
-                                <h3 className="font-bold text-lg">{FINISHER.name}</h3>
-                                <p className="text-[10px] font-bold uppercase tracking-widest opacity-80">Circuito de resistencia</p>
                             </div>
-                            <button
-                                onClick={() => setFinisherCompleted(!finisherCompleted)}
-                                className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${finisherCompleted ? 'bg-white text-orange-600 scale-110' : 'bg-white/20 text-white'}`}
-                            >
-                                <span className="material-symbols-rounded text-2xl font-bold">{finisherCompleted ? 'star' : 'local_fire_department'}</span>
-                            </button>
+
+                            <div className="space-y-2">
+                                {Array.from({ length: ex.sets }).map((_, i) => (
+                                    <div key={i} className={`flex items-center gap-3 p-3 rounded-2xl transition-all ${exerciseLogs[ex.id]?.[i]?.completed ? 'bg-green-500/5 opacity-60' : 'bg-slate-800/40'}`}>
+                                        <button
+                                            onClick={() => toggleSetComplete(ex.id, i)}
+                                            className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${exerciseLogs[ex.id]?.[i]?.completed ? 'border-green-500 bg-green-500 text-white shadow-md shadow-green-500/20' : 'border-slate-700 text-transparent hover:border-slate-500'}`}
+                                        >
+                                            <span className="material-symbols-rounded text-[14px] font-black">check</span>
+                                        </button>
+
+                                        <span className="text-[10px] font-black text-slate-600 w-5">S{i + 1}</span>
+
+                                        <div className="flex-1 grid grid-cols-2 gap-3">
+                                            {/* WEIGHT INPUT (Hider for bodyweight) */}
+                                            {ex.exerciseType !== 'bodyweight' ? (
+                                                <div className="relative">
+                                                    <input
+                                                        type="number"
+                                                        placeholder={ex.weight ? String(ex.weight) : "0"}
+                                                        value={exerciseLogs[ex.id]?.[i]?.weight || ''}
+                                                        onChange={(e) => updateLog(ex.id, i, 'weight', e.target.value)}
+                                                        className="w-full bg-slate-900/50 border-none rounded-xl px-4 py-2.5 text-sm font-black text-center text-white placeholder:text-slate-700 focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                                                    />
+                                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-600 font-black">KG</span>
+                                                </div>
+                                            ) : (
+                                                <div className="bg-slate-900/30 rounded-xl px-4 py-2.5 flex items-center justify-center">
+                                                    <span className="text-[10px] font-black text-slate-700 uppercase">Bodyweight</span>
+                                                </div>
+                                            )}
+
+                                            {/* REPS INPUT */}
+                                            <div className="relative">
+                                                <input
+                                                    type="text"
+                                                    placeholder={String(ex.reps)}
+                                                    value={exerciseLogs[ex.id]?.[i]?.reps || ''}
+                                                    onChange={(e) => updateLog(ex.id, i, 'reps', e.target.value)}
+                                                    className="w-full bg-slate-900/50 border-none rounded-xl px-4 py-2.5 text-sm font-black text-center text-white placeholder:text-slate-700 focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                                                />
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-600 font-black tracking-widest">RPS</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                        <p className="text-xs opacity-90 mb-4 italic leading-relaxed">{FINISHER.note}</p>
-                        <ul className="space-y-2">
-                            {FINISHER.exercises.map((fex, idx) => (
-                                <li key={idx} className="flex items-center gap-2 text-xs font-bold bg-white/10 p-2 rounded-xl">
-                                    <span className="material-symbols-rounded text-sm">bolt</span>
-                                    <span>{fex.name}: {fex.reps} reps</span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                </div>
+                    );
+                })}
             </div>
 
             <button
                 onClick={handleSave}
-                disabled={saving || !selectedRoutine}
-                className={`w-full py-5 rounded-[2rem] font-black text-lg tracking-tight shadow-xl transition-all flex items-center justify-center gap-2 ${saving ? 'bg-slate-200 text-slate-400 bg-none' : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:scale-[1.02] active:scale-95 shadow-blue-500/30'}`}
+                disabled={saving}
+                className={`w-full py-6 rounded-3xl font-black text-xl tracking-tight shadow-2xl transition-all flex items-center justify-center gap-3 mt-10 transform active:scale-[0.98] ${saving ? 'bg-slate-800 text-slate-600 cursor-wait' : 'bg-blue-600 text-white hover:bg-blue-500 shadow-blue-500/20'}`}
             >
                 {saving ? (
-                    'Guardando...'
+                    <span className="animate-spin material-symbols-rounded">progress_activity</span>
                 ) : (
-                    <>
-                        <span className="material-symbols-rounded">save</span>
-                        TERMINAR ENTRENAMIENTO
-                    </>
+                    <span className="material-symbols-rounded font-black text-2xl">task_alt</span>
                 )}
+                {saving ? 'Guardando...' : 'COMPLETAR SESIÓN'}
             </button>
         </div>
     );

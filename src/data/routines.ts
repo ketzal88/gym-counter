@@ -13,6 +13,8 @@ export interface Routine {
     note?: string;
 }
 
+// DEPRECATED: Replaced by Military Protocol (protocolEngine.ts)
+/*
 export const ROUTINES: Routine[] = [
     {
         id: 'A',
@@ -54,6 +56,7 @@ export const ROUTINES: Routine[] = [
         ]
     }
 ];
+*/
 
 export const FINISHER = {
     name: '🔥 FINISHER MILITAR (OPCIONAL)',

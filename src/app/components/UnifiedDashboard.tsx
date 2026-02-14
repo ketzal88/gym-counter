@@ -16,14 +16,19 @@ import MaxWeightsSection from './MaxWeightsSection';
 import RecentVisitsManager from './RecentVisitsManager';
 import RoutineTracker from './RoutineTracker';
 import BottomNav from './BottomNav';
+import { UserTrainingState, subscribeToUserTrainingState } from '@/services/db';
+import { getCycleIndex, isDeload } from '@/services/protocolEngine';
+import ProtocolSettings from './ProtocolSettings';
+import ProtocolOverview from './ProtocolOverview';
+import TabHeader from './TabHeader';
+// Auth handled via useAuth context
 
 export default function UnifiedDashboard() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
 
   // Navigation State
-  // Navigation State
-  const [activeTab, setActiveTab] = useState<'home' | 'routine' | 'logs' | 'kpis' | 'records'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'routine' | 'logs' | 'kpis' | 'records' | 'settings'>('home');
 
   // Data State
   const [visits, setVisits] = useState<Visit[]>([]);
@@ -36,7 +41,9 @@ export default function UnifiedDashboard() {
   const [modalDate, setModalDate] = useState(new Date().toISOString().split('T')[0]);
   const [modalMuscle, setModalMuscle] = useState('');
   const [modalFat, setModalFat] = useState('');
+  const [showProtocolOverview, setShowProtocolOverview] = useState(false);
   const [savingMeasurement, setSavingMeasurement] = useState(false);
+  const [userTrainingState, setUserTrainingState] = useState<UserTrainingState | null>(null);
 
   // Initial Data Load
   useEffect(() => {
@@ -56,9 +63,14 @@ export default function UnifiedDashboard() {
       setBodyMeasurements(data);
     });
 
+    const unsubscribeTraining = subscribeToUserTrainingState(user.uid, (data) => {
+      setUserTrainingState(data);
+    });
+
     return () => {
       unsubscribeVisits();
       unsubscribeMeasurements();
+      unsubscribeTraining();
     };
   }, [user]);
 
@@ -72,10 +84,8 @@ export default function UnifiedDashboard() {
   const isCurrentYear = selectedYear === currentYear;
 
   // Monthly Stats (Selected Year)
-  // If current year, show current month and last month
-  // If past year, show December and November of that year
-  const displayMonth1 = isCurrentYear ? currentMonth : 11; // December for past years
-  const displayMonth2 = isCurrentYear ? (currentMonth === 0 ? 11 : currentMonth - 1) : 10; // November for past years
+  const displayMonth1 = isCurrentYear ? currentMonth : 11;
+  const displayMonth2 = isCurrentYear ? (currentMonth === 0 ? 11 : currentMonth - 1) : 10;
 
   const month1Visits = yearVisits.filter(v => new Date(v.date).getMonth() === displayMonth1).length;
   const month2Visits = yearVisits.filter(v => new Date(v.date).getMonth() === displayMonth2).length;
@@ -88,19 +98,16 @@ export default function UnifiedDashboard() {
   const endOfYear = new Date(selectedYear, 11, 31, 23, 59, 59);
   const now = new Date();
 
-  // Days elapsed in the selected year (up to today if current year, or full year if past)
   const referenceDate = isCurrentYear ? now : endOfYear;
   const daysElapsed = Math.floor((referenceDate.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
-
-  // Attendance percentage
   const attendancePercentage = daysElapsed > 0 ? ((totalVisitsYear / daysElapsed) * 100).toFixed(1) : '0.0';
 
-  // Week Stats Logic (for Weekly Calendar)
+  // Week Stats Logic
   const today = new Date();
   const currentWeekDays: Date[] = [];
   const startOfWeek = new Date(today);
-  const dayOfWeek = today.getDay(); // 0 (Sun) - 6 (Sat)
+  const dayOfWeek = today.getDay();
   const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
   startOfWeek.setDate(today.getDate() + mondayOffset);
 
@@ -116,9 +123,6 @@ export default function UnifiedDashboard() {
     d1.getDate() === d2.getDate();
 
   const getDayStatus = (date: Date) => {
-    // Check if date is strictly in the future (tomorrow onwards)
-    const now = new Date();
-    // Reset time for accurate date comparison
     const dateNoTime = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     const todayNoTime = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
@@ -152,12 +156,11 @@ export default function UnifiedDashboard() {
     }
   };
 
-  // Process measurements to add diffs
   const processedMeasurements = useMemo(() => {
     const sorted = [...bodyMeasurements].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return sorted.map((current, index) => {
-      const next = sorted[index + 1]; // next in text is previous in time
+      const next = sorted[index + 1];
       let muscleDiff = null;
       let fatDiff = null;
 
@@ -176,12 +179,14 @@ export default function UnifiedDashboard() {
 
 
   if (loading) {
-    return <div className="flex justify-center items-center h-screen bg-slate-50 dark:bg-slate-900">
-      <div className="animate-pulse flex flex-col items-center">
-        <div className="h-12 w-12 bg-blue-500 rounded-full mb-4"></div>
-        <div className="text-slate-400 font-medium">Cargando GymCounter...</div>
+    return (
+      <div className="flex justify-center items-center h-screen bg-slate-50 dark:bg-slate-900">
+        <div className="animate-pulse flex flex-col items-center">
+          <div className="h-12 w-12 bg-blue-500 rounded-full mb-4"></div>
+          <div className="text-slate-400 font-medium">Cargando GymCounter...</div>
+        </div>
       </div>
-    </div>;
+    );
   }
 
   return (
@@ -212,13 +217,6 @@ export default function UnifiedDashboard() {
           </header>
 
           <main className="px-6 py-8 space-y-8 animate-fade-in">
-            {/* --- Team Scoreboard (Hidden for now) --- */}
-            {/* 
-            <section className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl p-6 shadow-xl shadow-blue-500/20 text-white relative overflow-hidden">
-              ...
-            </section>
-            */}
-
             <div className="space-y-2">
               <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
                 ¡Hola, {user?.displayName?.split(' ')[0] || 'Atleta'}! 👋
@@ -227,6 +225,30 @@ export default function UnifiedDashboard() {
                 Hoy es un buen día para entrenar.
               </p>
             </div>
+
+            {userTrainingState && (
+              <section className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex items-center justify-between group cursor-pointer hover:border-blue-500/50 transition-all" onClick={() => setActiveTab('records')}>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600">
+                    <span className="material-symbols-rounded">rocket_launch</span>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Protocolo Actual</p>
+                      {isDeload(getCycleIndex(userTrainingState.currentDay)) && (
+                        <span className="text-[8px] font-black bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded uppercase">Deload</span>
+                      )}
+                    </div>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">
+                      Día {userTrainingState.currentDay} • <span className="text-blue-500">Ciclo {getCycleIndex(userTrainingState.currentDay)}</span>
+                    </p>
+                  </div>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 group-hover:bg-blue-500 group-hover:text-white transition-all">
+                  <span className="material-symbols-rounded text-sm">chevron_right</span>
+                </div>
+              </section>
+            )}
 
             <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-700 p-5 text-white shadow-xl shadow-blue-900/20">
               <div className="relative z-10">
@@ -278,7 +300,7 @@ export default function UnifiedDashboard() {
                   const status = getDayStatus(date);
 
                   let bgClass = "bg-slate-50 dark:bg-slate-800 text-slate-300";
-                  let icon = "remove"; // horizontal_rule
+                  let icon = "remove";
                   let textColor = "text-slate-400";
                   let isClickable = false;
 
@@ -393,16 +415,9 @@ export default function UnifiedDashboard() {
 
       {/* ---------------- LOGS TAB ---------------- */}
       {activeTab === 'logs' && (
-        <div className="animate-fade-in">
-          <header className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 py-3">
-            <div className="flex items-center gap-3">
-              <button onClick={() => setActiveTab('home')} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">
-                <span className="material-symbols-rounded text-slate-500">arrow_back</span>
-              </button>
-              <h1 className="font-bold text-lg text-slate-900 dark:text-white">Corregir Asistencias</h1>
-            </div>
-          </header>
-          <div className="p-4">
+        <div className="animate-fade-in flex-1 overflow-y-auto px-6 pt-8 pb-24">
+          <TabHeader title="Asistencias" onBack={() => setActiveTab('home')} />
+          <div className="space-y-6">
             <RecentVisitsManager userId={user?.uid || ''} visits={visits} />
           </div>
         </div>
@@ -410,18 +425,16 @@ export default function UnifiedDashboard() {
 
       {/* ---------------- ROUTINE TAB ---------------- */}
       {activeTab === 'routine' && (
-        <div className="animate-fade-in px-6 pb-28 pt-6">
+        <div className="animate-fade-in flex-1 overflow-y-auto px-6 pt-8 pb-28">
+          <TabHeader title="Rutina" onBack={() => setActiveTab('home')} />
           <RoutineTracker userId={user?.uid || ''} />
         </div>
       )}
 
       {/* ---------------- KPIs TAB ---------------- */}
       {activeTab === 'kpis' && (
-        <div className="animate-fade-in px-6 pb-28 pt-6 space-y-6">
-          <header>
-            <h2 className="text-2xl font-extrabold text-blue-600 dark:text-blue-400 leading-tight">Comparativa Anual</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Análisis visual del rendimiento {selectedYear} vs {selectedYear - 1}</p>
-          </header>
+        <div className="animate-fade-in flex-1 overflow-y-auto px-6 pt-8 pb-28 space-y-6">
+          <TabHeader title="Proyección" onBack={() => setActiveTab('home')} />
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
             <div className="flex justify-between items-start mb-6">
               <div>
@@ -438,108 +451,223 @@ export default function UnifiedDashboard() {
 
       {/* ---------------- RECORDS TAB ---------------- */}
       {activeTab === 'records' && (
-        <div className="animate-fade-in">
-          <header className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-6 py-4">
-            <h1 className="font-bold text-lg text-slate-900 dark:text-white">Récords y Salud</h1>
-          </header>
-          <main className="px-6 pb-28 pt-6 space-y-6">
-            {user && <MaxWeightsSection userId={user.uid} />}
-            <section className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
-              <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                <h3 className="font-bold flex items-center gap-2 text-slate-800 dark:text-white">Mediciones corporales</h3>
-                <button onClick={() => setShowMeasurementModal(true)} className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg font-bold">
-                  + Nuevo
-                </button>
+        <div className="animate-fade-in flex-1 overflow-y-auto px-6 pt-8 pb-28 space-y-6">
+          <TabHeader title="Registros" onBack={() => setActiveTab('home')} />
+          {userTrainingState && (
+            <section className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl border border-slate-800 relative overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                <span className="material-symbols-rounded text-[12rem]">fitness_center</span>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead className="bg-slate-50 dark:bg-slate-800/50">
-                    <tr>
-                      <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase">Fecha</th>
-                      <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase text-center">% Músculo</th>
-                      <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase text-center">% Grasa</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {processedMeasurements.length === 0 ? (
-                      <tr><td colSpan={3} className="px-4 py-8 text-center text-slate-400 text-sm">Sin mediciones registrados</td></tr>
-                    ) : (
-                      processedMeasurements.slice(0, 10).map(m => (
-                        <tr key={m.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                          <td className="px-4 py-3 text-xs font-medium text-slate-700 dark:text-slate-300">
-                            {new Date(m.date).toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: '2-digit' })}
-                          </td>
-                          <td className="px-4 py-3 text-xs text-center">
-                            <div className="flex flex-col items-center">
-                              <span className="font-bold text-slate-700 dark:text-slate-300">{m.muscle}%</span>
-                              {m.muscleDiff && (
-                                <span className={`text-[10px] font-bold ${parseFloat(m.muscleDiff) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                  {parseFloat(m.muscleDiff) >= 0 ? '+' : ''}{m.muscleDiff}%
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-xs text-center">
-                            <div className="flex flex-col items-center">
-                              <span className="font-bold text-slate-700 dark:text-slate-300">{m.fat}%</span>
-                              {m.fatDiff && (
-                                <span className={`text-[10px] font-bold ${parseFloat(m.fatDiff) <= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                  {parseFloat(m.fatDiff) >= 0 ? '+' : ''}{m.fatDiff}%
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+
+              <div className="relative z-10">
+                <div className="flex justify-between items-start mb-8">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-[10px] font-black bg-blue-600/20 text-blue-400 px-3 py-1 rounded-full uppercase tracking-widest border border-blue-500/20">
+                        Military Operator
+                      </span>
+                      {isDeload(getCycleIndex(userTrainingState.currentDay)) && (
+                        <span className="text-[10px] font-black bg-amber-600/20 text-amber-500 px-3 py-1 rounded-full uppercase tracking-widest border border-amber-500/20">
+                          Deload
+                        </span>
+                      )}
+                    </div>
+                    <h2 className="text-4xl font-black leading-none flex items-baseline gap-2">
+                      DÍA {userTrainingState.currentDay}
+                      <span className="text-slate-700 text-xl font-bold">/ 180</span>
+                    </h2>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Ciclo</p>
+                    <p className="text-3xl font-black text-blue-500">{getCycleIndex(userTrainingState.currentDay)}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 gap-3 mb-8">
+                  {[
+                    { id: 'bench', label: 'BNCH' },
+                    { id: 'squat', label: 'SQUT' },
+                    { id: 'deadlift', label: 'DEAD' },
+                    { id: 'ohp', label: 'OHP' }
+                  ].map(lift => (
+                    <div key={lift.id} className="bg-slate-800/40 rounded-2xl p-3 text-center border border-slate-700/30 backdrop-blur-sm">
+                      <p className="text-[9px] font-black text-slate-500 uppercase mb-1 tracking-tighter">{lift.label}</p>
+                      <p className="text-sm font-black text-white">
+                        {userTrainingState.liftState?.[lift.id as keyof typeof userTrainingState.liftState] || '-'}
+                        <span className="text-[10px] text-slate-600 ml-0.5 font-bold">kg</span>
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="space-y-3">
+                  {!userTrainingState.protocolCompleted ? (
+                    <button
+                      onClick={() => setActiveTab('routine')}
+                      className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-5 rounded-2xl shadow-xl shadow-blue-600/20 flex items-center justify-center gap-3 transition-all transform active:scale-[0.98]"
+                    >
+                      <span className="material-symbols-rounded">play_circle</span>
+                      ENTRENAR HOY
+                    </button>
+                  ) : (
+                    <div className="w-full bg-green-500/10 border border-green-500/20 text-green-400 font-black py-4 rounded-2xl text-center flex items-center justify-center gap-2">
+                      <span className="material-symbols-rounded">stars</span>
+                      PROTOCOLO COMPLETADO
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => setShowProtocolOverview(true)}
+                    className="w-full bg-slate-800/50 hover:bg-slate-800 text-slate-400 font-bold py-3 rounded-xl border border-slate-700/50 text-xs flex items-center justify-center gap-2 transition-all"
+                  >
+                    <span className="material-symbols-rounded text-sm">map</span>
+                    Ver Estructura del Protocolo
+                  </button>
+                </div>
               </div>
             </section>
-          </main>
+          )}
+
+          {user && <MaxWeightsSection userId={user.uid} />}
+
+          <section className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+            <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+              <h3 className="font-bold flex items-center gap-2 text-slate-800 dark:text-white">Mediciones corporales</h3>
+              <button onClick={() => setShowMeasurementModal(true)} className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg font-bold">
+                + Nuevo
+              </button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-slate-50 dark:bg-slate-800/50">
+                  <tr>
+                    <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase">Fecha</th>
+                    <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase text-center">% Músculo</th>
+                    <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase text-center">% Grasa</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {processedMeasurements.length === 0 ? (
+                    <tr><td colSpan={3} className="px-4 py-8 text-center text-slate-400 text-sm">Sin mediciones registrados</td></tr>
+                  ) : (
+                    processedMeasurements.slice(0, 10).map(m => (
+                      <tr key={m.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                        <td className="px-4 py-3 text-xs font-medium text-slate-700 dark:text-slate-300">
+                          {new Date(m.date).toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-center">
+                          <div className="flex flex-col items-center">
+                            <span className="font-bold text-slate-700 dark:text-slate-300">{m.muscle}%</span>
+                            {m.muscleDiff && (
+                              <span className={`text-[10px] font-bold ${parseFloat(m.muscleDiff) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                {parseFloat(m.muscleDiff) >= 0 ? '+' : ''}{m.muscleDiff}%
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-center">
+                          <div className="flex flex-col items-center">
+                            <span className="font-bold text-slate-700 dark:text-slate-300">{m.fat}%</span>
+                            {m.fatDiff && (
+                              <span className={`text-[10px] font-bold ${parseFloat(m.fatDiff) <= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                {parseFloat(m.fatDiff) >= 0 ? '+' : ''}{m.fatDiff}%
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
         </div>
       )}
 
-      {/* Measurement Modal */}
+      {/* ---------------- SETTINGS TAB ---------------- */}
+      {activeTab === 'settings' && (
+        <div className="flex-1 overflow-y-auto px-6 pt-8 pb-28 space-y-6 animate-fade-in">
+          <TabHeader title="Configuración" onBack={() => setActiveTab('home')} />
+          <div className="bg-slate-900 rounded-3xl p-6 border border-slate-800 mb-6 font-white">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-xl font-bold border border-slate-700 uppercase text-white">
+                {user?.displayName?.charAt(0) || 'U'}
+              </div>
+              <div>
+                <h3 className="font-bold text-lg text-white">{user?.displayName || 'Usuario'}</h3>
+                <p className="text-xs text-slate-500">{user?.email}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => logout()}
+              className="w-full py-3 rounded-xl bg-red-500/10 text-red-500 font-bold text-sm border border-red-500/20 hover:bg-red-500/20 transition-all"
+            >
+              Cerrar Sesión
+            </button>
+          </div>
+          <ProtocolSettings />
+          <div className="text-center text-[10px] text-slate-600 font-mono mt-12 mb-4">
+            GymCounter Military v1.0
+          </div>
+        </div>
+      )}
+
+      {/* --- MODALS --- */}
       {showMeasurementModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center pointer-events-none">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto" onClick={() => setShowMeasurementModal(false)}></div>
-          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[2rem] shadow-2xl p-6 pointer-events-auto relative">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowMeasurementModal(false)}></div>
+          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[2rem] shadow-2xl p-6 relative animate-in slide-in-from-bottom duration-300">
             <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-6"></div>
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Nueva Medición</h3>
-              <button onClick={() => setShowMeasurementModal(false)} className="text-slate-400"><span className="material-symbols-rounded">close</span></button>
+              <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Nueva Medición</h3>
+              <button onClick={() => setShowMeasurementModal(false)} className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors">
+                <span className="material-symbols-rounded">close</span>
+              </button>
             </div>
             <div className="space-y-4">
-              <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl">
-                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Fecha</label>
-                <input type="date" value={modalDate} onChange={e => setModalDate(e.target.value)} className="w-full bg-transparent border-none p-0 text-slate-900 dark:text-white font-bold" />
+              <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/50">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Fecha de registro</label>
+                <input type="date" value={modalDate} onChange={e => setModalDate(e.target.value)} className="w-full bg-transparent border-none p-0 text-slate-900 dark:text-white font-bold outline-none" />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl">
-                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2">% Músculo</label>
-                  <input type="number" value={modalMuscle} onChange={e => setModalMuscle(e.target.value)} className="w-full bg-transparent border-none p-0 text-2xl font-bold" />
+                <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/50">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">% Músculo</label>
+                  <div className="flex items-baseline gap-1">
+                    <input type="number" step="0.1" value={modalMuscle} onChange={e => setModalMuscle(e.target.value)} className="w-full bg-transparent border-none p-0 text-3xl font-black outline-none" placeholder="0.0" />
+                    <span className="text-slate-400 font-bold">%</span>
+                  </div>
                 </div>
-                <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl">
-                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2">% Grasa</label>
-                  <input type="number" value={modalFat} onChange={e => setModalFat(e.target.value)} className="w-full bg-transparent border-none p-0 text-2xl font-bold" />
+                <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/50">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">% Grasa</label>
+                  <div className="flex items-baseline gap-1">
+                    <input type="number" step="0.1" value={modalFat} onChange={e => setModalFat(e.target.value)} className="w-full bg-transparent border-none p-0 text-3xl font-black outline-none" placeholder="0.0" />
+                    <span className="text-slate-400 font-bold">%</span>
+                  </div>
                 </div>
               </div>
             </div>
-            <button onClick={handleAddMeasurement} disabled={savingMeasurement} className="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl mt-8 shadow-lg">
-              {savingMeasurement ? 'Guardando...' : 'Guardar Cambios'}
+            <button onClick={handleAddMeasurement} disabled={savingMeasurement} className="w-full bg-blue-600 text-white font-black py-5 rounded-2xl mt-8 shadow-xl shadow-blue-600/20 active:scale-[0.98] transition-all transform disabled:opacity-50">
+              {savingMeasurement ? 'Cargando...' : 'GUARDAR MEDICIÓN'}
             </button>
           </div>
         </div>
+      )}
+
+      {showProtocolOverview && userTrainingState && (
+        <ProtocolOverview
+          currentDay={userTrainingState.currentDay}
+          onClose={() => setShowProtocolOverview(false)}
+        />
       )}
 
       {/* Floating Action Button (FAB) for Quick Visit */}
       {activeTab === 'home' && user && !visits.some(v => isSameDay(new Date(v.date), new Date())) && (
         <button
           onClick={() => addVisit(user.uid, new Date())}
-          className="fixed bottom-24 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center z-40 animate-pulse"
+          className="fixed bottom-24 right-6 w-16 h-16 bg-blue-600 text-white rounded-2xl shadow-2xl flex items-center justify-center z-40 animate-bounce transition-all hover:bg-blue-500"
         >
-          <span className="material-symbols-rounded text-3xl font-bold">add</span>
+          <span className="material-symbols-rounded text-4xl font-black">add</span>
         </button>
       )}
 

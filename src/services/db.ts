@@ -12,7 +12,7 @@ import {
 import { db } from '@/lib/firebase';
 
 export { db };
-export { deleteDoc, doc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
+export { deleteDoc, doc, collection, query, where, getDocs, writeBatch, setDoc, updateDoc } from 'firebase/firestore';
 
 export interface Visit {
     id: string;
@@ -59,6 +59,33 @@ export interface WorkoutLog {
     exercises: ExerciseLog[];
     finisherCompleted: boolean;
     timestamp: Date;
+    // Protocol Fields
+    protocolDay?: number;
+    protocolDayType?: string;
+    cycleIndex?: number;
+    isDeload?: boolean;
+    planned?: any;
+    performed?: any;
+    unlockResult?: any;
+}
+
+export interface UserTrainingState {
+    currentDay: number;
+    completedProtocolSessions: number;
+    liftState: {
+        bench: number;
+        squat: number;
+        deadlift: number;
+        ohp: number;
+        pullupsLevel: number;
+    };
+    benchmarkResults?: {
+        maxPushUps?: number;
+        maxPullUps?: number;
+        cardioTime?: string;
+    };
+    planVersion: "military_v1";
+    protocolCompleted: boolean;
 }
 
 export interface UserProfile {
@@ -225,4 +252,34 @@ export const subscribeToWorkoutLogs = (userId: string, callback: (workouts: Work
         })) as WorkoutLog[];
         callback(workouts);
     });
+};
+
+// --- USER TRAINING STATE ---
+
+export const initializeUserTrainingState = async (userId: string, initialLifts: UserTrainingState['liftState']) => {
+    const { setDoc, doc } = await import('firebase/firestore');
+    const initialState: UserTrainingState = {
+        currentDay: 1,
+        completedProtocolSessions: 0,
+        liftState: initialLifts,
+        planVersion: 'military_v1',
+        protocolCompleted: false
+    };
+    await setDoc(doc(db, 'userTrainingState', userId), initialState);
+    return initialState;
+};
+
+export const subscribeToUserTrainingState = (userId: string, callback: (state: UserTrainingState | null) => void) => {
+    return onSnapshot(doc(db, 'userTrainingState', userId), (docSnap) => {
+        if (docSnap.exists()) {
+            callback(docSnap.data() as UserTrainingState);
+        } else {
+            callback(null);
+        }
+    });
+};
+
+export const updateUserTrainingState = async (userId: string, updates: Partial<UserTrainingState>) => {
+    const { updateDoc, doc } = await import('firebase/firestore');
+    await updateDoc(doc(db, 'userTrainingState', userId), updates);
 };
