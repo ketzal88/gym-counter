@@ -41,7 +41,7 @@ export const WARMUP = [
     { name: 'Push Ups', reps: '15' }
 ];
 
-const TEMPLATES: Record<number, {
+export const TEMPLATES: Record<number, {
     type: string,
     mainLift?: keyof LiftState,
     accessories: {
@@ -96,7 +96,10 @@ const TEMPLATES: Record<number, {
         accessories: [
             { id: "inc_press", name: "Incline Press", sets: 4, reps: "10", exerciseType: "barbell", blockType: "strength" },
             { id: "pull_var", name: "Pull Variation (Lat Pulldowns)", sets: 4, reps: "8", exerciseType: "barbell", blockType: "strength" },
-            { id: "shoulders_arms", name: "Shoulders + Arms", sets: 3, reps: "10-15", exerciseType: "dumbbell", blockType: "strength" }
+            { id: "db_shoulder_press", name: "Dumbbell Shoulder Press", sets: 3, reps: "10", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "lateral_raises", name: "Lateral Raises", sets: 3, reps: "15", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "barbell_curl", name: "Barbell Curl", sets: 3, reps: "10", exerciseType: "barbell", blockType: "strength" },
+            { id: "triceps_pushdown", name: "Triceps Rope Pushdown", sets: 3, reps: "12", exerciseType: "dumbbell", blockType: "strength" }
         ]
     },
     5: {

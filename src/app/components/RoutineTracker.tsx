@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
     generateWorkout,
     evaluateUnlock,
@@ -30,6 +30,83 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
     const [completedExercises, setCompletedExercises] = useState<Record<string, boolean>>({});
     const [exerciseLogs, setExerciseLogs] = useState<Record<string, { reps: string, weight: string, completed: boolean }[]>>({});
     const [saving, setSaving] = useState(false);
+
+    // Rest Timer State
+    const REST_DURATION = 120; // 2 minutes in seconds
+    const [restTimer, setRestTimer] = useState(0);
+    const [timerActive, setTimerActive] = useState(false);
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const startRestTimer = useCallback(() => {
+        // Clear any existing timer
+        if (timerRef.current) clearInterval(timerRef.current);
+        setRestTimer(REST_DURATION);
+        setTimerActive(true);
+
+        timerRef.current = setInterval(() => {
+            setRestTimer(prev => {
+                if (prev <= 1) {
+                    clearInterval(timerRef.current!);
+                    timerRef.current = null;
+                    setTimerActive(false);
+                    // Play beep sound
+                    try {
+                        const ctx = new AudioContext();
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.frequency.value = 880;
+                        gain.gain.value = 0.3;
+                        osc.start();
+                        osc.stop(ctx.currentTime + 0.3);
+                    } catch {}
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+    }, []);
+
+    const cancelRestTimer = useCallback(() => {
+        if (timerRef.current) clearInterval(timerRef.current);
+        timerRef.current = null;
+        setRestTimer(0);
+        setTimerActive(false);
+    }, []);
+
+    // Cleanup timer on unmount
+    useEffect(() => {
+        return () => {
+            if (timerRef.current) clearInterval(timerRef.current);
+        };
+    }, []);
+
+    // Wake Lock: keep screen on during workout
+    const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+    useEffect(() => {
+        const requestWakeLock = async () => {
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLockRef.current = await navigator.wakeLock.request('screen');
+                }
+            } catch {}
+        };
+        requestWakeLock();
+
+        // Re-acquire on tab visibility change (browser releases it when tab is hidden)
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible') {
+                requestWakeLock();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibility);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibility);
+            wakeLockRef.current?.release();
+            wakeLockRef.current = null;
+        };
+    }, []);
 
     // Initialization Modal State
     const [showInitModal, setShowInitModal] = useState(false);
@@ -168,11 +245,16 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
     };
 
     const toggleSetComplete = (exId: string, setIndex: number) => {
+        const wasCompleted = exerciseLogs[exId]?.[setIndex]?.completed;
         setExerciseLogs(prev => {
             const newLogs = [...(prev[exId] || [])];
             newLogs[setIndex] = { ...newLogs[setIndex], completed: !newLogs[setIndex].completed };
             return { ...prev, [exId]: newLogs };
         });
+        // Start rest timer when marking a set as complete
+        if (!wasCompleted) {
+            startRestTimer();
+        }
     };
 
     const toggleExercise = (id: string, sets: number) => {
@@ -186,6 +268,10 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                 [id]: newLogs.map(s => ({ ...s, completed: isComplete }))
             };
         });
+        // Start rest timer when marking exercise as complete (conditioning/EMOM/AMRAP)
+        if (isComplete) {
+            startRestTimer();
+        }
     };
 
     const handleSave = async () => {
@@ -379,8 +465,48 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
 
     if (!workout) return null;
 
+    const formatTime = (seconds: number) => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    };
+
     return (
         <div className="space-y-6 pb-20 animate-fade-in relative z-10">
+            {/* REST TIMER OVERLAY */}
+            {timerActive && (
+                <div className="fixed bottom-0 left-0 right-0 z-50 p-4 animate-fade-in">
+                    <div className="max-w-lg mx-auto bg-slate-900/95 backdrop-blur-md border border-blue-500/30 rounded-2xl p-4 shadow-2xl shadow-blue-500/10">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-blue-600/20 flex items-center justify-center">
+                                    <span className="material-symbols-rounded text-blue-400 text-xl">timer</span>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Descanso</p>
+                                    <p className="text-2xl font-black text-white tabular-nums">{formatTime(restTimer)}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {/* Progress bar */}
+                                <div className="w-24 h-2 bg-slate-800 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-blue-500 rounded-full transition-all duration-1000 ease-linear"
+                                        style={{ width: `${(restTimer / REST_DURATION) * 100}%` }}
+                                    />
+                                </div>
+                                <button
+                                    onClick={cancelRestTimer}
+                                    className="w-10 h-10 rounded-xl bg-slate-800 hover:bg-red-900/50 text-slate-400 hover:text-red-400 flex items-center justify-center transition-all"
+                                >
+                                    <span className="material-symbols-rounded text-lg">close</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Header Info */}
             <div className="flex justify-between items-end mb-2">
                 <div>
