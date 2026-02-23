@@ -249,7 +249,7 @@ export const generateWorkout = (dayNumber: number, liftState: LiftState): Protoc
     if (template.mainLift) {
         const tm = liftState[template.mainLift as keyof LiftState];
         let sets = 5;
-        let reps = "5";
+        const reps = "5";
 
         if (dayTypeIndex === 6) { // Deadlift
             sets = 4;
@@ -381,15 +381,15 @@ export const evaluateUnlock = (
         // We will add pullups increment ONLY if it's the main lift.
 
         const lift = dayWorkout.mainLift;
-        let newState = { ...liftState };
-        let unlockChanges: Partial<LiftState> = {};
+        const newState = { ...liftState };
+        const unlockChanges: Partial<LiftState> = {};
 
         if (incrementMap[lift]) {
             unlockChanges[lift] = newState[lift as keyof LiftState] + incrementMap[lift];
         }
 
-        // Increment pullupsLevel if it's not already at max and the main lift was completed
-        if (newState.pullupsLevel < 12) { // Assuming 12 is the max target for pullupsLevel
+        // Increment pullupsLevel only on bench day (upper strength) where pullups are a key accessory
+        if (newState.pullupsLevel < 12 && lift === 'bench') {
             unlockChanges.pullupsLevel = newState.pullupsLevel + 1;
         }
 

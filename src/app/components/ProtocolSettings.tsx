@@ -3,12 +3,17 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { UserTrainingState, subscribeToUserTrainingState, updateUserTrainingState } from '@/services/db';
+import { useRestTimer } from '@/hooks/useRestTimer';
+import { useToast } from '@/hooks/useToast';
+import ToastContainer from './ui/ToastContainer';
 
 export default function ProtocolSettings() {
     const { user } = useAuth();
     const [userState, setUserState] = useState<UserTrainingState | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const { restDuration, updateRestDuration } = useRestTimer();
+    const { toasts, addToast, removeToast } = useToast();
 
     // Edit Form State
     const [editLifts, setEditLifts] = useState({
@@ -50,10 +55,10 @@ export default function ProtocolSettings() {
                     pullupsLevel: parseInt(editLifts.pullupsLevel) || 0
                 }
             });
-            alert('Pesos actualizados. Las próximas sesiones usarán estos valores.');
+            addToast('Pesos actualizados correctamente', 'success');
         } catch (error) {
             console.error("Error updating settings", error);
-            alert("Error al actualizar");
+            addToast('Error al actualizar', 'error');
         } finally {
             setSaving(false);
         }
@@ -62,8 +67,18 @@ export default function ProtocolSettings() {
     if (loading) return <div className="p-4 text-center text-slate-400 text-xs">Cargando datos...</div>;
     if (!userState) return null;
 
+    const timerOptions = [
+        { label: '30s', value: 30 },
+        { label: '1:00', value: 60 },
+        { label: '1:30', value: 90 },
+        { label: '2:00', value: 120 },
+        { label: '2:30', value: 150 },
+        { label: '3:00', value: 180 },
+    ];
+
     return (
         <div className="bg-slate-900 rounded-3xl p-6 border border-slate-800">
+            <ToastContainer toasts={toasts} onRemove={removeToast} />
             <div className="flex items-center gap-3 mb-6">
                 <span className="material-symbols-rounded text-blue-500 bg-blue-900/20 p-2 rounded-xl">settings_accessibility</span>
                 <div>
@@ -105,6 +120,28 @@ export default function ProtocolSettings() {
                         className="w-full bg-slate-800 border border-slate-700 rounded-xl py-2 pl-3 pr-8 text-white font-bold text-sm focus:border-blue-500 outline-none transition-colors"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 font-bold">Reps</span>
+                </div>
+            </div>
+
+            {/* Rest Timer Configuration */}
+            <div className="mb-6">
+                <div className="flex items-center gap-3 mb-3">
+                    <span className="material-symbols-rounded text-indigo-400 bg-indigo-900/20 p-1.5 rounded-lg text-sm">timer</span>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Descanso entre series</label>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                    {timerOptions.map(opt => (
+                        <button
+                            key={opt.value}
+                            onClick={() => updateRestDuration(opt.value)}
+                            className={`py-2.5 rounded-xl font-bold text-sm transition-all border ${restDuration === opt.value
+                                ? 'bg-blue-600 border-blue-500 text-white'
+                                : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600'
+                                }`}
+                        >
+                            {opt.label}
+                        </button>
+                    ))}
                 </div>
             </div>
 

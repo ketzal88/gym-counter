@@ -21,7 +21,7 @@ import { getCycleIndex, isDeload } from '@/services/protocolEngine';
 import ProtocolSettings from './ProtocolSettings';
 import ProtocolOverview from './ProtocolOverview';
 import TabHeader from './TabHeader';
-// Auth handled via useAuth context
+import { isSameDay } from '@/utils/date';
 
 export default function UnifiedDashboard() {
   const { user, logout } = useAuth();
@@ -116,11 +116,6 @@ export default function UnifiedDashboard() {
     day.setDate(startOfWeek.getDate() + i);
     currentWeekDays.push(day);
   }
-
-  const isSameDay = (d1: Date, d2: Date) =>
-    d1.getFullYear() === d2.getFullYear() &&
-    d1.getMonth() === d2.getMonth() &&
-    d1.getDate() === d2.getDate();
 
   const getDayStatus = (date: Date) => {
     const dateNoTime = new Date(date.getFullYear(), date.getMonth(), date.getDate());

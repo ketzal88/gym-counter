@@ -64,9 +64,7 @@ export interface WorkoutLog {
     protocolDayType?: string;
     cycleIndex?: number;
     isDeload?: boolean;
-    planned?: any;
-    performed?: any;
-    unlockResult?: any;
+    unlockResult?: Partial<UserTrainingState['liftState']> | null;
 }
 
 export interface UserTrainingState {
@@ -132,7 +130,8 @@ export const deleteVisit = async (visitId: string) => {
     await deleteDoc(doc(db, 'visits', visitId));
 };
 
-export const subscribeToAllVisits = (callback: (visits: Visit[]) => void) => {
+/** Subscribes to visits from the current month (not all visits). Used for the leaderboard/social view. */
+export const subscribeToCurrentMonthVisits = (callback: (visits: Visit[]) => void) => {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 

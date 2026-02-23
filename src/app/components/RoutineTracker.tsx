@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
     generateWorkout,
     evaluateUnlock,
     ProtocolWorkout,
-    WARMUP
 } from '@/services/protocolEngine';
 import {
     addWorkoutLog,
@@ -16,6 +15,11 @@ import {
 } from '@/services/db';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/services/db';
+import { useRestTimer } from '@/hooks/useRestTimer';
+import { useWakeLock } from '@/hooks/useWakeLock';
+import { useToast } from '@/hooks/useToast';
+import ToastContainer from './ui/ToastContainer';
+import ConfirmDialog from './ui/ConfirmDialog';
 
 interface RoutineTrackerProps {
     userId: string;
@@ -30,83 +34,12 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
     const [completedExercises, setCompletedExercises] = useState<Record<string, boolean>>({});
     const [exerciseLogs, setExerciseLogs] = useState<Record<string, { reps: string, weight: string, completed: boolean }[]>>({});
     const [saving, setSaving] = useState(false);
+    const { toasts, addToast, removeToast } = useToast();
+    const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-    // Rest Timer State
-    const REST_DURATION = 120; // 2 minutes in seconds
-    const [restTimer, setRestTimer] = useState(0);
-    const [timerActive, setTimerActive] = useState(false);
-    const timerRef = useRef<NodeJS.Timeout | null>(null);
-    const startRestTimer = useCallback(() => {
-        // Clear any existing timer
-        if (timerRef.current) clearInterval(timerRef.current);
-        setRestTimer(REST_DURATION);
-        setTimerActive(true);
-
-        timerRef.current = setInterval(() => {
-            setRestTimer(prev => {
-                if (prev <= 1) {
-                    clearInterval(timerRef.current!);
-                    timerRef.current = null;
-                    setTimerActive(false);
-                    // Play beep sound
-                    try {
-                        const ctx = new AudioContext();
-                        const osc = ctx.createOscillator();
-                        const gain = ctx.createGain();
-                        osc.connect(gain);
-                        gain.connect(ctx.destination);
-                        osc.frequency.value = 880;
-                        gain.gain.value = 0.3;
-                        osc.start();
-                        osc.stop(ctx.currentTime + 0.3);
-                    } catch {}
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
-    }, []);
-
-    const cancelRestTimer = useCallback(() => {
-        if (timerRef.current) clearInterval(timerRef.current);
-        timerRef.current = null;
-        setRestTimer(0);
-        setTimerActive(false);
-    }, []);
-
-    // Cleanup timer on unmount
-    useEffect(() => {
-        return () => {
-            if (timerRef.current) clearInterval(timerRef.current);
-        };
-    }, []);
-
-    // Wake Lock: keep screen on during workout
-    const wakeLockRef = useRef<WakeLockSentinel | null>(null);
-    useEffect(() => {
-        const requestWakeLock = async () => {
-            try {
-                if ('wakeLock' in navigator) {
-                    wakeLockRef.current = await navigator.wakeLock.request('screen');
-                }
-            } catch {}
-        };
-        requestWakeLock();
-
-        // Re-acquire on tab visibility change (browser releases it when tab is hidden)
-        const handleVisibility = () => {
-            if (document.visibilityState === 'visible') {
-                requestWakeLock();
-            }
-        };
-        document.addEventListener('visibilitychange', handleVisibility);
-
-        return () => {
-            document.removeEventListener('visibilitychange', handleVisibility);
-            wakeLockRef.current?.release();
-            wakeLockRef.current = null;
-        };
-    }, []);
+    // Rest Timer & Wake Lock
+    const { restTimer, timerActive, restDuration, startRestTimer, cancelRestTimer, formatTime } = useRestTimer();
+    useWakeLock();
 
     // Initialization Modal State
     const [showInitModal, setShowInitModal] = useState(false);
@@ -136,7 +69,7 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
     }, [userId]);
 
     // Fetch Last Accessory Performance (Smart Memory)
-    const fetchLastPerformance = async (exerciseId: string) => {
+    const fetchLastPerformance = useCallback(async (exerciseId: string) => {
         try {
             const q = query(
                 collection(db, 'workouts'),
@@ -148,13 +81,13 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
 
             for (const doc of snapshot.docs) {
                 const data = doc.data();
-                const ex = data.exercises.find((e: any) => e.exerciseId === exerciseId);
+                const ex = data.exercises.find((e: { exerciseId: string }) => e.exerciseId === exerciseId);
 
                 // If exercise found in this workout
                 if (ex && ex.sets && ex.sets.length > 0) {
                     // FIND THE HEAVIEST SET (Not just the first one)
                     // This avoids suggesting warmup weights
-                    const bestSet = ex.sets.reduce((max: any, current: any) => {
+                    const bestSet = ex.sets.reduce((max: { weight: string; reps: string }, current: { weight: string; reps: string }) => {
                         return (parseFloat(current.weight) || 0) > (parseFloat(max.weight) || 0) ? current : max;
                     }, ex.sets[0]);
 
@@ -167,7 +100,7 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
             console.error("Error fetching history", e);
         }
         return null;
-    };
+    }, [userId]);
 
     // Generate Workout & Prefill
     useEffect(() => {
@@ -176,7 +109,7 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                 const generated = generateWorkout(userState.currentDay, userState.liftState);
 
                 // Prefill accessories with history
-                const logs: Record<string, any[]> = {};
+                const logs: Record<string, { reps: string; weight: string; completed: boolean }[]> = {};
 
                 for (const ex of generated.exercises) {
                     let prefilledWeight = ex.weight ? ex.weight.toString() : '';
@@ -207,7 +140,7 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
         if (userState) {
             prepareWorkout();
         }
-    }, [userState]);
+    }, [userState, fetchLastPerformance]);
 
     const handleInitialize = async () => {
         setLoading(true);
@@ -230,7 +163,7 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
             setShowInitModal(false);
         } catch (error) {
             console.error(error);
-            alert("Error initializing profile");
+            addToast("Error al inicializar el perfil", 'error');
         } finally {
             setLoading(false);
         }
@@ -257,7 +190,7 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
         }
     };
 
-    const toggleExercise = (id: string, sets: number) => {
+    const toggleExercise = (id: string) => {
         const isComplete = !completedExercises[id];
         setCompletedExercises(prev => ({ ...prev, [id]: isComplete }));
 
@@ -354,12 +287,12 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                 : ["Trabajo hecho. Mantenemos y atacamos.", "Sólido. La consistencia es clave.", "Buen trabajo. A recuperar."];
 
             const phrase = successPhrases[Math.floor(Math.random() * successPhrases.length)];
-            alert(phrase);
+            addToast(phrase, 'success');
             window.scrollTo(0, 0);
 
         } catch (error) {
             console.error("Error saving:", error);
-            alert("Error al guardar");
+            addToast("Error al guardar la sesión", 'error');
         } finally {
             setSaving(false);
         }
@@ -444,6 +377,7 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
     if (userState?.protocolCompleted) {
         return (
             <div className="p-8 text-center space-y-6">
+                <ToastContainer toasts={toasts} onRemove={removeToast} />
                 <div className="inline-block p-6 rounded-full bg-green-500/20 text-green-500 mb-4">
                     <span className="material-symbols-rounded text-6xl">emoji_events</span>
                 </div>
@@ -451,28 +385,31 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                 <p className="text-slate-400">Has completado los 180 días. Eres una máquina.</p>
                 <button
                     className="bg-slate-800 text-white px-6 py-3 rounded-xl font-bold"
-                    onClick={() => {
-                        if (confirm("¿Reiniciar contadores? Tus cargas se mantendrán.")) {
-                            updateUserTrainingState(userId, { currentDay: 1, protocolCompleted: false });
-                        }
-                    }}
+                    onClick={() => setShowResetConfirm(true)}
                 >
                     Reiniciar Ciclo (Mantener Cargas)
                 </button>
+                {showResetConfirm && (
+                    <ConfirmDialog
+                        title="Reiniciar Protocolo"
+                        message="¿Reiniciar contadores? Tus cargas se mantendrán."
+                        confirmText="Reiniciar"
+                        onConfirm={() => {
+                            updateUserTrainingState(userId, { currentDay: 1, protocolCompleted: false });
+                            setShowResetConfirm(false);
+                        }}
+                        onCancel={() => setShowResetConfirm(false)}
+                    />
+                )}
             </div>
         );
     }
 
     if (!workout) return null;
 
-    const formatTime = (seconds: number) => {
-        const m = Math.floor(seconds / 60);
-        const s = seconds % 60;
-        return `${m}:${s.toString().padStart(2, '0')}`;
-    };
-
     return (
         <div className="space-y-6 pb-20 animate-fade-in relative z-10">
+            <ToastContainer toasts={toasts} onRemove={removeToast} />
             {/* REST TIMER OVERLAY */}
             {timerActive && (
                 <div className="fixed bottom-0 left-0 right-0 z-50 p-4 animate-fade-in">
@@ -492,7 +429,7 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                                 <div className="w-24 h-2 bg-slate-800 rounded-full overflow-hidden">
                                     <div
                                         className="h-full bg-blue-500 rounded-full transition-all duration-1000 ease-linear"
-                                        style={{ width: `${(restTimer / REST_DURATION) * 100}%` }}
+                                        style={{ width: `${(restTimer / restDuration) * 100}%` }}
                                     />
                                 </div>
                                 <button
@@ -558,7 +495,7 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                                         <h4 className="font-extrabold text-xl text-white">{ex.name}</h4>
                                     </div>
                                     <button
-                                        onClick={() => toggleExercise(ex.id, 1)}
+                                        onClick={() => toggleExercise(ex.id)}
                                         className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${completedExercises[ex.id] ? 'bg-green-500 text-white' : 'bg-slate-800 text-slate-500'}`}
                                     >
                                         <span className="material-symbols-rounded font-bold">{completedExercises[ex.id] ? 'check_circle' : 'play_arrow'}</span>
@@ -581,7 +518,7 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                             <div className="flex justify-between items-start mb-6">
                                 <div className="flex gap-4 items-center">
                                     <button
-                                        onClick={() => toggleExercise(ex.id, ex.sets)}
+                                        onClick={() => toggleExercise(ex.id)}
                                         className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all shadow-lg ${completedExercises[ex.id] ? 'bg-green-500 text-white shadow-green-500/20' : 'bg-slate-800 text-slate-500'}`}
                                     >
                                         <span className="material-symbols-rounded font-black text-2xl">{completedExercises[ex.id] ? 'check' : 'fitness_center'}</span>
