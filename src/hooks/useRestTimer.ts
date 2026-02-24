@@ -49,7 +49,7 @@ export function useRestTimer() {
                         osc.connect(gain);
                         gain.connect(ctx.destination);
                         osc.frequency.value = 880;
-                        gain.gain.value = 0.3;
+                        gain.gain.value = 1;
                         osc.start();
                         osc.stop(ctx.currentTime + 0.3);
                     } catch { /* audio not available */ }

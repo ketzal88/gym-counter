@@ -412,7 +412,7 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
             <ToastContainer toasts={toasts} onRemove={removeToast} />
             {/* REST TIMER OVERLAY */}
             {timerActive && (
-                <div className="fixed bottom-0 left-0 right-0 z-50 p-4 animate-fade-in">
+                <div className="fixed bottom-12 left-0 right-0 z-50 p-4 animate-fade-in">
                     <div className="max-w-lg mx-auto bg-slate-900/95 backdrop-blur-md border border-blue-500/30 rounded-2xl p-4 shadow-2xl shadow-blue-500/10">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
@@ -450,11 +450,11 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                     <span className="text-[10px] font-black bg-blue-600/20 text-blue-400 px-2 py-0.5 rounded uppercase tracking-wider">
                         DÍA {workout.dayNumber} / 180
                     </span>
-                    <h2 className="text-2xl font-black text-white leading-none mt-1">
+                    <h2 className="text-2xl font-black text-white leading-none mt-1 mb-4">
                         {workout.dayType}
                     </h2>
                 </div>
-                <div className="text-right">
+                <div className="text-right mb-4">
                     <p className="text-xs font-bold text-slate-500 uppercase">Ciclo {workout.cycleIndex}</p>
                     {workout.isDeload && <span className="text-[10px] font-bold text-amber-500 bg-amber-900/20 px-2 py-1 rounded mt-1 inline-block">DELOAD</span>}
                 </div>

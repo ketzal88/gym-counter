@@ -6,10 +6,14 @@ import { useAuth } from '@/context/AuthContext';
 import {
   Visit,
   BodyMeasurement,
+  MaxWeight,
+  WorkoutLog,
   subscribeToVisits,
   addVisit,
   subscribeToBodyMeasurements,
-  addBodyMeasurement
+  addBodyMeasurement,
+  subscribeToMaxWeights,
+  subscribeToWorkoutLogs,
 } from '@/services/db';
 import TotalVisitsChart from './TotalVisitsChart';
 import MaxWeightsSection from './MaxWeightsSection';
@@ -18,6 +22,10 @@ import RoutineTracker from './RoutineTracker';
 import BottomNav from './BottomNav';
 import { UserTrainingState, subscribeToUserTrainingState } from '@/services/db';
 import { getCycleIndex, isDeload } from '@/services/protocolEngine';
+import TrainingStreakCard from './charts/TrainingStreakCard';
+import LiftProgressionChart from './charts/LiftProgressionChart';
+import WeeklyVolumeChart from './charts/WeeklyVolumeChart';
+import BodyCompositionChart from './charts/BodyCompositionChart';
 import ProtocolSettings from './ProtocolSettings';
 import ProtocolOverview from './ProtocolOverview';
 import TabHeader from './TabHeader';
@@ -44,6 +52,8 @@ export default function UnifiedDashboard() {
   const [showProtocolOverview, setShowProtocolOverview] = useState(false);
   const [savingMeasurement, setSavingMeasurement] = useState(false);
   const [userTrainingState, setUserTrainingState] = useState<UserTrainingState | null>(null);
+  const [maxWeights, setMaxWeights] = useState<MaxWeight[]>([]);
+  const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
 
   // Initial Data Load
   useEffect(() => {
@@ -67,10 +77,20 @@ export default function UnifiedDashboard() {
       setUserTrainingState(data);
     });
 
+    const unsubscribeMaxWeights = subscribeToMaxWeights(user.uid, (data) => {
+      setMaxWeights(data);
+    });
+
+    const unsubscribeWorkouts = subscribeToWorkoutLogs(user.uid, (data) => {
+      setWorkoutLogs(data);
+    });
+
     return () => {
       unsubscribeVisits();
       unsubscribeMeasurements();
       unsubscribeTraining();
+      unsubscribeMaxWeights();
+      unsubscribeWorkouts();
     };
   }, [user]);
 
@@ -430,17 +450,27 @@ export default function UnifiedDashboard() {
       {activeTab === 'kpis' && (
         <div className="animate-fade-in flex-1 overflow-y-auto px-6 pt-8 pb-28 space-y-6">
           <TabHeader title="Proyección" onBack={() => setActiveTab('home')} />
+
+          <TrainingStreakCard visits={visits} />
+
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
             <div className="flex justify-between items-start mb-6">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Volumen Acumulado</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Asistencia Mensual</span>
                 <div className="flex items-baseline gap-2 mt-1">
                   <span className="text-4xl font-black text-slate-900 dark:text-white">{totalVisitsYear}</span>
+                  <span className="text-sm font-bold text-slate-400">visitas en {selectedYear}</span>
                 </div>
               </div>
             </div>
             <TotalVisitsChart visits={visits} currentYear={selectedYear} />
           </div>
+
+          <LiftProgressionChart weights={maxWeights} />
+
+          <WeeklyVolumeChart workouts={workoutLogs} />
+
+          <BodyCompositionChart measurements={bodyMeasurements} />
         </div>
       )}
 
@@ -523,7 +553,7 @@ export default function UnifiedDashboard() {
             </section>
           )}
 
-          {user && <MaxWeightsSection userId={user.uid} />}
+          {user && <MaxWeightsSection userId={user.uid} workoutLogs={workoutLogs} />}
 
           <section className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
             <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
