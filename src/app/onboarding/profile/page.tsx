@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { User, Scale, Ruler, Calendar } from 'lucide-react';
 
 export default function OnboardingProfilePage() {
     const router = useRouter();
@@ -19,7 +20,7 @@ export default function OnboardingProfilePage() {
             return;
         }
 
-        // Guardar en localStorage temporalmente (luego se guardará en Firestore)
+        // Guardar en localStorage temporalmente
         localStorage.setItem('onboarding_profile', JSON.stringify({
             weight,
             sex,
@@ -27,11 +28,10 @@ export default function OnboardingProfilePage() {
             height
         }));
 
-        // Navegar al siguiente paso
         router.push('/onboarding/goals');
     };
 
-    // Calcular IMC para feedback visual
+    // Calcular IMC
     const calculateBMI = () => {
         const heightInMeters = height / 100;
         return (weight / (heightInMeters * heightInMeters)).toFixed(1);
@@ -40,26 +40,26 @@ export default function OnboardingProfilePage() {
     const bmi = calculateBMI();
 
     return (
-        <div className="space-y-8 animate-fade-in">
-            {/* Header del paso */}
-            <div className="text-center space-y-2">
-                <h1 className="text-3xl font-black text-slate-900 dark:text-white">
+        <div className="space-y-10">
+            {/* Header */}
+            <div className="text-center space-y-3">
+                <h1 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
                     Cuéntanos sobre ti
                 </h1>
-                <p className="text-slate-600 dark:text-slate-400 text-sm">
-                    Necesitamos algunos datos básicos para personalizar tu plan de entrenamiento
+                <p className="text-base text-slate-600 dark:text-slate-400">
+                    Necesitamos algunos datos básicos para personalizar tu plan
                 </p>
             </div>
 
-            {/* Avatar Preview (Responsive a los inputs) */}
+            {/* Avatar Preview */}
             <div className="flex justify-center">
                 <div className="relative">
-                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-4xl shadow-2xl shadow-blue-500/30">
-                        {sex === 'M' ? '🧔' : sex === 'F' ? '👩' : '👤'}
+                    <div className="w-20 h-20 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-4xl">
+                        {sex === 'M' ? '🧔' : sex === 'F' ? '👩' : <User className="w-10 h-10 text-slate-400" />}
                     </div>
                     {sex && (
-                        <div className="absolute -bottom-2 -right-2 bg-white dark:bg-slate-800 rounded-full px-3 py-1 shadow-lg border-2 border-slate-200 dark:border-slate-700">
-                            <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                        <div className="absolute -bottom-2 -right-2 bg-blue-600 text-white rounded-lg px-2 py-1">
+                            <span className="text-xs font-semibold">
                                 IMC {bmi}
                             </span>
                         </div>
@@ -68,10 +68,11 @@ export default function OnboardingProfilePage() {
             </div>
 
             {/* Formulario */}
-            <div className="space-y-6">
+            <div className="space-y-8">
                 {/* Selector de Sexo */}
                 <div className="space-y-3">
-                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">
+                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                        <User className="w-4 h-4" />
                         Sexo
                     </label>
                     <div className="grid grid-cols-2 gap-3">
@@ -79,32 +80,32 @@ export default function OnboardingProfilePage() {
                             type="button"
                             onClick={() => setSex('M')}
                             className={`
-                                h-20 rounded-2xl font-bold text-lg transition-all duration-300
+                                h-24 rounded-lg font-medium transition-colors
                                 ${sex === 'M'
-                                    ? 'bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-500/30 scale-105'
-                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:scale-105'
+                                    ? 'bg-blue-600 text-white border-2 border-blue-600'
+                                    : 'bg-white dark:bg-slate-950 border-2 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700'
                                 }
                             `}
                         >
-                            <div className="space-y-1">
-                                <div className="text-2xl">🧔</div>
-                                <div className="text-sm">Masculino</div>
+                            <div className="flex flex-col items-center gap-2">
+                                <span className="text-3xl">🧔</span>
+                                <span className="text-sm">Masculino</span>
                             </div>
                         </button>
                         <button
                             type="button"
                             onClick={() => setSex('F')}
                             className={`
-                                h-20 rounded-2xl font-bold text-lg transition-all duration-300
+                                h-24 rounded-lg font-medium transition-colors
                                 ${sex === 'F'
-                                    ? 'bg-gradient-to-br from-pink-500 to-rose-500 text-white shadow-lg shadow-pink-500/30 scale-105'
-                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:scale-105'
+                                    ? 'bg-blue-600 text-white border-2 border-blue-600'
+                                    : 'bg-white dark:bg-slate-950 border-2 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700'
                                 }
                             `}
                         >
-                            <div className="space-y-1">
-                                <div className="text-2xl">👩</div>
-                                <div className="text-sm">Femenino</div>
+                            <div className="flex flex-col items-center gap-2">
+                                <span className="text-3xl">👩</span>
+                                <span className="text-sm">Femenino</span>
                             </div>
                         </button>
                     </div>
@@ -113,14 +114,15 @@ export default function OnboardingProfilePage() {
                 {/* Peso con Slider */}
                 <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                        <label className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                        <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                            <Scale className="w-4 h-4" />
                             Peso
                         </label>
                         <div className="text-right">
-                            <span className="text-3xl font-black text-blue-600 dark:text-blue-400">
+                            <span className="text-2xl font-bold text-slate-900 dark:text-white">
                                 {weight}
                             </span>
-                            <span className="text-sm text-slate-500 dark:text-slate-400 ml-1">kg</span>
+                            <span className="text-sm text-slate-500 dark:text-slate-500 ml-1">kg</span>
                         </div>
                     </div>
                     <input
@@ -129,7 +131,7 @@ export default function OnboardingProfilePage() {
                         max="150"
                         value={weight}
                         onChange={(e) => setWeight(Number(e.target.value))}
-                        className="w-full h-3 bg-slate-200 dark:bg-slate-800 rounded-full appearance-none cursor-pointer accent-blue-500"
+                        className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full appearance-none cursor-pointer accent-blue-600"
                     />
                     <div className="flex justify-between text-xs text-slate-400">
                         <span>40 kg</span>
@@ -140,14 +142,15 @@ export default function OnboardingProfilePage() {
                 {/* Altura con Slider */}
                 <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                        <label className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                        <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                            <Ruler className="w-4 h-4" />
                             Altura
                         </label>
                         <div className="text-right">
-                            <span className="text-3xl font-black text-blue-600 dark:text-blue-400">
+                            <span className="text-2xl font-bold text-slate-900 dark:text-white">
                                 {height}
                             </span>
-                            <span className="text-sm text-slate-500 dark:text-slate-400 ml-1">cm</span>
+                            <span className="text-sm text-slate-500 dark:text-slate-500 ml-1">cm</span>
                         </div>
                     </div>
                     <input
@@ -156,7 +159,7 @@ export default function OnboardingProfilePage() {
                         max="220"
                         value={height}
                         onChange={(e) => setHeight(Number(e.target.value))}
-                        className="w-full h-3 bg-slate-200 dark:bg-slate-800 rounded-full appearance-none cursor-pointer accent-blue-500"
+                        className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full appearance-none cursor-pointer accent-blue-600"
                     />
                     <div className="flex justify-between text-xs text-slate-400">
                         <span>140 cm</span>
@@ -166,34 +169,34 @@ export default function OnboardingProfilePage() {
 
                 {/* Edad con Selector Numérico */}
                 <div className="space-y-3">
-                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">
+                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                        <Calendar className="w-4 h-4" />
                         Edad
                     </label>
                     <div className="flex items-center gap-3">
                         <button
                             type="button"
                             onClick={() => setAge(Math.max(15, age - 1))}
-                            className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 font-bold text-xl transition-all active:scale-95"
+                            className="w-12 h-12 rounded-lg border border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 bg-white dark:bg-slate-950 font-semibold text-lg transition-colors"
                         >
                             −
                         </button>
-                        <div className="flex-1 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                            <span className="text-4xl font-black text-blue-600 dark:text-blue-400">
+                        <div className="flex-1 h-14 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
+                            <span className="text-3xl font-bold text-slate-900 dark:text-white">
                                 {age}
                             </span>
-                            <span className="text-sm text-slate-500 dark:text-slate-400 ml-2">años</span>
+                            <span className="text-sm text-slate-500 dark:text-slate-500 ml-2">años</span>
                         </div>
                         <button
                             type="button"
                             onClick={() => setAge(Math.min(80, age + 1))}
-                            className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 font-bold text-xl transition-all active:scale-95"
+                            className="w-12 h-12 rounded-lg border border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 bg-white dark:bg-slate-950 font-semibold text-lg transition-colors"
                         >
                             +
                         </button>
                     </div>
                     <div className="flex justify-between text-xs text-slate-400">
-                        <span>15 años (mínimo)</span>
-                        <span>80 años (máximo)</span>
+                        <span>15-80 años</span>
                     </div>
                 </div>
             </div>
@@ -203,31 +206,15 @@ export default function OnboardingProfilePage() {
                 onClick={handleContinue}
                 disabled={!sex}
                 className={`
-                    w-full h-14 rounded-2xl font-bold text-lg transition-all duration-300
+                    w-full h-12 rounded-lg font-semibold transition-colors
                     ${sex
-                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 active:scale-95'
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
                         : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'
                     }
                 `}
             >
                 Continuar →
             </button>
-
-            <style jsx>{`
-                @keyframes fade-in {
-                    from {
-                        opacity: 0;
-                        transform: translateY(10px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-                .animate-fade-in {
-                    animation: fade-in 0.5s ease-out;
-                }
-            `}</style>
         </div>
     );
 }

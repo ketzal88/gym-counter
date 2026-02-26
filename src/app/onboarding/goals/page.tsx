@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Target, Activity, Dumbbell, Zap, Calendar, AlertCircle } from 'lucide-react';
 
 type FitnessGoal = 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning';
 type ExperienceLevel = 'beginner' | 'intermediate' | 'advanced';
@@ -10,35 +11,39 @@ type WeeklyAvailability = 3 | 4 | 5 | 6;
 const FITNESS_GOALS = [
     {
         id: 'weight_loss' as FitnessGoal,
-        emoji: '🔥',
+        icon: Activity,
         title: 'Perder Peso',
         description: 'Déficit calórico + cardio estructurado',
-        gradient: 'from-orange-500 to-red-500',
-        hoverGradient: 'from-orange-600 to-red-600',
+        color: 'text-orange-600 dark:text-orange-500',
+        bgSelected: 'bg-orange-600',
+        borderSelected: 'border-orange-600',
     },
     {
         id: 'muscle_gain' as FitnessGoal,
-        emoji: '💪',
+        icon: Dumbbell,
         title: 'Ganar Músculo',
         description: 'Superávit calórico + hipertrofia',
-        gradient: 'from-blue-500 to-indigo-500',
-        hoverGradient: 'from-blue-600 to-indigo-600',
+        color: 'text-blue-600 dark:text-blue-500',
+        bgSelected: 'bg-blue-600',
+        borderSelected: 'border-blue-600',
     },
     {
         id: 'max_strength' as FitnessGoal,
-        emoji: '🏋️',
+        icon: Target,
         title: 'Fuerza Máxima',
         description: 'Powerlifting y levantamientos pesados',
-        gradient: 'from-purple-500 to-pink-500',
-        hoverGradient: 'from-purple-600 to-pink-600',
+        color: 'text-purple-600 dark:text-purple-500',
+        bgSelected: 'bg-purple-600',
+        borderSelected: 'border-purple-600',
     },
     {
         id: 'conditioning' as FitnessGoal,
-        emoji: '⚡',
+        icon: Zap,
         title: 'Resistencia/CrossFit',
         description: 'Metcons + conditioning funcional',
-        gradient: 'from-green-500 to-teal-500',
-        hoverGradient: 'from-green-600 to-teal-600',
+        color: 'text-green-600 dark:text-green-500',
+        bgSelected: 'bg-green-600',
+        borderSelected: 'border-green-600',
     },
 ];
 
@@ -59,7 +64,7 @@ const EXPERIENCE_LEVELS = [
         id: 'advanced' as ExperienceLevel,
         emoji: '🌳',
         title: 'Avanzado',
-        description: 'Más de 2 años entrenando consistentemente',
+        description: 'Más de 2 años entrenando',
     },
 ];
 
@@ -76,13 +81,11 @@ const COMMON_INJURIES = [
 export default function OnboardingGoalsPage() {
     const router = useRouter();
 
-    // Estados del formulario
     const [fitnessGoal, setFitnessGoal] = useState<FitnessGoal | null>(null);
     const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel | null>(null);
     const [weeklyAvailability, setWeeklyAvailability] = useState<WeeklyAvailability>(4);
     const [injuries, setInjuries] = useState('');
 
-    // Cargar datos previos si existen
     useEffect(() => {
         const saved = localStorage.getItem('onboarding_goals');
         if (saved) {
@@ -95,7 +98,6 @@ export default function OnboardingGoalsPage() {
     }, []);
 
     const handleContinue = () => {
-        // Validación básica
         if (!fitnessGoal) {
             alert('Por favor selecciona tu objetivo');
             return;
@@ -105,7 +107,6 @@ export default function OnboardingGoalsPage() {
             return;
         }
 
-        // Guardar en localStorage
         localStorage.setItem('onboarding_goals', JSON.stringify({
             fitnessGoal,
             experienceLevel,
@@ -113,7 +114,6 @@ export default function OnboardingGoalsPage() {
             injuries
         }));
 
-        // Navegar al siguiente paso
         router.push('/onboarding/plan');
     };
 
@@ -130,105 +130,118 @@ export default function OnboardingGoalsPage() {
         }
     };
 
+    const selectedGoal = FITNESS_GOALS.find(g => g.id === fitnessGoal);
+
     return (
-        <div className="space-y-8 animate-fade-in">
-            {/* Header del paso */}
-            <div className="text-center space-y-2">
-                <h1 className="text-3xl font-black text-slate-900 dark:text-white">
+        <div className="space-y-10">
+            {/* Header */}
+            <div className="text-center space-y-3">
+                <h1 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
                     Define tu objetivo
                 </h1>
-                <p className="text-slate-600 dark:text-slate-400 text-sm">
+                <p className="text-base text-slate-600 dark:text-slate-400">
                     Personalizaremos tu plan según tus metas y disponibilidad
                 </p>
             </div>
 
             {/* Selector de Objetivo Fitness */}
             <div className="space-y-4">
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
                     ¿Cuál es tu objetivo principal?
                 </label>
                 <div className="grid grid-cols-1 gap-3">
-                    {FITNESS_GOALS.map((goal) => (
-                        <button
-                            key={goal.id}
-                            type="button"
-                            onClick={() => setFitnessGoal(goal.id)}
-                            className={`
-                                relative h-24 rounded-2xl transition-all duration-300
-                                ${fitnessGoal === goal.id
-                                    ? `bg-gradient-to-br ${goal.gradient} text-white shadow-2xl shadow-${goal.gradient.split('-')[1]}-500/40 scale-105`
-                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:scale-102'
-                                }
-                            `}
-                        >
-                            <div className="flex items-center gap-4 px-4 h-full">
-                                <div className="text-4xl">{goal.emoji}</div>
-                                <div className="flex-1 text-left">
-                                    <div className="font-bold text-lg">{goal.title}</div>
-                                    <div className={`text-sm ${fitnessGoal === goal.id ? 'text-white/90' : 'text-slate-500 dark:text-slate-400'}`}>
-                                        {goal.description}
+                    {FITNESS_GOALS.map((goal) => {
+                        const Icon = goal.icon;
+                        const isSelected = fitnessGoal === goal.id;
+                        return (
+                            <button
+                                key={goal.id}
+                                type="button"
+                                onClick={() => setFitnessGoal(goal.id)}
+                                className={`
+                                    h-20 rounded-lg transition-colors text-left
+                                    ${isSelected
+                                        ? `${goal.bgSelected} text-white border-2 ${goal.borderSelected}`
+                                        : 'bg-white dark:bg-slate-950 border-2 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                                    }
+                                `}
+                            >
+                                <div className="flex items-center gap-4 px-4 h-full">
+                                    <Icon className={`w-6 h-6 ${isSelected ? 'text-white' : goal.color}`} />
+                                    <div className="flex-1">
+                                        <div className="font-semibold text-base">{goal.title}</div>
+                                        <div className={`text-sm ${isSelected ? 'text-white/90' : 'text-slate-500 dark:text-slate-500'}`}>
+                                            {goal.description}
+                                        </div>
                                     </div>
+                                    {isSelected && (
+                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                        </svg>
+                                    )}
                                 </div>
-                                {fitnessGoal === goal.id && (
-                                    <div className="text-2xl">✓</div>
-                                )}
-                            </div>
-                        </button>
-                    ))}
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
 
             {/* Selector de Nivel de Experiencia */}
             <div className="space-y-4">
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
                     ¿Cuál es tu nivel de experiencia?
                 </label>
                 <div className="grid grid-cols-1 gap-3">
-                    {EXPERIENCE_LEVELS.map((level) => (
-                        <button
-                            key={level.id}
-                            type="button"
-                            onClick={() => setExperienceLevel(level.id)}
-                            className={`
-                                h-20 rounded-2xl font-bold transition-all duration-300
-                                ${experienceLevel === level.id
-                                    ? 'bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-500/30 scale-105'
-                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:scale-102'
-                                }
-                            `}
-                        >
-                            <div className="flex items-center gap-3 px-4">
-                                <div className="text-3xl">{level.emoji}</div>
-                                <div className="flex-1 text-left">
-                                    <div className="font-bold text-base">{level.title}</div>
-                                    <div className={`text-xs ${experienceLevel === level.id ? 'text-white/90' : 'text-slate-500 dark:text-slate-400'}`}>
-                                        {level.description}
+                    {EXPERIENCE_LEVELS.map((level) => {
+                        const isSelected = experienceLevel === level.id;
+                        return (
+                            <button
+                                key={level.id}
+                                type="button"
+                                onClick={() => setExperienceLevel(level.id)}
+                                className={`
+                                    h-18 rounded-lg transition-colors text-left
+                                    ${isSelected
+                                        ? 'bg-blue-600 text-white border-2 border-blue-600'
+                                        : 'bg-white dark:bg-slate-950 border-2 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                                    }
+                                `}
+                            >
+                                <div className="flex items-center gap-3 px-4 py-3">
+                                    <span className="text-2xl">{level.emoji}</span>
+                                    <div className="flex-1">
+                                        <div className="font-semibold text-base">{level.title}</div>
+                                        <div className={`text-sm ${isSelected ? 'text-white/90' : 'text-slate-500 dark:text-slate-500'}`}>
+                                            {level.description}
+                                        </div>
                                     </div>
+                                    {isSelected && (
+                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                        </svg>
+                                    )}
                                 </div>
-                                {experienceLevel === level.id && (
-                                    <div className="text-xl">✓</div>
-                                )}
-                            </div>
-                        </button>
-                    ))}
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
 
             {/* Selector de Disponibilidad Semanal */}
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                        <Calendar className="w-4 h-4" />
                         Días disponibles por semana
                     </label>
                     <div className="text-right">
-                        <span className="text-3xl font-black text-blue-600 dark:text-blue-400">
+                        <span className="text-2xl font-bold text-slate-900 dark:text-white">
                             {weeklyAvailability}
                         </span>
-                        <span className="text-sm text-slate-500 dark:text-slate-400 ml-1">días</span>
+                        <span className="text-sm text-slate-500 dark:text-slate-500 ml-1">días</span>
                     </div>
                 </div>
 
-                {/* Visual Calendar Selector */}
                 <div className="grid grid-cols-4 gap-2">
                     {[3, 4, 5, 6].map((days) => (
                         <button
@@ -236,14 +249,14 @@ export default function OnboardingGoalsPage() {
                             type="button"
                             onClick={() => setWeeklyAvailability(days as WeeklyAvailability)}
                             className={`
-                                h-16 rounded-xl font-bold text-xl transition-all duration-300
+                                h-16 rounded-lg font-semibold text-xl transition-colors
                                 ${weeklyAvailability === days
-                                    ? 'bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-500/30 scale-110'
-                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:scale-105'
+                                    ? 'bg-blue-600 text-white border-2 border-blue-600'
+                                    : 'bg-white dark:bg-slate-950 border-2 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-700 dark:text-slate-300'
                                 }
                             `}
                         >
-                            <div className="space-y-1">
+                            <div className="flex flex-col items-center gap-1">
                                 <div>{days}</div>
                                 <div className="text-xs font-normal opacity-80">días</div>
                             </div>
@@ -251,15 +264,18 @@ export default function OnboardingGoalsPage() {
                     ))}
                 </div>
 
-                <div className="text-xs text-slate-500 dark:text-slate-400 text-center">
-                    💡 Recomendamos 4-5 días para resultados óptimos
+                <div className="text-xs text-slate-500 dark:text-slate-500 text-center flex items-center justify-center gap-1">
+                    <span>💡</span>
+                    <span>Recomendamos 4-5 días para resultados óptimos</span>
                 </div>
             </div>
 
             {/* Lesiones (opcional) */}
             <div className="space-y-3">
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">
-                    ¿Tienes alguna lesión o molestia? <span className="font-normal text-slate-500">(opcional)</span>
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <AlertCircle className="w-4 h-4" />
+                    ¿Tienes alguna lesión o molestia?
+                    <span className="font-normal text-slate-500 dark:text-slate-500 text-xs">(opcional)</span>
                 </label>
 
                 {/* Sugerencias rápidas */}
@@ -269,7 +285,7 @@ export default function OnboardingGoalsPage() {
                             key={injury}
                             type="button"
                             onClick={() => addInjury(injury)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 transition-all"
+                            className="px-3 py-1.5 rounded-md text-xs font-medium border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
                         >
                             {injury}
                         </button>
@@ -280,9 +296,9 @@ export default function OnboardingGoalsPage() {
                     value={injuries}
                     onChange={(e) => setInjuries(e.target.value)}
                     placeholder="Ejemplo: Dolor en rodilla derecha, molestia en hombro izquierdo..."
-                    className="w-full h-24 px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 border-2 border-transparent focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 transition-all resize-none"
+                    className="w-full h-24 px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 transition-colors resize-none outline-none"
                 />
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-slate-500 dark:text-slate-500">
                     Adaptaremos los ejercicios para cuidar estas áreas
                 </p>
             </div>
@@ -291,7 +307,7 @@ export default function OnboardingGoalsPage() {
             <div className="flex gap-3">
                 <button
                     onClick={handleBack}
-                    className="flex-1 h-14 rounded-2xl font-bold text-lg bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 transition-all active:scale-95"
+                    className="flex-1 h-12 rounded-lg font-medium border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-400 dark:hover:border-slate-600 transition-colors"
                 >
                     ← Atrás
                 </button>
@@ -299,9 +315,9 @@ export default function OnboardingGoalsPage() {
                     onClick={handleContinue}
                     disabled={!fitnessGoal || !experienceLevel}
                     className={`
-                        flex-1 h-14 rounded-2xl font-bold text-lg transition-all duration-300
+                        flex-1 h-12 rounded-lg font-semibold transition-colors
                         ${fitnessGoal && experienceLevel
-                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 active:scale-95'
+                            ? 'bg-blue-600 text-white hover:bg-blue-700'
                             : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'
                         }
                     `}
@@ -309,25 +325,6 @@ export default function OnboardingGoalsPage() {
                     Continuar →
                 </button>
             </div>
-
-            <style jsx>{`
-                @keyframes fade-in {
-                    from {
-                        opacity: 0;
-                        transform: translateY(10px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-                .animate-fade-in {
-                    animation: fade-in 0.5s ease-out;
-                }
-                .hover\:scale-102:hover {
-                    transform: scale(1.02);
-                }
-            `}</style>
         </div>
     );
 }

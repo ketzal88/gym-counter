@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import AuthGuard from '../components/AuthGuard';
 import OnboardingGuard from '../components/guards/OnboardingGuard';
-import { Check, Zap, Clock } from 'lucide-react';
+import { Check, Clock, CreditCard, Lock, Smartphone } from 'lucide-react';
 import { createCheckoutSession } from '@/services/stripeService';
 
 export default function PaywallPage() {
@@ -23,13 +23,15 @@ export default function PaywallPage() {
   return (
     <AuthGuard>
       <OnboardingGuard>
-        <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900">
+        <div className="min-h-screen bg-white dark:bg-slate-950">
           {/* Header */}
-          <div className="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-slate-200 dark:border-slate-800">
-            <div className="max-w-6xl mx-auto px-6 py-4">
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-2xl">💪</span>
-                <span className="font-black text-xl bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+          <div className="border-b border-slate-200 dark:border-slate-800">
+            <div className="max-w-6xl mx-auto px-6 md:px-8 py-5">
+              <div className="flex items-center justify-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-slate-900 dark:bg-white flex items-center justify-center">
+                  <span className="text-lg">💪</span>
+                </div>
+                <span className="font-bold text-lg text-slate-900 dark:text-white tracking-tight">
                   GymCounter
                 </span>
               </div>
@@ -37,44 +39,44 @@ export default function PaywallPage() {
           </div>
 
           {/* Main Content */}
-          <div className="max-w-5xl mx-auto px-6 py-12 md:py-20">
+          <div className="max-w-5xl mx-auto px-6 md:px-8 py-12 md:py-20">
             {/* Hero */}
-            <div className="text-center space-y-6 mb-12">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border border-amber-200 dark:border-amber-900">
-                <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                <span className="text-sm font-bold text-amber-900 dark:text-amber-100">
-                  Tu Prueba Gratuita Ha Terminado
+            <div className="text-center space-y-6 mb-16">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
+                <Clock className="w-4 h-4 text-slate-500" />
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 tracking-wide uppercase">
+                  Prueba gratuita finalizada
                 </span>
               </div>
 
-              <h1 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white leading-tight">
-                ¡Sigue Transformando<br />tu Físico!
+              <h1 className="text-3xl md:text-5xl font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
+                Sigue transformando<br />tu físico
               </h1>
 
-              <p className="text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
-                Has experimentado el poder de GymCounter. Continúa tu progreso con acceso completo desde solo <span className="font-bold text-blue-600 dark:text-blue-400">$4.99/mes</span>.
+              <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
+                Continúa tu progreso con acceso completo desde <span className="font-semibold text-slate-900 dark:text-white">$4.99/mes</span>.
               </p>
             </div>
 
             {/* Pricing Cards */}
-            <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto mb-12">
+            <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto mb-16">
               {/* Plan Mensual */}
-              <div className="p-8 rounded-3xl bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 hover:border-blue-500 dark:hover:border-blue-500 transition-all">
+              <div className="p-8 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 hover:border-slate-300 dark:hover:border-slate-700 transition-colors">
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">
+                    <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-1">
                       Mensual
                     </h3>
-                    <p className="text-slate-600 dark:text-slate-400 text-sm">
+                    <p className="text-sm text-slate-500 dark:text-slate-500">
                       Cancela cuando quieras
                     </p>
                   </div>
 
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-5xl font-black text-slate-900 dark:text-white">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
                       $4.99
                     </span>
-                    <span className="text-slate-500 dark:text-slate-400 text-lg">
+                    <span className="text-slate-500 dark:text-slate-500">
                       /mes
                     </span>
                   </div>
@@ -88,9 +90,9 @@ export default function PaywallPage() {
                       'Modo offline',
                       'Tracking ilimitado'
                     ].map((feature, idx) => (
-                      <li key={idx} className="flex items-center gap-3">
-                        <Check className="w-5 h-5 text-blue-500 flex-shrink-0" />
-                        <span className="text-slate-700 dark:text-slate-300">{feature}</span>
+                      <li key={idx} className="flex items-start gap-3">
+                        <Check className="w-5 h-5 text-slate-400 dark:text-slate-600 flex-shrink-0 mt-0.5" />
+                        <span className="text-sm text-slate-600 dark:text-slate-400">{feature}</span>
                       </li>
                     ))}
                   </ul>
@@ -99,70 +101,70 @@ export default function PaywallPage() {
                     onClick={() => handleSubscribe('monthly')}
                     disabled={loading !== null}
                     className={`
-                      w-full py-4 rounded-2xl font-bold text-center transition-all
+                      w-full py-3 rounded-lg font-medium text-center transition-colors
                       ${loading === 'monthly'
-                        ? 'bg-slate-400 dark:bg-slate-600 text-white cursor-not-allowed'
-                        : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:scale-105'
+                        ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+                        : 'border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-400 dark:hover:border-slate-600'
                       }
                     `}
                   >
                     {loading === 'monthly' ? (
                       <span className="flex items-center justify-center gap-2">
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-slate-400"></div>
                         Procesando...
                       </span>
                     ) : (
-                      'Suscribirme Ahora'
+                      'Suscribirme'
                     )}
                   </button>
                 </div>
               </div>
 
               {/* Plan Anual - DESTACADO */}
-              <div className="relative p-8 rounded-3xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-2xl shadow-blue-500/30 scale-105 hover:scale-110 transition-all">
-                {/* Badge de Popular */}
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-black shadow-lg">
-                  🔥 MÁS POPULAR
+              <div className="relative p-8 rounded-xl border-2 border-blue-600 bg-white dark:bg-slate-950">
+                {/* Badge */}
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-blue-600 text-white text-xs font-medium">
+                  Más popular
                 </div>
 
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-2xl font-black mb-2">
+                    <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-1">
                       Anual
                     </h3>
-                    <p className="text-white/90 text-sm">
+                    <p className="text-sm text-slate-500 dark:text-slate-500">
                       Ahorra 2 meses gratis
                     </p>
                   </div>
 
-                  <div className="space-y-2">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-5xl font-black">
+                  <div className="space-y-1">
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
                         $49.90
                       </span>
-                      <span className="text-white/80 text-lg">
+                      <span className="text-slate-500 dark:text-slate-500">
                         /año
                       </span>
                     </div>
-                    <div className="text-sm text-white/80">
+                    <div className="text-sm text-slate-500 dark:text-slate-500">
                       <span className="line-through">$59.88</span>
-                      {' '}→{' '}
-                      <span className="font-bold text-amber-300">Ahorra $9.98</span>
+                      {' · '}
+                      <span className="text-blue-600 dark:text-blue-500 font-medium">Ahorra $9.98</span>
                     </div>
                   </div>
 
                   <ul className="space-y-3">
                     {[
                       'Todo lo del plan mensual',
-                      '2 meses gratis ($9.98 de ahorro)',
+                      '2 meses gratis ($9.98 ahorro)',
                       'Soporte prioritario',
-                      'Acceso anticipado a nuevas funciones',
-                      'Sin preocuparte por renovaciones',
+                      'Acceso anticipado a funciones',
+                      'Sin renovaciones mensuales',
                       'Mejor precio garantizado'
                     ].map((feature, idx) => (
-                      <li key={idx} className="flex items-center gap-3">
-                        <Check className="w-5 h-5 text-white flex-shrink-0" />
-                        <span className="text-white">{feature}</span>
+                      <li key={idx} className="flex items-start gap-3">
+                        <Check className="w-5 h-5 text-blue-600 dark:text-blue-500 flex-shrink-0 mt-0.5" />
+                        <span className="text-sm text-slate-600 dark:text-slate-400">{feature}</span>
                       </li>
                     ))}
                   </ul>
@@ -171,20 +173,20 @@ export default function PaywallPage() {
                     onClick={() => handleSubscribe('annual')}
                     disabled={loading !== null}
                     className={`
-                      w-full py-4 rounded-2xl font-bold text-center transition-all shadow-lg
+                      w-full py-3 rounded-lg font-semibold text-center transition-colors
                       ${loading === 'annual'
-                        ? 'bg-white/50 text-white cursor-not-allowed'
-                        : 'bg-white text-blue-600 hover:scale-105'
+                        ? 'bg-blue-400 text-white cursor-not-allowed'
+                        : 'bg-blue-600 text-white hover:bg-blue-700'
                       }
                     `}
                   >
                     {loading === 'annual' ? (
                       <span className="flex items-center justify-center gap-2">
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                         Procesando...
                       </span>
                     ) : (
-                      'Suscribirme Ahora'
+                      'Suscribirme'
                     )}
                   </button>
                 </div>
@@ -192,79 +194,73 @@ export default function PaywallPage() {
             </div>
 
             {/* Value Props */}
-            <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-12">
-              <div className="text-center p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/50">
-                <div className="text-3xl mb-3">💳</div>
-                <h4 className="font-bold text-slate-900 dark:text-white mb-2">
+            <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-16">
+              <div className="text-center p-6">
+                <CreditCard className="w-6 h-6 text-slate-400 mx-auto mb-3" />
+                <h4 className="font-medium text-slate-900 dark:text-white mb-1">
                   Pago Seguro
                 </h4>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Procesado por Stripe, líder mundial en pagos online
+                <p className="text-sm text-slate-500 dark:text-slate-500">
+                  Procesado por Stripe
                 </p>
               </div>
 
-              <div className="text-center p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/50">
-                <div className="text-3xl mb-3">🔒</div>
-                <h4 className="font-bold text-slate-900 dark:text-white mb-2">
+              <div className="text-center p-6">
+                <Lock className="w-6 h-6 text-slate-400 mx-auto mb-3" />
+                <h4 className="font-medium text-slate-900 dark:text-white mb-1">
                   Cancela Fácilmente
                 </h4>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Sin preguntas ni complicaciones, desde tu cuenta
+                <p className="text-sm text-slate-500 dark:text-slate-500">
+                  Sin preguntas, desde tu cuenta
                 </p>
               </div>
 
-              <div className="text-center p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/50">
-                <div className="text-3xl mb-3">📱</div>
-                <h4 className="font-bold text-slate-900 dark:text-white mb-2">
+              <div className="text-center p-6">
+                <Smartphone className="w-6 h-6 text-slate-400 mx-auto mb-3" />
+                <h4 className="font-medium text-slate-900 dark:text-white mb-1">
                   Acceso Inmediato
                 </h4>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Continúa tu entrenamiento en segundos
+                <p className="text-sm text-slate-500 dark:text-slate-500">
+                  Continúa en segundos
                 </p>
               </div>
             </div>
 
-            {/* FAQ Preview */}
+            {/* FAQ */}
             <div className="max-w-2xl mx-auto space-y-4">
-              <h3 className="text-2xl font-black text-slate-900 dark:text-white text-center mb-6">
-                Preguntas Frecuentes
+              <h3 className="text-xl font-semibold text-slate-900 dark:text-white text-center mb-6">
+                Preguntas frecuentes
               </h3>
 
-              <details className="group p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                <summary className="flex items-center justify-between cursor-pointer font-bold text-slate-900 dark:text-white">
-                  <span>¿Puedo cancelar en cualquier momento?</span>
-                  <span className="text-2xl group-open:rotate-180 transition-transform">
-                    ↓
-                  </span>
-                </summary>
-                <p className="mt-4 text-slate-600 dark:text-slate-400 leading-relaxed">
-                  Sí, puedes cancelar en cualquier momento desde tu configuración de cuenta. Mantendrás acceso hasta el final de tu período de pago.
-                </p>
-              </details>
-
-              <details className="group p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                <summary className="flex items-center justify-between cursor-pointer font-bold text-slate-900 dark:text-white">
-                  <span>¿Qué métodos de pago aceptan?</span>
-                  <span className="text-2xl group-open:rotate-180 transition-transform">
-                    ↓
-                  </span>
-                </summary>
-                <p className="mt-4 text-slate-600 dark:text-slate-400 leading-relaxed">
-                  Aceptamos todas las tarjetas de crédito y débito principales (Visa, Mastercard, American Express) procesadas de forma segura por Stripe.
-                </p>
-              </details>
-
-              <details className="group p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                <summary className="flex items-center justify-between cursor-pointer font-bold text-slate-900 dark:text-white">
-                  <span>¿Perderé mi progreso si no me suscribo?</span>
-                  <span className="text-2xl group-open:rotate-180 transition-transform">
-                    ↓
-                  </span>
-                </summary>
-                <p className="mt-4 text-slate-600 dark:text-slate-400 leading-relaxed">
-                  No. Todo tu progreso, datos y configuración se mantienen seguros. Cuando te suscribas, podrás continuar exactamente donde lo dejaste.
-                </p>
-              </details>
+              {[
+                {
+                  q: '¿Puedo cancelar en cualquier momento?',
+                  a: 'Sí, puedes cancelar en cualquier momento desde tu configuración de cuenta. Mantendrás acceso hasta el final de tu período de pago.'
+                },
+                {
+                  q: '¿Qué métodos de pago aceptan?',
+                  a: 'Aceptamos todas las tarjetas principales (Visa, Mastercard, American Express) procesadas por Stripe.'
+                },
+                {
+                  q: '¿Perderé mi progreso si no me suscribo?',
+                  a: 'No. Todo tu progreso se mantiene seguro. Cuando te suscribas, podrás continuar donde lo dejaste.'
+                }
+              ].map((faq, idx) => (
+                <details
+                  key={idx}
+                  className="group p-5 rounded-lg border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
+                >
+                  <summary className="flex items-center justify-between cursor-pointer font-medium text-slate-900 dark:text-white">
+                    <span className="text-sm">{faq.q}</span>
+                    <svg className="w-5 h-5 text-slate-400 group-open:rotate-180 transition-transform flex-shrink-0 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </summary>
+                  <p className="mt-3 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                    {faq.a}
+                  </p>
+                </details>
+              ))}
             </div>
           </div>
         </div>

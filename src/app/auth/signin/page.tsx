@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 
 function SignInForm() {
@@ -29,7 +30,6 @@ function SignInForm() {
 
     try {
       await loginWithEmail(email, password);
-      // Login successful, redirect via auth state listener in context/Guard or just push here
       router.push('/');
     } catch (err: unknown) {
       console.error(err);
@@ -59,28 +59,39 @@ function SignInForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            💪 GymCounter - Iniciar Sesión
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Accede a tu cuenta para continuar
-          </p>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            ¿Aún no tienes cuenta? Solo inicia sesión con Google.
-          </p>
+    <div className="min-h-screen bg-white dark:bg-slate-950 flex items-center justify-center px-6">
+      <div className="w-full max-w-sm space-y-10">
+        {/* Logo */}
+        <div className="text-center space-y-6">
+          <div className="flex items-center justify-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-slate-900 dark:bg-white flex items-center justify-center">
+              <span className="text-xl">💪</span>
+            </div>
+            <span className="font-bold text-2xl text-slate-900 dark:text-white tracking-tight">
+              GymCounter
+            </span>
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+              Iniciar sesión
+            </h1>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Accede a tu cuenta para continuar
+            </p>
+          </div>
+
           {successMessage && (
-            <div className="mt-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded text-sm text-center">
+            <div className="p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 rounded-lg text-sm text-center">
               {successMessage}
             </div>
           )}
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm -space-y-px">
+
+        {/* Form */}
+        <form className="space-y-6" onSubmit={handleSubmit}>
+          <div className="space-y-3">
             <div>
-              <label htmlFor="email" className="sr-only">
+              <label htmlFor="email" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                 Email
               </label>
               <input
@@ -89,14 +100,14 @@ function SignInForm() {
                 type="email"
                 autoComplete="email"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Email"
+                className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none transition-colors"
+                placeholder="tu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div>
-              <label htmlFor="password" className="sr-only">
+              <label htmlFor="password" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                 Contraseña
               </label>
               <input
@@ -105,8 +116,8 @@ function SignInForm() {
                 type="password"
                 autoComplete="current-password"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Contraseña"
+                className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none transition-colors"
+                placeholder="········"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
@@ -114,41 +125,48 @@ function SignInForm() {
           </div>
 
           {error && (
-            <div className="text-red-600 text-sm text-center">{error}</div>
+            <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 rounded-lg text-sm text-center">
+              {error}
+            </div>
           )}
 
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400"
-            >
-              {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 rounded-lg font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed transition-colors"
+          >
+            {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
+          </button>
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300" />
+              <div className="w-full border-t border-slate-200 dark:border-slate-800" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-gray-100 text-gray-500">O continúa con</span>
+              <span className="px-3 bg-white dark:bg-slate-950 text-slate-500 dark:text-slate-500">o</span>
             </div>
           </div>
 
-          <div>
-            <button
-              type="button"
-              onClick={handleGoogleSignIn}
-              disabled={loading}
-              className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              <Image className="mr-2" src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google logo" width={20} height={20} />
-              Google
-            </button>
-          </div>
-
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-3 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-medium hover:border-slate-400 dark:hover:border-slate-600 disabled:opacity-50 transition-colors"
+          >
+            <Image src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" width={18} height={18} />
+            Continuar con Google
+          </button>
         </form>
+
+        {/* Footer */}
+        <div className="text-center">
+          <p className="text-sm text-slate-500 dark:text-slate-500">
+            ¿No tienes cuenta?{' '}
+            <Link href="/auth/signup" className="text-blue-600 dark:text-blue-500 font-medium hover:text-blue-700 dark:hover:text-blue-400 transition-colors">
+              Regístrate gratis
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -157,10 +175,10 @@ function SignInForm() {
 export default function SignIn() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-white dark:bg-slate-950 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-4xl mb-4">⏳</div>
-          <p className="text-gray-600">Cargando...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-sm text-slate-500">Cargando...</p>
         </div>
       </div>
     }>
