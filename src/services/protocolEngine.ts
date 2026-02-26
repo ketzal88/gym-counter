@@ -19,7 +19,8 @@ export interface ProtocolExercise {
         duration: string;
         instructions: string;
     };
-    videoUrl?: string;
+    videoUrl?: string; // YouTube video ID or full URL
+    videoDuration?: string; // Duration like "2:34"
 }
 
 export interface ProtocolWorkout {
@@ -398,3 +399,74 @@ export const evaluateUnlock = (
 
     return null;
 };
+
+/**
+ * Aplica multiplicadores de volumen e intensidad a los lift states
+ * según la variante de plan del usuario
+ */
+export function applyMultipliers(
+    liftState: LiftState,
+    volumeMultiplier: number,
+    intensityMultiplier: number
+): LiftState {
+    return {
+        bench: Math.round(liftState.bench * intensityMultiplier * 2) / 2, // Round to nearest 2.5kg
+        squat: Math.round(liftState.squat * intensityMultiplier / 5) * 5, // Round to nearest 5kg
+        deadlift: Math.round(liftState.deadlift * intensityMultiplier / 5) * 5, // Round to nearest 5kg
+        ohp: Math.round(liftState.ohp * intensityMultiplier * 2) / 2, // Round to nearest 2.5kg
+        pullupsLevel: liftState.pullupsLevel, // No afectado por multiplicadores
+    };
+}
+
+/**
+ * Ajusta el número de sets según el multiplicador de volumen
+ */
+export function adjustVolume(sets: number, volumeMultiplier: number): number {
+    return Math.max(1, Math.round(sets * volumeMultiplier));
+}
+
+/**
+ * Obtiene los templates para una variante específica
+ * NOTA: Por ahora usa TEMPLATES hardcoded. En futuras fases,
+ * esto se moverá a cargar desde Firestore collection planVariants
+ */
+export async function getTemplatesForVariant(variantId: string): Promise<typeof TEMPLATES> {
+    // TODO: En Fase 2, implementar carga desde Firestore
+    // const { getPlanVariant } = await import('./planVariantService');
+    // const variant = await getPlanVariant(variantId);
+    // return variant?.dayTemplates || TEMPLATES;
+
+    // Por ahora, retornar templates hardcoded
+    return TEMPLATES;
+}
+
+/**
+ * Versión futura de generateWorkout que acepta variantId
+ * NOTA: Por ahora mantiene compatibilidad con código existente
+ */
+export async function generateWorkoutWithVariant(
+    dayNumber: number,
+    liftState: LiftState,
+    variantId?: string
+): Promise<ProtocolWorkout> {
+    // Si no hay variantId, usar comportamiento default (military_v1)
+    if (!variantId || variantId === 'military_v1') {
+        return generateWorkout(dayNumber, liftState);
+    }
+
+    // TODO: Implementar lógica para variantes dinámicas en próximas fases
+    // const { getPlanVariant } = await import('./planVariantService');
+    // const variant = await getPlanVariant(variantId);
+    //
+    // if (variant) {
+    //     const adjustedLiftState = applyMultipliers(
+    //         liftState,
+    //         variant.volumeMultiplier,
+    //         variant.intensityMultiplier
+    //     );
+    //     // Generar workout con templates de la variante
+    // }
+
+    // Fallback a comportamiento default
+    return generateWorkout(dayNumber, liftState);
+}
