@@ -206,7 +206,9 @@ export async function POST(request: NextRequest) {
 
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice;
-        const subscriptionId = invoice.subscription as string;
+        const subscriptionId = typeof invoice.parent?.subscription_details?.subscription === 'string'
+          ? invoice.parent.subscription_details.subscription
+          : invoice.parent?.subscription_details?.subscription?.id;
 
         if (!subscriptionId) break;
 
