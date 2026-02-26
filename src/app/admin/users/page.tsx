@@ -133,7 +133,7 @@ function Header() {
 }
 
 // Helper functions
-const formatDate = (date: Date | { toDate(): Date } | undefined): string => {
+const formatDate = (date: Date | { toDate(): Date } | { seconds: number } | undefined): string => {
   if (!date) return 'N/A';
 
   try {
@@ -409,7 +409,7 @@ function EditUserModal({ user, onSave, onClose, updating }: EditUserModalProps) 
 }
 
 // Helper para formatear fecha para input type="date"
-function formatDateForInput(date: Date | { toDate(): Date } | undefined): string {
+function formatDateForInput(date: Date | { toDate(): Date } | { seconds: number } | undefined): string {
   if (!date) return '';
 
   try {
