@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { X, ExternalLink } from 'lucide-react';
-import { EXERCISE_VIDEOS, getYouTubeEmbedUrl, getYouTubeUrl } from '@/data/exerciseVideos';
+import { getExerciseVideoData, getYouTubeEmbedUrl, getYouTubeUrl } from '@/data/exerciseVideos';
 
 interface YouTubeVideoModalProps {
   exerciseId: string;
@@ -41,7 +41,7 @@ export default function YouTubeVideoModal({
 
   const embedUrl = getYouTubeEmbedUrl(exerciseId);
   const videoUrl = getYouTubeUrl(exerciseId);
-  const videoData = EXERCISE_VIDEOS[exerciseId];
+  const videoData = getExerciseVideoData(exerciseId);
 
   // Si no hay video, mostrar mensaje
   if (!embedUrl) {

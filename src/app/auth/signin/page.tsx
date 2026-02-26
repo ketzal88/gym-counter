@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 
 function SignInForm() {
   const [email, setEmail] = useState('');
@@ -15,6 +16,7 @@ function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { loginWithEmail, signInWithGoogle } = useAuth();
+  const { t } = useLanguage();
 
   useEffect(() => {
     const message = searchParams.get('message');
@@ -35,9 +37,9 @@ function SignInForm() {
       console.error(err);
       const e = err as { code?: string; message?: string };
       if (e.code === 'auth/invalid-credential' || e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password') {
-        setError('Credenciales inválidas');
+        setError(t('auth.invalidCredentials'));
       } else {
-        setError('Error al iniciar sesión: ' + (e.message || 'Desconocido'));
+        setError(t('auth.errorSignIn') + ': ' + (e.message || 'Desconocido'));
       }
     } finally {
       setLoading(false);
@@ -52,7 +54,7 @@ function SignInForm() {
       router.push('/');
     } catch (err: unknown) {
       console.error(err);
-      setError('Error iniciando sesión con Google');
+      setError(t('auth.errorGoogle'));
     } finally {
       setLoading(false);
     }
@@ -73,10 +75,10 @@ function SignInForm() {
           </div>
           <div className="space-y-2">
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-              Iniciar sesión
+              {t('auth.signInTitle')}
             </h1>
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              Accede a tu cuenta para continuar
+              {t('auth.signInSubtitle')}
             </p>
           </div>
 
@@ -92,7 +94,7 @@ function SignInForm() {
           <div className="space-y-3">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                Email
+                {t('auth.email')}
               </label>
               <input
                 id="email"
@@ -101,14 +103,14 @@ function SignInForm() {
                 autoComplete="email"
                 required
                 className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none transition-colors"
-                placeholder="tu@email.com"
+                placeholder={t('auth.emailPlaceholder')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                Contraseña
+                {t('auth.password')}
               </label>
               <input
                 id="password"
@@ -117,7 +119,7 @@ function SignInForm() {
                 autoComplete="current-password"
                 required
                 className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none transition-colors"
-                placeholder="········"
+                placeholder={t('auth.passwordPlaceholder')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
@@ -135,7 +137,7 @@ function SignInForm() {
             disabled={loading}
             className="w-full py-3 rounded-lg font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed transition-colors"
           >
-            {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
+            {loading ? t('auth.signingIn') : t('auth.signInButton')}
           </button>
 
           <div className="relative">
@@ -143,7 +145,7 @@ function SignInForm() {
               <div className="w-full border-t border-slate-200 dark:border-slate-800" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-3 bg-white dark:bg-slate-950 text-slate-500 dark:text-slate-500">o</span>
+              <span className="px-3 bg-white dark:bg-slate-950 text-slate-500 dark:text-slate-500">{t('common.or')}</span>
             </div>
           </div>
 
@@ -154,16 +156,16 @@ function SignInForm() {
             className="w-full flex items-center justify-center gap-3 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-medium hover:border-slate-400 dark:hover:border-slate-600 disabled:opacity-50 transition-colors"
           >
             <Image src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" width={18} height={18} />
-            Continuar con Google
+            {t('auth.continueWithGoogle')}
           </button>
         </form>
 
         {/* Footer */}
         <div className="text-center">
           <p className="text-sm text-slate-500 dark:text-slate-500">
-            ¿No tienes cuenta?{' '}
+            {t('auth.noAccount')}{' '}
             <Link href="/auth/signup" className="text-blue-600 dark:text-blue-500 font-medium hover:text-blue-700 dark:hover:text-blue-400 transition-colors">
-              Regístrate gratis
+              {t('auth.registerFree')}
             </Link>
           </p>
         </div>

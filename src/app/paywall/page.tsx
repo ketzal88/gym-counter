@@ -5,9 +5,11 @@ import AuthGuard from '../components/AuthGuard';
 import OnboardingGuard from '../components/guards/OnboardingGuard';
 import { Check, Clock, CreditCard, Lock, Smartphone } from 'lucide-react';
 import { createCheckoutSession } from '@/services/stripeService';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function PaywallPage() {
   const [loading, setLoading] = useState<'monthly' | 'annual' | null>(null);
+  const { t, dict } = useLanguage();
 
   const handleSubscribe = async (tier: 'monthly' | 'annual') => {
     setLoading(tier);
@@ -15,7 +17,7 @@ export default function PaywallPage() {
       await createCheckoutSession(tier);
     } catch (error) {
       console.error('Error creating checkout:', error);
-      alert('Hubo un error al procesar tu solicitud. Por favor intenta de nuevo.');
+      alert(t('subscription.errorCheckout'));
       setLoading(null);
     }
   };
@@ -45,16 +47,16 @@ export default function PaywallPage() {
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
                 <Clock className="w-4 h-4 text-slate-500" />
                 <span className="text-xs font-medium text-slate-700 dark:text-slate-300 tracking-wide uppercase">
-                  Prueba gratuita finalizada
+                  {t('paywall.trialEnded')}
                 </span>
               </div>
 
               <h1 className="text-3xl md:text-5xl font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
-                Sigue transformando<br />tu físico
+                {t('paywall.heroTitle')}<br />{t('paywall.heroTitle2')}
               </h1>
 
               <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
-                Continúa tu progreso con acceso completo desde <span className="font-semibold text-slate-900 dark:text-white">$4.99/mes</span>.
+                {t('paywall.heroSubtitle')} <span className="font-semibold text-slate-900 dark:text-white">$4.99{t('landing.perMonth')}</span>.
               </p>
             </div>
 
@@ -65,10 +67,10 @@ export default function PaywallPage() {
                 <div className="space-y-6">
                   <div>
                     <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-1">
-                      Mensual
+                      {t('landing.planMonthly')}
                     </h3>
                     <p className="text-sm text-slate-500 dark:text-slate-500">
-                      Cancela cuando quieras
+                      {t('landing.trustCancel')}
                     </p>
                   </div>
 
@@ -77,19 +79,12 @@ export default function PaywallPage() {
                       $4.99
                     </span>
                     <span className="text-slate-500 dark:text-slate-500">
-                      /mes
+                      {t('landing.perMonth')}
                     </span>
                   </div>
 
                   <ul className="space-y-3">
-                    {[
-                      'Plan personalizado 180 días',
-                      'Progresión automática',
-                      'Videos de técnica',
-                      'Sistema de logros',
-                      'Modo offline',
-                      'Tracking ilimitado'
-                    ].map((feature, idx) => (
+                    {dict.landing.monthlyFeatures.map((feature, idx) => (
                       <li key={idx} className="flex items-start gap-3">
                         <Check className="w-5 h-5 text-slate-400 dark:text-slate-600 flex-shrink-0 mt-0.5" />
                         <span className="text-sm text-slate-600 dark:text-slate-400">{feature}</span>
@@ -111,10 +106,10 @@ export default function PaywallPage() {
                     {loading === 'monthly' ? (
                       <span className="flex items-center justify-center gap-2">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-slate-400"></div>
-                        Procesando...
+                        {t('common.processing')}
                       </span>
                     ) : (
-                      'Suscribirme'
+                      t('paywall.subscribe')
                     )}
                   </button>
                 </div>
@@ -124,16 +119,16 @@ export default function PaywallPage() {
               <div className="relative p-8 rounded-xl border-2 border-blue-600 bg-white dark:bg-slate-950">
                 {/* Badge */}
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-blue-600 text-white text-xs font-medium">
-                  Más popular
+                  {t('landing.mostPopular')}
                 </div>
 
                 <div className="space-y-6">
                   <div>
                     <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-1">
-                      Anual
+                      {t('landing.planAnnual')}
                     </h3>
                     <p className="text-sm text-slate-500 dark:text-slate-500">
-                      Ahorra 2 meses gratis
+                      {t('landing.planAnnualSave')}
                     </p>
                   </div>
 
@@ -143,25 +138,18 @@ export default function PaywallPage() {
                         $49.90
                       </span>
                       <span className="text-slate-500 dark:text-slate-500">
-                        /año
+                        {t('landing.perYear')}
                       </span>
                     </div>
                     <div className="text-sm text-slate-500 dark:text-slate-500">
                       <span className="line-through">$59.88</span>
                       {' · '}
-                      <span className="text-blue-600 dark:text-blue-500 font-medium">Ahorra $9.98</span>
+                      <span className="text-blue-600 dark:text-blue-500 font-medium">{t('landing.save')} $9.98</span>
                     </div>
                   </div>
 
                   <ul className="space-y-3">
-                    {[
-                      'Todo lo del plan mensual',
-                      '2 meses gratis ($9.98 ahorro)',
-                      'Soporte prioritario',
-                      'Acceso anticipado a funciones',
-                      'Sin renovaciones mensuales',
-                      'Mejor precio garantizado'
-                    ].map((feature, idx) => (
+                    {dict.landing.annualFeatures.map((feature, idx) => (
                       <li key={idx} className="flex items-start gap-3">
                         <Check className="w-5 h-5 text-blue-600 dark:text-blue-500 flex-shrink-0 mt-0.5" />
                         <span className="text-sm text-slate-600 dark:text-slate-400">{feature}</span>
@@ -183,10 +171,10 @@ export default function PaywallPage() {
                     {loading === 'annual' ? (
                       <span className="flex items-center justify-center gap-2">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        Procesando...
+                        {t('common.processing')}
                       </span>
                     ) : (
-                      'Suscribirme'
+                      t('paywall.subscribe')
                     )}
                   </button>
                 </div>
@@ -198,30 +186,30 @@ export default function PaywallPage() {
               <div className="text-center p-6">
                 <CreditCard className="w-6 h-6 text-slate-400 mx-auto mb-3" />
                 <h4 className="font-medium text-slate-900 dark:text-white mb-1">
-                  Pago Seguro
+                  {t('paywall.securePayment')}
                 </h4>
                 <p className="text-sm text-slate-500 dark:text-slate-500">
-                  Procesado por Stripe
+                  {t('paywall.processedByStripe')}
                 </p>
               </div>
 
               <div className="text-center p-6">
                 <Lock className="w-6 h-6 text-slate-400 mx-auto mb-3" />
                 <h4 className="font-medium text-slate-900 dark:text-white mb-1">
-                  Cancela Fácilmente
+                  {t('paywall.cancelEasily')}
                 </h4>
                 <p className="text-sm text-slate-500 dark:text-slate-500">
-                  Sin preguntas, desde tu cuenta
+                  {t('paywall.cancelDesc')}
                 </p>
               </div>
 
               <div className="text-center p-6">
                 <Smartphone className="w-6 h-6 text-slate-400 mx-auto mb-3" />
                 <h4 className="font-medium text-slate-900 dark:text-white mb-1">
-                  Acceso Inmediato
+                  {t('paywall.immediateAccess')}
                 </h4>
                 <p className="text-sm text-slate-500 dark:text-slate-500">
-                  Continúa en segundos
+                  {t('paywall.immediateAccessDesc')}
                 </p>
               </div>
             </div>
@@ -229,23 +217,10 @@ export default function PaywallPage() {
             {/* FAQ */}
             <div className="max-w-2xl mx-auto space-y-4">
               <h3 className="text-xl font-semibold text-slate-900 dark:text-white text-center mb-6">
-                Preguntas frecuentes
+                {t('paywall.faqTitle')}
               </h3>
 
-              {[
-                {
-                  q: '¿Puedo cancelar en cualquier momento?',
-                  a: 'Sí, puedes cancelar en cualquier momento desde tu configuración de cuenta. Mantendrás acceso hasta el final de tu período de pago.'
-                },
-                {
-                  q: '¿Qué métodos de pago aceptan?',
-                  a: 'Aceptamos todas las tarjetas principales (Visa, Mastercard, American Express) procesadas por Stripe.'
-                },
-                {
-                  q: '¿Perderé mi progreso si no me suscribo?',
-                  a: 'No. Todo tu progreso se mantiene seguro. Cuando te suscribas, podrás continuar donde lo dejaste.'
-                }
-              ].map((faq, idx) => (
+              {dict.paywall.faq.map((faq, idx) => (
                 <details
                   key={idx}
                   className="group p-5 rounded-lg border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-colors"

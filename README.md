@@ -219,6 +219,18 @@ gymcounter/
 - Variables de entorno para credenciales sensibles
 - HTTPS obligatorio en producción (Vercel lo maneja automáticamente)
 
+## 🛠️ Herramientas Administrativas
+
+### Recuperación de Progreso
+
+Si experimentas problemas con tu progreso de entrenamiento (ej: el día actual se reseteo), puedes usar la herramienta de recuperación:
+
+- **Documentación Técnica**: Ver [docs/RECOVERY_TOOL_TECHNICAL.md](docs/RECOVERY_TOOL_TECHNICAL.md)
+- **Guía de Usuario**: Ver [docs/RECOVERY_TOOL_USER_GUIDE.md](docs/RECOVERY_TOOL_USER_GUIDE.md)
+- **URL de acceso**: `/admin/recover-progress` (requiere autenticación)
+
+Esta herramienta te permite restaurar tu día de entrenamiento basándose en tu historial de workouts registrados.
+
 ## 📄 Licencia
 
 MIT License - siéntete libre de usar este proyecto para tus propios propósitos.

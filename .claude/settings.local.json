@@ -15,7 +15,18 @@
       "Bash(git commit:*)",
       "Bash(npm run dev:*)",
       "Bash(taskkill:*)",
-      "Bash(timeout 15 npx next dev:*)"
+      "Bash(timeout 15 npx next dev:*)",
+      "Bash(curl:*)",
+      "Bash(netstat:*)",
+      "Bash(npx tsx:*)",
+      "Bash(firebase projects:list:*)",
+      "WebFetch(domain:centr.com)",
+      "WebFetch(domain:www.trainheroic.com)",
+      "WebFetch(domain:www.hevyapp.com)",
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "Bash(xxd \"c:/Users/gabri/Documents/Worker/Webs/gymcounter/src/locales/es.ts\")",
+      "Bash(firebase deploy:*)"
     ]
   }
 }

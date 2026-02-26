@@ -2,84 +2,39 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useLanguage } from '@/context/LanguageContext';
 import { Target, Activity, Dumbbell, Zap, Calendar, AlertCircle } from 'lucide-react';
 
 type FitnessGoal = 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning';
 type ExperienceLevel = 'beginner' | 'intermediate' | 'advanced';
 type WeeklyAvailability = 3 | 4 | 5 | 6;
 
-const FITNESS_GOALS = [
-    {
-        id: 'weight_loss' as FitnessGoal,
-        icon: Activity,
-        title: 'Perder Peso',
-        description: 'Déficit calórico + cardio estructurado',
-        color: 'text-orange-600 dark:text-orange-500',
-        bgSelected: 'bg-orange-600',
-        borderSelected: 'border-orange-600',
-    },
-    {
-        id: 'muscle_gain' as FitnessGoal,
-        icon: Dumbbell,
-        title: 'Ganar Músculo',
-        description: 'Superávit calórico + hipertrofia',
-        color: 'text-blue-600 dark:text-blue-500',
-        bgSelected: 'bg-blue-600',
-        borderSelected: 'border-blue-600',
-    },
-    {
-        id: 'max_strength' as FitnessGoal,
-        icon: Target,
-        title: 'Fuerza Máxima',
-        description: 'Powerlifting y levantamientos pesados',
-        color: 'text-purple-600 dark:text-purple-500',
-        bgSelected: 'bg-purple-600',
-        borderSelected: 'border-purple-600',
-    },
-    {
-        id: 'conditioning' as FitnessGoal,
-        icon: Zap,
-        title: 'Resistencia/CrossFit',
-        description: 'Metcons + conditioning funcional',
-        color: 'text-green-600 dark:text-green-500',
-        bgSelected: 'bg-green-600',
-        borderSelected: 'border-green-600',
-    },
-];
-
-const EXPERIENCE_LEVELS = [
-    {
-        id: 'beginner' as ExperienceLevel,
-        emoji: '🌱',
-        title: 'Principiante',
-        description: 'Nuevo en el gym o menos de 6 meses',
-    },
-    {
-        id: 'intermediate' as ExperienceLevel,
-        emoji: '🌿',
-        title: 'Intermedio',
-        description: '6 meses a 2 años de experiencia',
-    },
-    {
-        id: 'advanced' as ExperienceLevel,
-        emoji: '🌳',
-        title: 'Avanzado',
-        description: 'Más de 2 años entrenando',
-    },
-];
-
-const COMMON_INJURIES = [
-    'Ninguna',
-    'Rodilla',
-    'Espalda baja',
-    'Hombro',
-    'Muñeca',
-    'Tobillo',
-    'Codo',
-];
-
 export default function OnboardingGoalsPage() {
     const router = useRouter();
+    const { t } = useLanguage();
+
+    const FITNESS_GOALS = [
+        { id: 'weight_loss' as FitnessGoal, icon: Activity, title: t('onboarding.goalWeightLoss'), description: t('onboarding.goalWeightLossDesc'), color: 'text-orange-600 dark:text-orange-500', bgSelected: 'bg-orange-600', borderSelected: 'border-orange-600' },
+        { id: 'muscle_gain' as FitnessGoal, icon: Dumbbell, title: t('onboarding.goalMuscleGain'), description: t('onboarding.goalMuscleGainDesc'), color: 'text-blue-600 dark:text-blue-500', bgSelected: 'bg-blue-600', borderSelected: 'border-blue-600' },
+        { id: 'max_strength' as FitnessGoal, icon: Target, title: t('onboarding.goalMaxStrength'), description: t('onboarding.goalMaxStrengthDesc'), color: 'text-purple-600 dark:text-purple-500', bgSelected: 'bg-purple-600', borderSelected: 'border-purple-600' },
+        { id: 'conditioning' as FitnessGoal, icon: Zap, title: t('onboarding.goalConditioning'), description: t('onboarding.goalConditioningDesc'), color: 'text-green-600 dark:text-green-500', bgSelected: 'bg-green-600', borderSelected: 'border-green-600' },
+    ];
+
+    const EXPERIENCE_LEVELS = [
+        { id: 'beginner' as ExperienceLevel, emoji: '🌱', title: t('onboarding.beginner'), description: t('onboarding.beginnerDesc') },
+        { id: 'intermediate' as ExperienceLevel, emoji: '🌿', title: t('onboarding.intermediate'), description: t('onboarding.intermediateDesc') },
+        { id: 'advanced' as ExperienceLevel, emoji: '🌳', title: t('onboarding.advanced'), description: t('onboarding.advancedDesc') },
+    ];
+
+    const COMMON_INJURIES = [
+        t('onboarding.injuryNone'),
+        t('onboarding.injuryKnee'),
+        t('onboarding.injuryLowerBack'),
+        t('onboarding.injuryShoulder'),
+        t('onboarding.injuryWrist'),
+        t('onboarding.injuryAnkle'),
+        t('onboarding.injuryElbow'),
+    ];
 
     const [fitnessGoal, setFitnessGoal] = useState<FitnessGoal | null>(null);
     const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel | null>(null);
@@ -99,11 +54,11 @@ export default function OnboardingGoalsPage() {
 
     const handleContinue = () => {
         if (!fitnessGoal) {
-            alert('Por favor selecciona tu objetivo');
+            alert(t('onboarding.selectGoal'));
             return;
         }
         if (!experienceLevel) {
-            alert('Por favor selecciona tu nivel de experiencia');
+            alert(t('onboarding.selectExperience'));
             return;
         }
 
@@ -122,7 +77,7 @@ export default function OnboardingGoalsPage() {
     };
 
     const addInjury = (injury: string) => {
-        if (injury === 'Ninguna') {
+        if (injury === t('onboarding.injuryNone')) {
             setInjuries('');
         } else {
             const current = injuries ? injuries + ', ' : '';
@@ -137,17 +92,17 @@ export default function OnboardingGoalsPage() {
             {/* Header */}
             <div className="text-center space-y-3">
                 <h1 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
-                    Define tu objetivo
+                    {t('onboarding.goalsTitle')}
                 </h1>
                 <p className="text-base text-slate-600 dark:text-slate-400">
-                    Personalizaremos tu plan según tus metas y disponibilidad
+                    {t('onboarding.goalsSubtitle')}
                 </p>
             </div>
 
             {/* Selector de Objetivo Fitness */}
             <div className="space-y-4">
                 <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                    ¿Cuál es tu objetivo principal?
+                    {t('onboarding.mainGoalLabel')}
                 </label>
                 <div className="grid grid-cols-1 gap-3">
                     {FITNESS_GOALS.map((goal) => {
@@ -189,7 +144,7 @@ export default function OnboardingGoalsPage() {
             {/* Selector de Nivel de Experiencia */}
             <div className="space-y-4">
                 <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                    ¿Cuál es tu nivel de experiencia?
+                    {t('onboarding.experienceLabel')}
                 </label>
                 <div className="grid grid-cols-1 gap-3">
                     {EXPERIENCE_LEVELS.map((level) => {
@@ -232,13 +187,13 @@ export default function OnboardingGoalsPage() {
                 <div className="flex items-center justify-between">
                     <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
                         <Calendar className="w-4 h-4" />
-                        Días disponibles por semana
+                        {t('onboarding.availabilityLabel')}
                     </label>
                     <div className="text-right">
                         <span className="text-2xl font-bold text-slate-900 dark:text-white">
                             {weeklyAvailability}
                         </span>
-                        <span className="text-sm text-slate-500 dark:text-slate-500 ml-1">días</span>
+                        <span className="text-sm text-slate-500 dark:text-slate-500 ml-1">{t('common.days')}</span>
                     </div>
                 </div>
 
@@ -258,7 +213,7 @@ export default function OnboardingGoalsPage() {
                         >
                             <div className="flex flex-col items-center gap-1">
                                 <div>{days}</div>
-                                <div className="text-xs font-normal opacity-80">días</div>
+                                <div className="text-xs font-normal opacity-80">{t('common.days')}</div>
                             </div>
                         </button>
                     ))}
@@ -266,7 +221,7 @@ export default function OnboardingGoalsPage() {
 
                 <div className="text-xs text-slate-500 dark:text-slate-500 text-center flex items-center justify-center gap-1">
                     <span>💡</span>
-                    <span>Recomendamos 4-5 días para resultados óptimos</span>
+                    <span>{t('onboarding.availabilityTip')}</span>
                 </div>
             </div>
 
@@ -274,8 +229,8 @@ export default function OnboardingGoalsPage() {
             <div className="space-y-3">
                 <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
                     <AlertCircle className="w-4 h-4" />
-                    ¿Tienes alguna lesión o molestia?
-                    <span className="font-normal text-slate-500 dark:text-slate-500 text-xs">(opcional)</span>
+                    {t('onboarding.injuriesLabel')}
+                    <span className="font-normal text-slate-500 dark:text-slate-500 text-xs">{t('onboarding.injuriesOptional')}</span>
                 </label>
 
                 {/* Sugerencias rápidas */}
@@ -295,11 +250,11 @@ export default function OnboardingGoalsPage() {
                 <textarea
                     value={injuries}
                     onChange={(e) => setInjuries(e.target.value)}
-                    placeholder="Ejemplo: Dolor en rodilla derecha, molestia en hombro izquierdo..."
+                    placeholder={t('onboarding.injuriesPlaceholder')}
                     className="w-full h-24 px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 transition-colors resize-none outline-none"
                 />
                 <p className="text-xs text-slate-500 dark:text-slate-500">
-                    Adaptaremos los ejercicios para cuidar estas áreas
+                    {t('onboarding.injuriesTip')}
                 </p>
             </div>
 
@@ -309,7 +264,7 @@ export default function OnboardingGoalsPage() {
                     onClick={handleBack}
                     className="flex-1 h-12 rounded-lg font-medium border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-400 dark:hover:border-slate-600 transition-colors"
                 >
-                    ← Atrás
+                    {t('common.back')}
                 </button>
                 <button
                     onClick={handleContinue}
@@ -322,7 +277,7 @@ export default function OnboardingGoalsPage() {
                         }
                     `}
                 >
-                    Continuar →
+                    {t('common.continue')}
                 </button>
             </div>
         </div>

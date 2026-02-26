@@ -2,10 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useLanguage } from '@/context/LanguageContext';
 import { User, Scale, Ruler, Calendar } from 'lucide-react';
 
 export default function OnboardingProfilePage() {
     const router = useRouter();
+    const { t } = useLanguage();
 
     // Estados del formulario
     const [weight, setWeight] = useState(70);
@@ -16,7 +18,7 @@ export default function OnboardingProfilePage() {
     const handleContinue = () => {
         // Validación básica
         if (!sex) {
-            alert('Por favor selecciona tu sexo');
+            alert(t('onboarding.selectSex'));
             return;
         }
 
@@ -44,10 +46,10 @@ export default function OnboardingProfilePage() {
             {/* Header */}
             <div className="text-center space-y-3">
                 <h1 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
-                    Cuéntanos sobre ti
+                    {t('onboarding.profileTitle')}
                 </h1>
                 <p className="text-base text-slate-600 dark:text-slate-400">
-                    Necesitamos algunos datos básicos para personalizar tu plan
+                    {t('onboarding.profileSubtitle')}
                 </p>
             </div>
 
@@ -60,7 +62,7 @@ export default function OnboardingProfilePage() {
                     {sex && (
                         <div className="absolute -bottom-2 -right-2 bg-blue-600 text-white rounded-lg px-2 py-1">
                             <span className="text-xs font-semibold">
-                                IMC {bmi}
+                                {t('onboarding.bmi')} {bmi}
                             </span>
                         </div>
                     )}
@@ -73,7 +75,7 @@ export default function OnboardingProfilePage() {
                 <div className="space-y-3">
                     <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
                         <User className="w-4 h-4" />
-                        Sexo
+                        {t('onboarding.sex')}
                     </label>
                     <div className="grid grid-cols-2 gap-3">
                         <button
@@ -89,7 +91,7 @@ export default function OnboardingProfilePage() {
                         >
                             <div className="flex flex-col items-center gap-2">
                                 <span className="text-3xl">🧔</span>
-                                <span className="text-sm">Masculino</span>
+                                <span className="text-sm">{t('onboarding.male')}</span>
                             </div>
                         </button>
                         <button
@@ -105,7 +107,7 @@ export default function OnboardingProfilePage() {
                         >
                             <div className="flex flex-col items-center gap-2">
                                 <span className="text-3xl">👩</span>
-                                <span className="text-sm">Femenino</span>
+                                <span className="text-sm">{t('onboarding.female')}</span>
                             </div>
                         </button>
                     </div>
@@ -116,7 +118,7 @@ export default function OnboardingProfilePage() {
                     <div className="flex items-center justify-between">
                         <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
                             <Scale className="w-4 h-4" />
-                            Peso
+                            {t('onboarding.weight')}
                         </label>
                         <div className="text-right">
                             <span className="text-2xl font-bold text-slate-900 dark:text-white">
@@ -144,7 +146,7 @@ export default function OnboardingProfilePage() {
                     <div className="flex items-center justify-between">
                         <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
                             <Ruler className="w-4 h-4" />
-                            Altura
+                            {t('onboarding.height')}
                         </label>
                         <div className="text-right">
                             <span className="text-2xl font-bold text-slate-900 dark:text-white">
@@ -171,7 +173,7 @@ export default function OnboardingProfilePage() {
                 <div className="space-y-3">
                     <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
                         <Calendar className="w-4 h-4" />
-                        Edad
+                        {t('onboarding.age')}
                     </label>
                     <div className="flex items-center gap-3">
                         <button
@@ -185,7 +187,7 @@ export default function OnboardingProfilePage() {
                             <span className="text-3xl font-bold text-slate-900 dark:text-white">
                                 {age}
                             </span>
-                            <span className="text-sm text-slate-500 dark:text-slate-500 ml-2">años</span>
+                            <span className="text-sm text-slate-500 dark:text-slate-500 ml-2">{t('common.years')}</span>
                         </div>
                         <button
                             type="button"
@@ -196,7 +198,7 @@ export default function OnboardingProfilePage() {
                         </button>
                     </div>
                     <div className="flex justify-between text-xs text-slate-400">
-                        <span>15-80 años</span>
+                        <span>15-80 {t('common.years')}</span>
                     </div>
                 </div>
             </div>
@@ -213,7 +215,7 @@ export default function OnboardingProfilePage() {
                     }
                 `}
             >
-                Continuar →
+                {t('common.continue')}
             </button>
         </div>
     );

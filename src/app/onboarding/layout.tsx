@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
@@ -12,6 +13,7 @@ interface OnboardingLayoutProps {
 export default function OnboardingLayout({ children }: OnboardingLayoutProps) {
     const pathname = usePathname();
     const { user, loading, onboardingCompleted } = useAuth();
+    const { t } = useLanguage();
     const router = useRouter();
 
     useEffect(() => {
@@ -37,9 +39,9 @@ export default function OnboardingLayout({ children }: OnboardingLayoutProps) {
     const totalSteps = 3;
 
     const steps = [
-        { number: 1, label: 'Perfil' },
-        { number: 2, label: 'Objetivos' },
-        { number: 3, label: 'Plan' },
+        { number: 1, label: t('onboarding.stepProfile') },
+        { number: 2, label: t('onboarding.stepGoals') },
+        { number: 3, label: t('onboarding.stepPlan') },
     ];
 
     if (loading) {
@@ -47,7 +49,7 @@ export default function OnboardingLayout({ children }: OnboardingLayoutProps) {
             <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-sm text-slate-500 dark:text-slate-500">Cargando...</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-500">{t('common.loading')}</p>
                 </div>
             </div>
         );
@@ -148,7 +150,7 @@ export default function OnboardingLayout({ children }: OnboardingLayoutProps) {
                 <div className="max-w-lg mx-auto px-6 py-4">
                     <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-3 pointer-events-auto">
                         <p className="text-xs text-slate-500 dark:text-slate-500">
-                            Tu información es privada y segura. Puedes cambiarla después en ajustes.
+                            {t('onboarding.footerTip')}
                         </p>
                     </div>
                 </div>

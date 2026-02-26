@@ -18,6 +18,9 @@ import { db } from '@/services/db';
 import { useRestTimer } from '@/hooks/useRestTimer';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import { useToast } from '@/hooks/useToast';
+import { useLanguage } from '@/context/LanguageContext';
+import { hasVideo } from '@/data/exerciseVideos';
+import YouTubeVideoModal from './YouTubeVideoModal';
 import ToastContainer from './ui/ToastContainer';
 import ConfirmDialog from './ui/ConfirmDialog';
 
@@ -26,6 +29,7 @@ interface RoutineTrackerProps {
 }
 
 export default function RoutineTracker({ userId }: RoutineTrackerProps) {
+    const { t } = useLanguage();
     const [userState, setUserState] = useState<UserTrainingState | null>(null);
     const [loading, setLoading] = useState(true);
     const [workout, setWorkout] = useState<ProtocolWorkout | null>(null);
@@ -36,6 +40,7 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
     const [saving, setSaving] = useState(false);
     const { toasts, addToast, removeToast } = useToast();
     const [showResetConfirm, setShowResetConfirm] = useState(false);
+    const [videoExercise, setVideoExercise] = useState<{ id: string; name: string } | null>(null);
 
     // Rest Timer & Wake Lock
     const { restTimer, timerActive, restDuration, startRestTimer, cancelRestTimer, formatTime } = useRestTimer();
@@ -473,7 +478,18 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                                     <span className="material-symbols-rounded text-orange-400 text-sm">local_fire_department</span>
                                     <span className="text-xs font-bold text-slate-300">{ex.name}</span>
                                 </div>
-                                <span className="text-xs font-black text-orange-500">{ex.reps}</span>
+                                <div className="flex items-center gap-2">
+                                    {hasVideo(ex.id) && (
+                                        <button
+                                            onClick={() => setVideoExercise({ id: ex.id, name: ex.name })}
+                                            className="w-7 h-7 rounded-lg flex items-center justify-center text-red-500 hover:bg-red-500/10 transition-colors"
+                                            title="Ver técnica"
+                                        >
+                                            <span className="material-symbols-rounded text-sm">smart_display</span>
+                                        </button>
+                                    )}
+                                    <span className="text-xs font-black text-orange-500">{ex.reps}</span>
+                                </div>
                             </div>
                         );
                     }
@@ -494,12 +510,23 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                                         </div>
                                         <h4 className="font-extrabold text-xl text-white">{ex.name}</h4>
                                     </div>
-                                    <button
-                                        onClick={() => toggleExercise(ex.id)}
-                                        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${completedExercises[ex.id] ? 'bg-green-500 text-white' : 'bg-slate-800 text-slate-500'}`}
-                                    >
-                                        <span className="material-symbols-rounded font-bold">{completedExercises[ex.id] ? 'check_circle' : 'play_arrow'}</span>
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        {hasVideo(ex.id) && (
+                                            <button
+                                                onClick={() => setVideoExercise({ id: ex.id, name: ex.name })}
+                                                className="w-10 h-10 rounded-xl flex items-center justify-center bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
+                                                title="Ver técnica"
+                                            >
+                                                <span className="material-symbols-rounded text-lg">smart_display</span>
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={() => toggleExercise(ex.id)}
+                                            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${completedExercises[ex.id] ? 'bg-green-500 text-white' : 'bg-slate-800 text-slate-500'}`}
+                                        >
+                                            <span className="material-symbols-rounded font-bold">{completedExercises[ex.id] ? 'check_circle' : 'play_arrow'}</span>
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="bg-slate-950/40 rounded-2xl p-4 border border-white/5">
                                     <p className="text-xs text-slate-300 font-medium leading-relaxed whitespace-pre-line">
@@ -531,6 +558,15 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                                         </div>
                                     </div>
                                 </div>
+                                {hasVideo(ex.id) && (
+                                    <button
+                                        onClick={() => setVideoExercise({ id: ex.id, name: ex.name })}
+                                        className="w-10 h-10 rounded-xl flex items-center justify-center bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
+                                        title="Ver técnica"
+                                    >
+                                        <span className="material-symbols-rounded text-lg">smart_display</span>
+                                    </button>
+                                )}
                             </div>
 
                             <div className="space-y-2">
@@ -560,7 +596,7 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                                                 </div>
                                             ) : (
                                                 <div className="bg-slate-900/30 rounded-xl px-4 py-2.5 flex items-center justify-center">
-                                                    <span className="text-[10px] font-black text-slate-700 uppercase">Bodyweight</span>
+                                                    <span className="text-[10px] font-black text-slate-700 uppercase">{t('routine.bodyweight')}</span>
                                                 </div>
                                             )}
 
@@ -594,8 +630,15 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                 ) : (
                     <span className="material-symbols-rounded font-black text-2xl">task_alt</span>
                 )}
-                {saving ? 'Guardando...' : 'COMPLETAR SESIÓN'}
+                {saving ? t('routine.savingSession') : t('routine.completeSession')}
             </button>
+
+            <YouTubeVideoModal
+                exerciseId={videoExercise?.id || ''}
+                exerciseName={videoExercise?.name || ''}
+                isOpen={videoExercise !== null}
+                onClose={() => setVideoExercise(null)}
+            />
         </div>
     );
 }

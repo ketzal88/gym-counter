@@ -128,6 +128,9 @@ export interface UserProfile {
     subscriptionStartDate?: Date;
     subscriptionEndDate?: Date;
     subscriptionCancelAtPeriodEnd?: boolean;
+
+    // Preferencias
+    locale?: 'es' | 'en';
 }
 
 // --- VISITS ---
@@ -317,6 +320,15 @@ export const subscribeToUserTrainingState = (userId: string, callback: (state: U
 export const updateUserTrainingState = async (userId: string, updates: Partial<UserTrainingState>) => {
     const { updateDoc, doc } = await import('firebase/firestore');
     await updateDoc(doc(db, 'userTrainingState', userId), updates);
+};
+
+/**
+ * Actualiza campos del perfil de un usuario (solo para admin)
+ * ADVERTENCIA: Esta función debe usarse solo por usuarios admin autorizados
+ */
+export const updateUserProfile = async (userId: string, updates: Partial<UserProfile>) => {
+    const { updateDoc, doc } = await import('firebase/firestore');
+    await updateDoc(doc(db, 'users', userId), updates);
 };
 
 // --- PLAN VARIANTS ---

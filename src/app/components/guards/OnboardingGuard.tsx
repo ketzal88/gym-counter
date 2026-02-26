@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface OnboardingGuardProps {
     children: React.ReactNode;
@@ -15,6 +16,7 @@ interface OnboardingGuardProps {
  */
 export default function OnboardingGuard({ children }: OnboardingGuardProps) {
     const { user, loading, onboardingCompleted } = useAuth();
+    const { t } = useLanguage();
     const router = useRouter();
 
     useEffect(() => {
@@ -39,7 +41,7 @@ export default function OnboardingGuard({ children }: OnboardingGuardProps) {
             <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-sm text-slate-500 dark:text-slate-500">Cargando...</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-500">{t('guards.loading')}</p>
                 </div>
             </div>
         );

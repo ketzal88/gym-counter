@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useLanguage } from '@/context/LanguageContext';
 
 type Tab = 'home' | 'routine' | 'logs' | 'kpis' | 'records' | 'settings';
 
@@ -9,16 +10,17 @@ interface BottomNavProps {
     onTabChange: (tab: Tab) => void;
 }
 
-const navItems = [
-    { id: 'home', label: 'Resumen', icon: 'grid_view' },
-    { id: 'routine', label: 'Rutina', icon: 'fitness_center' },
-    { id: 'logs', label: 'Registro', icon: 'history_edu' },
-    { id: 'kpis', label: 'KPIs', icon: 'monitoring' },
-    { id: 'records', label: 'Récords', icon: 'military_tech' },
-    { id: 'settings', label: 'Ajustes', icon: 'settings' },
-] as const;
-
 export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
+    const { t } = useLanguage();
+
+    const navItems = [
+        { id: 'home' as const, label: t('nav.home'), icon: 'grid_view' },
+        { id: 'routine' as const, label: t('nav.routine'), icon: 'fitness_center' },
+        { id: 'logs' as const, label: t('nav.logs'), icon: 'history_edu' },
+        { id: 'kpis' as const, label: t('nav.kpis'), icon: 'monitoring' },
+        { id: 'records' as const, label: t('nav.records'), icon: 'military_tech' },
+        { id: 'settings' as const, label: t('nav.settings'), icon: 'settings' },
+    ];
     return (
         <nav
             className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 px-4 py-2 pb-6 flex justify-between items-center z-40"

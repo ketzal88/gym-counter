@@ -305,11 +305,56 @@ export const EXERCISE_VIDEOS: Record<string, ExerciseVideoData> = {
   },
 };
 
+// Alias map: protocol engine IDs → exerciseVideos keys
+const EXERCISE_ID_ALIASES: Record<string, string> = {
+  'bench': 'bench_press',
+  'ohp_acc': 'ohp',
+  'bb_row': 'barbell_rows',
+  'rdl': 'romanian_deadlift',
+  'inc_press': 'incline_bench',
+  'pull_var': 'lat_pulldowns',
+  'barbell_curl': 'barbell_curls',
+  'triceps_pushdown': 'tricep_pushdowns',
+  'front_sq': 'front_squat',
+  'front_sq_light': 'front_squat',
+  'dips_w': 'dips',
+  'leg_raises': 'hanging_leg_raises',
+  'pullups_vol': 'pullups',
+  'bench_var': 'bench_press',
+  'row_heavy': 'barbell_rows',
+  'push_press': 'ohp',
+  'ring_dips': 'dips',
+  'split_sq': 'bulgarian_split_squat',
+  'tempo_rdl': 'romanian_deadlift',
+  'db_shoulder_press': 'military_press',
+  'pushups_vol': 'dips', // closest match
+  'chest_dips': 'dips',
+};
+
+function resolveExerciseId(exerciseId: string): string {
+  return EXERCISE_ID_ALIASES[exerciseId] || exerciseId;
+}
+
+/**
+ * Obtiene los datos del video para un ejercicio (resuelve aliases)
+ */
+export function getExerciseVideoData(exerciseId: string): ExerciseVideoData | null {
+  const resolved = resolveExerciseId(exerciseId);
+  return EXERCISE_VIDEOS[resolved] || null;
+}
+
+/**
+ * Verifica si un ejercicio tiene video disponible
+ */
+export function hasVideo(exerciseId: string): boolean {
+  return getExerciseVideoData(exerciseId) !== null;
+}
+
 /**
  * Obtiene la URL completa del video de YouTube
  */
 export function getYouTubeUrl(exerciseId: string): string | null {
-  const videoData = EXERCISE_VIDEOS[exerciseId];
+  const videoData = getExerciseVideoData(exerciseId);
   if (!videoData) return null;
   return `https://www.youtube.com/watch?v=${videoData.videoId}`;
 }
@@ -318,7 +363,7 @@ export function getYouTubeUrl(exerciseId: string): string | null {
  * Obtiene la URL del embed de YouTube
  */
 export function getYouTubeEmbedUrl(exerciseId: string): string | null {
-  const videoData = EXERCISE_VIDEOS[exerciseId];
+  const videoData = getExerciseVideoData(exerciseId);
   if (!videoData) return null;
   return `https://www.youtube.com/embed/${videoData.videoId}`;
 }
@@ -327,7 +372,7 @@ export function getYouTubeEmbedUrl(exerciseId: string): string | null {
  * Obtiene la URL del thumbnail del video
  */
 export function getYouTubeThumbnail(exerciseId: string, quality: 'default' | 'hq' | 'maxres' = 'hq'): string | null {
-  const videoData = EXERCISE_VIDEOS[exerciseId];
+  const videoData = getExerciseVideoData(exerciseId);
   if (!videoData) return null;
 
   const qualityMap = {

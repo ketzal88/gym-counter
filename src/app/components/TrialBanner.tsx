@@ -2,10 +2,12 @@
 
 import Link from 'next/link';
 import { useSubscription } from '@/context/SubscriptionContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { Clock, ArrowRight } from 'lucide-react';
 
 export default function TrialBanner() {
   const { isTrialActive, trialDaysRemaining, subscriptionStatus } = useSubscription();
+  const { t } = useLanguage();
 
   if (!isTrialActive || subscriptionStatus !== 'trial') {
     return null;
@@ -24,7 +26,7 @@ export default function TrialBanner() {
           <div className="flex items-center gap-3">
             <Clock className={`w-4 h-4 flex-shrink-0 ${isUrgent ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`} />
             <p className={`font-medium text-sm ${isUrgent ? 'text-red-900 dark:text-red-100' : 'text-blue-900 dark:text-blue-100'}`}>
-              Prueba gratuita: {trialDaysRemaining <= 1 ? 'último día' : `${trialDaysRemaining} días restantes`}
+              {t('trial.freeTrialPrefix')} {trialDaysRemaining <= 1 ? t('trial.lastDay') : `${trialDaysRemaining} ${t('trial.daysRemaining')}`}
             </p>
           </div>
           <Link
@@ -35,7 +37,7 @@ export default function TrialBanner() {
                 : 'bg-blue-600 text-white hover:bg-blue-700'
             }`}
           >
-            Ver planes
+            {t('trial.viewPlans')}
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
