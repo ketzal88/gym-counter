@@ -18,6 +18,7 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 interface AuthContextType {
     user: User | null;
     loading: boolean;
+    onboardingCompleted: boolean;
     signInWithGoogle: () => Promise<void>;
     loginWithEmail: (email: string, password: string) => Promise<UserCredential>;
     registerWithEmail: (email: string, password: string) => Promise<UserCredential>;
@@ -27,6 +28,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
     user: null,
     loading: true,
+    onboardingCompleted: false,
     signInWithGoogle: async () => { },
     loginWithEmail: async () => { throw new Error('Not implemented'); },
     registerWithEmail: async () => { throw new Error('Not implemented'); },
@@ -38,6 +40,7 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -51,6 +54,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     photoURL: user.photoURL,
                     lastLogin: serverTimestamp()
                 }, { merge: true });
+
+                // Subscribe to user profile to get onboarding status
+                const { onSnapshot } = await import('firebase/firestore');
+                const unsubscribeProfile = onSnapshot(userRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        const userData = docSnap.data();
+                        setOnboardingCompleted(userData.onboardingCompleted || false);
+                    }
+                });
+
+                // Store unsubscribe function for cleanup
+                return unsubscribeProfile;
+            } else {
+                setOnboardingCompleted(false);
             }
             setUser(user);
             setLoading(false);
@@ -87,7 +104,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, signInWithGoogle, loginWithEmail, registerWithEmail, logout }}>
+        <AuthContext.Provider value={{ user, loading, onboardingCompleted, signInWithGoogle, loginWithEmail, registerWithEmail, logout }}>
             {children}
         </AuthContext.Provider>
     );

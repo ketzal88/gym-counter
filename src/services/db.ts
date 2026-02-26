@@ -82,8 +82,13 @@ export interface UserTrainingState {
         maxPullUps?: number;
         cardioTime?: string;
     };
-    planVersion: "military_v1";
+    planVersion: string; // ahora almacena el variantId dinámico
+    assignedVariant?: string; // planVariant ID
     protocolCompleted: boolean;
+
+    // Tracking
+    planStartedAt?: Date;
+    estimatedCompletionDate?: Date; // basado en disponibilidad semanal
 }
 
 export interface UserProfile {
@@ -92,6 +97,37 @@ export interface UserProfile {
     email: string;
     photoURL?: string;
     lastLogin: Date;
+
+    // Onboarding
+    onboardingCompleted?: boolean;
+    onboardingCompletedAt?: Date;
+
+    // Perfil físico
+    weight?: number; // kg
+    sex?: 'M' | 'F';
+    age?: number;
+    height?: number; // cm
+
+    // Perfil fitness
+    fitnessGoal?: 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning';
+    experienceLevel?: 'beginner' | 'intermediate' | 'advanced';
+    weeklyAvailability?: 3 | 4 | 5 | 6; // días por semana
+    injuries?: string; // texto libre opcional
+
+    // Plan asignado
+    assignedPlan?: string; // ID del plan (ej: "muscle_gain_intermediate_5day")
+    planAssignedAt?: Date;
+
+    // Estado de suscripción
+    subscriptionStatus?: 'trial' | 'active' | 'expired' | 'cancelled';
+    trialStartDate?: Date;
+    trialEndDate?: Date;
+    subscriptionTier?: 'monthly' | 'annual';
+    stripeCustomerId?: string;
+    stripeSubscriptionId?: string;
+    subscriptionStartDate?: Date;
+    subscriptionEndDate?: Date;
+    subscriptionCancelAtPeriodEnd?: boolean;
 }
 
 // --- VISITS ---
@@ -282,3 +318,81 @@ export const updateUserTrainingState = async (userId: string, updates: Partial<U
     const { updateDoc, doc } = await import('firebase/firestore');
     await updateDoc(doc(db, 'userTrainingState', userId), updates);
 };
+
+// --- PLAN VARIANTS ---
+
+export interface PlanVariant {
+    id: string; // ej: "muscle_gain_intermediate_5day"
+    name: string; // ej: "Ganancia Muscular - Intermedio (5 días)"
+    goal: 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning';
+    experienceLevel: 'beginner' | 'intermediate' | 'advanced';
+    weeklyDays: 3 | 4 | 5 | 6;
+
+    // Configuración del plan
+    totalDays: number; // 180
+    cycleLength: number; // 12 días (puede variar)
+    deloadFrequency: number; // cada 4 ciclos
+
+    // Modificadores de volumen/intensidad
+    volumeMultiplier: number; // 0.7 principiante, 1.0 intermedio, 1.2 avanzado
+    intensityMultiplier: number; // ajusta pesos calculados
+
+    // Complejidad de ejercicios
+    exerciseComplexity: 'basic' | 'standard' | 'advanced';
+
+    // Templates de días (estructura similar a TEMPLATES actual pero por variante)
+    dayTemplates: Record<number, any>; // DayTemplateConfig from protocolEngine
+
+    metadata: {
+        description: string;
+        targetAudience: string;
+        createdAt: Date;
+        updatedAt: Date;
+    };
+}
+
+// --- SUBSCRIPTION EVENTS ---
+
+export interface SubscriptionEvent {
+    id: string;
+    userId: string;
+    eventType: 'trial_started' | 'trial_expired' | 'subscription_created'
+        | 'subscription_updated' | 'subscription_cancelled' | 'payment_failed';
+    timestamp: Date;
+    data: Record<string, any>; // detalles específicos del evento
+    stripeEventId?: string;
+}
+
+// --- USER BADGES (Gamification - Fase 5) ---
+
+export interface Badge {
+    id: string;
+    unlockedAt: Date;
+    seen: boolean; // Para mostrar notificación de nuevo badge
+}
+
+export interface UserBadges {
+    userId: string;
+    badges: Badge[];
+    totalPoints: number;
+    level: number; // 1-50 basado en puntos
+    lastBadgeUnlocked?: Date;
+}
+
+export interface BadgeDefinition {
+    id: string;
+    name: string;
+    description: string;
+    icon: string; // emoji o URL de imagen
+    category: 'attendance' | 'strength' | 'volume' | 'milestone' | 'consistency';
+    points: number; // Puntos otorgados al desbloquear
+    condition: BadgeCondition; // Lógica para desbloquear
+}
+
+export type BadgeCondition =
+    | { type: 'visits_total', count: number }
+    | { type: 'visits_streak', days: number }
+    | { type: 'protocol_day', day: number }
+    | { type: 'protocol_complete' }
+    | { type: 'lift_milestone', lift: 'bench' | 'squat' | 'deadlift' | 'ohp', weight: number }
+    | { type: 'total_volume', volume: number };
