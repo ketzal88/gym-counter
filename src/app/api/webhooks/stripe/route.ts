@@ -55,8 +55,8 @@ export async function POST(request: NextRequest) {
           subscriptionStatus: subscription.status === 'trialing' ? 'trial' : 'active',
           stripeSubscriptionId: subscriptionId,
           subscriptionTier: session.metadata?.tier || 'monthly',
-          subscriptionStartDate: Timestamp.fromMillis(subscription.current_period_start * 1000),
-          subscriptionEndDate: Timestamp.fromMillis(subscription.current_period_end * 1000),
+          subscriptionStartDate: Timestamp.fromMillis(subscription.items.data[0].current_period_start * 1000),
+          subscriptionEndDate: Timestamp.fromMillis(subscription.items.data[0].current_period_end * 1000),
         });
 
         // Registrar evento
@@ -100,8 +100,8 @@ export async function POST(request: NextRequest) {
           // Actualizar suscripción
           await db.collection('users').doc(actualUserId).update({
             subscriptionStatus: subscription.status === 'trialing' ? 'trial' : subscription.status === 'active' ? 'active' : 'cancelled',
-            subscriptionStartDate: Timestamp.fromMillis(subscription.current_period_start * 1000),
-            subscriptionEndDate: Timestamp.fromMillis(subscription.current_period_end * 1000),
+            subscriptionStartDate: Timestamp.fromMillis(subscription.items.data[0].current_period_start * 1000),
+            subscriptionEndDate: Timestamp.fromMillis(subscription.items.data[0].current_period_end * 1000),
             subscriptionCancelAtPeriodEnd: subscription.cancel_at_period_end || false,
           });
 
@@ -122,8 +122,8 @@ export async function POST(request: NextRequest) {
           // Actualizar suscripción
           await db.collection('users').doc(userId).update({
             subscriptionStatus: subscription.status === 'trialing' ? 'trial' : subscription.status === 'active' ? 'active' : 'cancelled',
-            subscriptionStartDate: Timestamp.fromMillis(subscription.current_period_start * 1000),
-            subscriptionEndDate: Timestamp.fromMillis(subscription.current_period_end * 1000),
+            subscriptionStartDate: Timestamp.fromMillis(subscription.items.data[0].current_period_start * 1000),
+            subscriptionEndDate: Timestamp.fromMillis(subscription.items.data[0].current_period_end * 1000),
             subscriptionCancelAtPeriodEnd: subscription.cancel_at_period_end || false,
           });
 

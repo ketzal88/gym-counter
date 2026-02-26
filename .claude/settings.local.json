@@ -27,7 +27,8 @@
       "Bash(grep:*)",
       "Bash(xxd \"c:/Users/gabri/Documents/Worker/Webs/gymcounter/src/locales/es.ts\")",
       "Bash(firebase deploy:*)",
-      "Bash(npx next lint)"
+      "Bash(npx next lint)",
+      "Bash(node -e:*)"
     ]
   }
 }
