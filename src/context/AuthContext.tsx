@@ -43,6 +43,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
     useEffect(() => {
+        let unsubscribeProfile: (() => void) | null = null;
+
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
                 // Create/Update user profile in Firestore
@@ -57,23 +59,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
                 // Subscribe to user profile to get onboarding status
                 const { onSnapshot } = await import('firebase/firestore');
-                const unsubscribeProfile = onSnapshot(userRef, (docSnap) => {
+                unsubscribeProfile = onSnapshot(userRef, (docSnap) => {
                     if (docSnap.exists()) {
                         const userData = docSnap.data();
                         setOnboardingCompleted(userData.onboardingCompleted || false);
                     }
+                    setLoading(false);
                 });
-
-                // Store unsubscribe function for cleanup
-                return unsubscribeProfile;
+                setUser(user);
             } else {
                 setOnboardingCompleted(false);
+                setUser(null);
+                setLoading(false);
             }
-            setUser(user);
-            setLoading(false);
         });
 
-        return () => unsubscribe();
+        return () => {
+            unsubscribe();
+            if (unsubscribeProfile) {
+                unsubscribeProfile();
+            }
+        };
     }, []);
 
     const signInWithGoogle = async () => {
