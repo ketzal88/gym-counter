@@ -85,8 +85,6 @@ export default function OnboardingGoalsPage() {
         }
     };
 
-    const selectedGoal = FITNESS_GOALS.find(g => g.id === fitnessGoal);
-
     return (
         <div className="space-y-10">
             {/* Header */}

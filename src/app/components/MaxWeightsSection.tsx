@@ -150,12 +150,6 @@ export default function MaxWeightsSection({ userId, workoutLogs = [] }: MaxWeigh
         });
     }, [logDetectedExercises, weights, userId]);
 
-    const allFormExercises = [
-        ...MAIN_EXERCISES,
-        ...ACCESSORY_EXERCISES,
-        ...logExerciseStats.map(e => ({ id: e.id, label: e.label })),
-    ];
-
     const renderExerciseCard = (stat: ExerciseStat) => (
         <div key={stat.id} className="relative group bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden transition-all hover:shadow-md">
             <div className="flex p-4 gap-4 items-center">

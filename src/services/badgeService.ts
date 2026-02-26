@@ -1,5 +1,5 @@
 import { db } from './db';
-import { collection, doc, getDoc, setDoc, getDocs, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, setDoc, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { BADGE_DEFINITIONS, BadgeDefinition, calculateLevel } from '@/data/badgeDefinitions';
 
 export interface Badge {
@@ -38,11 +38,11 @@ export async function getUserBadges(userId: string): Promise<UserBadges> {
     const data = badgesDoc.data() as UserBadges;
     // Convert Firestore Timestamps to Date
     if (data.lastBadgeUnlocked && typeof data.lastBadgeUnlocked === 'object') {
-      data.lastBadgeUnlocked = (data.lastBadgeUnlocked as any).toDate();
+      data.lastBadgeUnlocked = (data.lastBadgeUnlocked as unknown as { toDate(): Date }).toDate();
     }
     data.badges = data.badges.map(b => ({
       ...b,
-      unlockedAt: (b.unlockedAt as any).toDate ? (b.unlockedAt as any).toDate() : b.unlockedAt
+      unlockedAt: typeof (b.unlockedAt as unknown as { toDate?: () => Date }).toDate === 'function' ? (b.unlockedAt as unknown as { toDate(): Date }).toDate() : b.unlockedAt
     }));
 
     return data;
@@ -78,8 +78,8 @@ async function getUserStats(userId: string) {
     // Calcular volumen total
     let totalVolume = 0;
     workouts.forEach(workout => {
-      workout.exercises?.forEach((ex: any) => {
-        ex.sets?.forEach((set: any) => {
+      workout.exercises?.forEach((ex: { sets?: { weight: string; reps: string }[] }) => {
+        ex.sets?.forEach((set: { weight: string; reps: string }) => {
           const weight = parseFloat(set.weight) || 0;
           const reps = parseFloat(set.reps) || 0;
           totalVolume += weight * reps;
@@ -98,7 +98,7 @@ async function getUserStats(userId: string) {
       return dateB.getTime() - dateA.getTime();
     });
 
-    let checkDate = new Date(today);
+    const checkDate = new Date(today);
     for (const workout of sortedWorkouts) {
       const workoutDate = workout.timestamp?.toDate ? workout.timestamp.toDate() : new Date(workout.timestamp);
       workoutDate.setHours(0, 0, 0, 0);
@@ -161,7 +161,7 @@ async function getUserStats(userId: string) {
 /**
  * Evalúa una condición de badge
  */
-function evaluateCondition(condition: BadgeDefinition['condition'], stats: any): boolean {
+function evaluateCondition(condition: BadgeDefinition['condition'], stats: Record<string, number>): boolean {
   switch (condition.type) {
     case 'visits_total':
       return stats.totalWorkouts >= (condition.count || 0);

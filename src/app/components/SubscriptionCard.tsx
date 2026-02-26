@@ -11,7 +11,6 @@ export default function SubscriptionCard() {
     subscriptionTier,
     trialDaysRemaining,
     isTrialActive,
-    isSubscriptionActive,
   } = useSubscription();
 
   const { t } = useLanguage();

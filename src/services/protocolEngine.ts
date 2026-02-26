@@ -430,7 +430,8 @@ export function adjustVolume(sets: number, volumeMultiplier: number): number {
  * NOTA: Por ahora usa TEMPLATES hardcoded. En futuras fases,
  * esto se moverá a cargar desde Firestore collection planVariants
  */
-export async function getTemplatesForVariant(variantId: string): Promise<typeof TEMPLATES> {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function getTemplatesForVariant(_variantId: string): Promise<typeof TEMPLATES> {
     // TODO: En Fase 2, implementar carga desde Firestore
     // const { getPlanVariant } = await import('./planVariantService');
     // const variant = await getPlanVariant(variantId);

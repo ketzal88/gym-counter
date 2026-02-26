@@ -12,18 +12,18 @@ interface GymCounterDB extends DBSchema {
   };
   userState: {
     key: string;
-    value: any; // UserTrainingState
+    value: Record<string, unknown>; // UserTrainingState
   };
   planVariant: {
     key: string;
-    value: any; // PlanVariant
+    value: Record<string, unknown>; // PlanVariant
   };
   pendingSync: {
     key: number; // auto-increment
     value: {
       id?: number;
       type: 'workout' | 'visit' | 'measurement' | 'maxWeight';
-      data: any;
+      data: Record<string, unknown>;
       timestamp: number;
       retries: number;
     };
@@ -207,7 +207,7 @@ export async function cleanupOldWorkouts(): Promise<void> {
 /**
  * Guarda el estado del usuario localmente
  */
-export async function saveUserStateOffline(userId: string, state: any): Promise<void> {
+export async function saveUserStateOffline(userId: string, state: Record<string, unknown>): Promise<void> {
   try {
     const db = await initDB();
     await db.put('userState', { userId, ...state });
@@ -219,7 +219,7 @@ export async function saveUserStateOffline(userId: string, state: any): Promise<
 /**
  * Obtiene el estado del usuario desde almacenamiento local
  */
-export async function getUserStateOffline(userId: string): Promise<any | null> {
+export async function getUserStateOffline(userId: string): Promise<Record<string, unknown> | null> {
   try {
     const db = await initDB();
     return await db.get('userState', userId);
@@ -232,7 +232,7 @@ export async function getUserStateOffline(userId: string): Promise<any | null> {
 /**
  * Guarda una variante de plan localmente
  */
-export async function savePlanVariantOffline(variantId: string, variant: any): Promise<void> {
+export async function savePlanVariantOffline(variantId: string, variant: Record<string, unknown>): Promise<void> {
   try {
     const db = await initDB();
     await db.put('planVariant', { id: variantId, ...variant });
@@ -244,7 +244,7 @@ export async function savePlanVariantOffline(variantId: string, variant: any): P
 /**
  * Obtiene una variante de plan desde almacenamiento local
  */
-export async function getPlanVariantOffline(variantId: string): Promise<any | null> {
+export async function getPlanVariantOffline(variantId: string): Promise<Record<string, unknown> | null> {
   try {
     const db = await initDB();
     return await db.get('planVariant', variantId);

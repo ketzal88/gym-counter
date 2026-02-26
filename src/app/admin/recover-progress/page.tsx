@@ -157,7 +157,7 @@ export default function RecoverProgressPage() {
               <p className="text-gray-400">Total de workouts registrados: <span className="text-white font-semibold">{workouts.length}</span></p>
               <p className="text-gray-400">Último día completado según historial: <span className="text-white font-semibold">Día {suggestedDay}</span></p>
 
-              {workouts.slice(0, 5).map((workout, idx) => (
+              {workouts.slice(0, 5).map((workout) => (
                 <div key={workout.id} className="border-t border-gray-700 pt-2 mt-2">
                   <div className="flex justify-between">
                     <span className="text-gray-400">{new Date(workout.timestamp).toLocaleDateString()}</span>

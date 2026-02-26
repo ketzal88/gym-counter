@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { getUserBadges, UserBadges } from '@/services/badgeService';
-import { BADGE_DEFINITIONS, getRarityColor, calculateLevel, pointsForNextLevel } from '@/data/badgeDefinitions';
+import { BADGE_DEFINITIONS, getRarityColor, pointsForNextLevel } from '@/data/badgeDefinitions';
 import { Award, Lock, TrendingUp } from 'lucide-react';
 
 interface BadgesGalleryProps {

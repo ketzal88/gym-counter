@@ -353,7 +353,7 @@ export interface PlanVariant {
     exerciseComplexity: 'basic' | 'standard' | 'advanced';
 
     // Templates de días (estructura similar a TEMPLATES actual pero por variante)
-    dayTemplates: Record<number, any>; // DayTemplateConfig from protocolEngine
+    dayTemplates: Record<number, unknown>; // DayTemplateConfig from protocolEngine
 
     metadata: {
         description: string;
@@ -371,7 +371,7 @@ export interface SubscriptionEvent {
     eventType: 'trial_started' | 'trial_expired' | 'subscription_created'
         | 'subscription_updated' | 'subscription_cancelled' | 'payment_failed';
     timestamp: Date;
-    data: Record<string, any>; // detalles específicos del evento
+    data: Record<string, unknown>; // detalles específicos del evento
     stripeEventId?: string;
 }
 
