@@ -195,32 +195,34 @@ export default function UnifiedDashboard() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen bg-slate-50 dark:bg-slate-900">
-        <div className="animate-pulse flex flex-col items-center">
-          <div className="h-12 w-12 bg-blue-500 rounded-full mb-4"></div>
-          <div className="text-slate-400 font-medium">Cargando GymCounter...</div>
+      <div className="flex justify-center items-center h-screen bg-white dark:bg-slate-950">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+          <div className="text-sm text-slate-500 dark:text-slate-500">Cargando...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="pb-24 max-w-lg mx-auto min-h-screen bg-slate-50 dark:bg-slate-950">
+    <div className="pb-24 max-w-lg mx-auto min-h-screen bg-white dark:bg-slate-950">
 
       {/* ---------------- HOME TAB ---------------- */}
       {activeTab === 'home' && (
         <>
-          <header className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 py-3">
+          <header className="sticky top-0 z-30 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 px-4 py-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl animate-bounce-slow">💪</span>
-                <h1 className="font-extrabold text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-500">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-slate-900 dark:bg-white flex items-center justify-center">
+                  <span className="text-lg">💪</span>
+                </div>
+                <h1 className="font-bold text-lg tracking-tight text-slate-900 dark:text-white">
                   GymCounter
                 </h1>
               </div>
               <button
                 onClick={() => setActiveTab('records')}
-                className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 font-bold border border-slate-200 dark:border-slate-700 hover:scale-105 active:scale-95 transition-all overflow-hidden"
+                className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-900 flex items-center justify-center text-slate-700 dark:text-slate-200 font-medium border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-colors overflow-hidden"
               >
                 {user?.photoURL ? (
                   <Image src={user.photoURL} alt="Profile" width={40} height={40} className="w-full h-full object-cover" />
@@ -265,28 +267,23 @@ export default function UnifiedDashboard() {
               </section>
             )}
 
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-700 p-5 text-white shadow-xl shadow-blue-900/20">
+            <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-5">
               <div className="relative z-10">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="material-symbols-rounded text-sm bg-white/20 p-1 rounded">rocket_launch</span>
-                  <span className="text-[10px] uppercase tracking-widest font-bold opacity-90">Motivación diaria</span>
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-500 uppercase tracking-wide">Motivación diaria</span>
                 </div>
-                <p className="text-sm font-medium leading-relaxed italic opacity-90">
-                  &quot;¡No hay límites para quien se atreve a superarse!&quot;
+                <p className="text-sm font-medium leading-relaxed text-slate-700 dark:text-slate-300 italic">
+                  &quot;No hay límites para quien se atreve a superarse.&quot;
                 </p>
               </div>
-              <div className="absolute -right-6 -bottom-6 opacity-10 rotate-12">
-                <span className="material-symbols-rounded text-[140px]">fitness_center</span>
+              <div className="hidden">
               </div>
             </div>
 
-            <section className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 text-center relative overflow-hidden">
+            <section className="border border-slate-200 dark:border-slate-800 rounded-xl p-8 text-center">
               <div className="flex flex-col items-center justify-center">
-                <div className="flex items-center justify-center gap-3 mb-2">
-                  <span className="text-6xl font-black text-blue-600 tracking-tighter drop-shadow-sm">{totalVisitsYear}</span>
-                  <span className="text-5xl animate-pulse filter drop-shadow-lg">🔥</span>
-                </div>
-                <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">Total de visitas al gym ({currentYear})</p>
+                <span className="text-5xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">{totalVisitsYear}</span>
+                <p className="text-slate-500 dark:text-slate-500 text-sm">Visitas al gym en {currentYear}</p>
               </div>
             </section>
 
@@ -379,22 +376,22 @@ export default function UnifiedDashboard() {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-green-50 dark:bg-green-900/10 p-4 rounded-2xl border border-green-100 dark:border-green-800/30">
+                <div className="p-4 rounded-lg border border-slate-200 dark:border-slate-800">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-4xl font-black text-green-600 dark:text-green-400">{month1Visits}</span>
-                    <span className="material-symbols-rounded text-green-500/40 text-2xl">event_available</span>
+                    <span className="text-3xl font-bold text-slate-900 dark:text-white">{month1Visits}</span>
+                    <span className="material-symbols-rounded text-slate-300 dark:text-slate-700 text-xl">event_available</span>
                   </div>
-                  <p className="text-[11px] font-bold text-green-800 dark:text-green-300 uppercase tracking-tight mb-0.5">{isCurrentYear ? 'Este mes' : 'Diciembre'}</p>
-                  <p className="text-[10px] text-green-600/70 dark:text-green-400/70 capitalize">{month1Name}</p>
+                  <p className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-0.5">{isCurrentYear ? 'Este mes' : 'Diciembre'}</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-500 capitalize">{month1Name}</p>
                 </div>
 
-                <div className="bg-purple-50 dark:bg-purple-900/10 p-4 rounded-2xl border border-purple-100 dark:border-purple-800/30">
+                <div className="p-4 rounded-lg border border-slate-200 dark:border-slate-800">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-4xl font-black text-purple-600 dark:text-purple-400">{month2Visits}</span>
-                    <span className="material-symbols-rounded text-purple-500/40 text-2xl">history</span>
+                    <span className="text-3xl font-bold text-slate-900 dark:text-white">{month2Visits}</span>
+                    <span className="material-symbols-rounded text-slate-300 dark:text-slate-700 text-xl">history</span>
                   </div>
-                  <p className="text-[11px] font-bold text-purple-800 dark:text-purple-300 uppercase tracking-tight mb-0.5">{isCurrentYear ? 'Mes pasado' : 'Noviembre'}</p>
-                  <p className="text-[10px] text-purple-600/70 dark:text-purple-400/70 capitalize">{month2Name}</p>
+                  <p className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-0.5">{isCurrentYear ? 'Mes pasado' : 'Noviembre'}</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-500 capitalize">{month2Name}</p>
                 </div>
               </div>
             </div>
@@ -415,7 +412,7 @@ export default function UnifiedDashboard() {
                 </div>
                 <div className="relative w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                   <div
-                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500"
+                    className="absolute top-0 left-0 h-full bg-blue-600 rounded-full transition-all duration-500"
                     style={{ width: `${Math.min(parseFloat(attendancePercentage), 100)}%` }}
                   />
                 </div>
@@ -479,74 +476,70 @@ export default function UnifiedDashboard() {
         <div className="animate-fade-in flex-1 overflow-y-auto px-6 pt-8 pb-28 space-y-6">
           <TabHeader title="Registros" onBack={() => setActiveTab('home')} />
           {userTrainingState && (
-            <section className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl border border-slate-800 relative overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
-              <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-                <span className="material-symbols-rounded text-[12rem]">fitness_center</span>
-              </div>
-
-              <div className="relative z-10">
-                <div className="flex justify-between items-start mb-8">
+            <section className="rounded-xl border-2 border-slate-900 dark:border-slate-200 bg-slate-900 dark:bg-slate-950 p-6 text-white relative overflow-hidden">
+              <div className="space-y-6">
+                <div className="flex justify-between items-start">
                   <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-[10px] font-black bg-blue-600/20 text-blue-400 px-3 py-1 rounded-full uppercase tracking-widest border border-blue-500/20">
-                        Military Operator
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-xs font-medium bg-blue-600/20 text-blue-400 px-2.5 py-1 rounded-lg uppercase tracking-wide border border-blue-500/20">
+                        Military Protocol
                       </span>
                       {isDeload(getCycleIndex(userTrainingState.currentDay)) && (
-                        <span className="text-[10px] font-black bg-amber-600/20 text-amber-500 px-3 py-1 rounded-full uppercase tracking-widest border border-amber-500/20">
+                        <span className="text-xs font-medium bg-amber-600/20 text-amber-500 px-2.5 py-1 rounded-lg uppercase tracking-wide border border-amber-500/20">
                           Deload
                         </span>
                       )}
                     </div>
-                    <h2 className="text-4xl font-black leading-none flex items-baseline gap-2">
-                      DÍA {userTrainingState.currentDay}
-                      <span className="text-slate-700 text-xl font-bold">/ 180</span>
+                    <h2 className="text-3xl font-bold leading-none flex items-baseline gap-2">
+                      Día {userTrainingState.currentDay}
+                      <span className="text-slate-600 text-lg font-medium">/ 180</span>
                     </h2>
                   </div>
                   <div className="text-right">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Ciclo</p>
-                    <p className="text-3xl font-black text-blue-500">{getCycleIndex(userTrainingState.currentDay)}</p>
+                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Ciclo</p>
+                    <p className="text-2xl font-bold text-blue-500">{getCycleIndex(userTrainingState.currentDay)}</p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-4 gap-3 mb-8">
+                <div className="grid grid-cols-4 gap-2">
                   {[
                     { id: 'bench', label: 'BNCH' },
                     { id: 'squat', label: 'SQUT' },
                     { id: 'deadlift', label: 'DEAD' },
                     { id: 'ohp', label: 'OHP' }
                   ].map(lift => (
-                    <div key={lift.id} className="bg-slate-800/40 rounded-2xl p-3 text-center border border-slate-700/30 backdrop-blur-sm">
-                      <p className="text-[9px] font-black text-slate-500 uppercase mb-1 tracking-tighter">{lift.label}</p>
-                      <p className="text-sm font-black text-white">
+                    <div key={lift.id} className="bg-slate-800 rounded-lg p-3 text-center border border-slate-700">
+                      <p className="text-[9px] font-semibold text-slate-500 uppercase mb-1">{lift.label}</p>
+                      <p className="text-sm font-bold text-white">
                         {userTrainingState.liftState?.[lift.id as keyof typeof userTrainingState.liftState] || '-'}
-                        <span className="text-[10px] text-slate-600 ml-0.5 font-bold">kg</span>
+                        <span className="text-[10px] text-slate-600 ml-0.5">kg</span>
                       </p>
                     </div>
                   ))}
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {!userTrainingState.protocolCompleted ? (
                     <button
                       onClick={() => setActiveTab('routine')}
-                      className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-5 rounded-2xl shadow-xl shadow-blue-600/20 flex items-center justify-center gap-3 transition-all transform active:scale-[0.98]"
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 rounded-lg flex items-center justify-center gap-2 transition-colors"
                     >
                       <span className="material-symbols-rounded">play_circle</span>
-                      ENTRENAR HOY
+                      Entrenar hoy
                     </button>
                   ) : (
-                    <div className="w-full bg-green-500/10 border border-green-500/20 text-green-400 font-black py-4 rounded-2xl text-center flex items-center justify-center gap-2">
+                    <div className="w-full bg-green-500/10 border border-green-500/20 text-green-400 font-semibold py-3 rounded-lg text-center flex items-center justify-center gap-2">
                       <span className="material-symbols-rounded">stars</span>
-                      PROTOCOLO COMPLETADO
+                      Protocolo completado
                     </div>
                   )}
 
                   <button
                     onClick={() => setShowProtocolOverview(true)}
-                    className="w-full bg-slate-800/50 hover:bg-slate-800 text-slate-400 font-bold py-3 rounded-xl border border-slate-700/50 text-xs flex items-center justify-center gap-2 transition-all"
+                    className="w-full bg-slate-800 hover:bg-slate-700 text-slate-400 font-medium py-3 rounded-lg border border-slate-700 text-xs flex items-center justify-center gap-2 transition-colors"
                   >
                     <span className="material-symbols-rounded text-sm">map</span>
-                    Ver Estructura del Protocolo
+                    Ver estructura del protocolo
                   </button>
                 </div>
               </div>
