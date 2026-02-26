@@ -48,8 +48,8 @@ export default function LiftProgressionChart({ weights }: LiftProgressionChartPr
         }
 
         return Array.from(dateMap.entries())
-            .map(([date, values]) => ({ date, ...values }))
-            .sort((a, b) => (a._sort as number) - (b._sort as number))
+            .map(([date, values]) => ({ date, ...values } as { date: string } & Record<string, number>))
+            .sort((a, b) => (a._sort ?? 0) - (b._sort ?? 0))
             .slice(-20);
     }, [weights]);
 

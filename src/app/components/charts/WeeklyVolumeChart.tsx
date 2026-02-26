@@ -112,8 +112,8 @@ export default function WeeklyVolumeChart({ workouts }: WeeklyVolumeChartProps) 
                             color: '#fff',
                             fontSize: '12px',
                         }}
-                        formatter={(value: number) => [`${value.toLocaleString()} kg`, 'Volumen']}
-                        labelFormatter={(label: string) => `Semana del ${label}`}
+                        formatter={(value) => [`${(value ?? 0).toLocaleString()} kg`, 'Volumen']}
+                        labelFormatter={(label) => `Semana del ${label}`}
                     />
                     <Bar dataKey="volume" radius={[6, 6, 0, 0]}>
                         {data.map((entry, index) => (

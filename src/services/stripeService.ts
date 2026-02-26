@@ -1,10 +1,3 @@
-import { loadStripe } from '@stripe/stripe-js';
-
-// Inicializar Stripe con la clave pública
-const stripePromise = loadStripe(
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''
-);
-
 /**
  * Crea una sesión de Stripe Checkout y redirige al usuario
  */
@@ -23,19 +16,14 @@ export async function createCheckoutSession(tier: 'monthly' | 'annual'): Promise
       throw new Error(error.message || 'Failed to create checkout session');
     }
 
-    const { sessionId } = await response.json();
+    const { url } = await response.json();
+
+    if (!url) {
+      throw new Error('No checkout URL received');
+    }
 
     // Redirigir a Stripe Checkout
-    const stripe = await stripePromise;
-    if (!stripe) {
-      throw new Error('Stripe failed to initialize');
-    }
-
-    const { error } = await stripe.redirectToCheckout({ sessionId });
-
-    if (error) {
-      throw error;
-    }
+    window.location.href = url;
   } catch (error) {
     console.error('Error creating checkout session:', error);
     throw error;

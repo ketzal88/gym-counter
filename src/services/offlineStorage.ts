@@ -23,7 +23,7 @@ interface GymCounterDB extends DBSchema {
     value: {
       id?: number;
       type: 'workout' | 'visit' | 'measurement' | 'maxWeight';
-      data: Record<string, unknown>;
+      data: WorkoutLog | Record<string, unknown>;
       timestamp: number;
       retries: number;
     };
@@ -127,7 +127,7 @@ export async function syncPendingData(): Promise<{ success: number; failed: numb
       try {
         // Intentar subir a Firestore
         if (item.type === 'workout') {
-          await addWorkoutLog(item.data);
+          await addWorkoutLog(item.data as Omit<WorkoutLog, 'timestamp' | 'id'>);
           console.log('✅ Workout sincronizado:', item.data.id);
         }
         // Añadir más tipos según necesidad (visit, measurement, etc.)
@@ -190,9 +190,7 @@ export async function cleanupOldWorkouts(): Promise<void> {
     const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
 
     for (const workout of allWorkouts) {
-      const workoutDate = workout.timestamp?.toDate
-        ? workout.timestamp.toDate().getTime()
-        : new Date(workout.timestamp).getTime();
+      const workoutDate = new Date(workout.timestamp).getTime();
 
       if (workoutDate < thirtyDaysAgo) {
         await db.delete('workouts', workout.id);
@@ -222,7 +220,7 @@ export async function saveUserStateOffline(userId: string, state: Record<string,
 export async function getUserStateOffline(userId: string): Promise<Record<string, unknown> | null> {
   try {
     const db = await initDB();
-    return await db.get('userState', userId);
+    return (await db.get('userState', userId)) ?? null;
   } catch (error) {
     console.error('Error obteniendo user state offline:', error);
     return null;
@@ -247,7 +245,7 @@ export async function savePlanVariantOffline(variantId: string, variant: Record<
 export async function getPlanVariantOffline(variantId: string): Promise<Record<string, unknown> | null> {
   try {
     const db = await initDB();
-    return await db.get('planVariant', variantId);
+    return (await db.get('planVariant', variantId)) ?? null;
   } catch (error) {
     console.error('Error obteniendo plan variant offline:', error);
     return null;

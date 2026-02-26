@@ -161,7 +161,18 @@ async function getUserStats(userId: string) {
 /**
  * Evalúa una condición de badge
  */
-function evaluateCondition(condition: BadgeDefinition['condition'], stats: Record<string, number>): boolean {
+interface UserStats {
+  totalWorkouts: number;
+  currentStreak: number;
+  currentDay: number;
+  protocolCompleted: boolean;
+  liftState: Record<string, number>;
+  totalVolume: number;
+  workoutsByHour: Record<number, number>;
+  workoutsByDayOfWeek: Record<number, number>;
+}
+
+function evaluateCondition(condition: BadgeDefinition['condition'], stats: UserStats): boolean {
   switch (condition.type) {
     case 'visits_total':
       return stats.totalWorkouts >= (condition.count || 0);
