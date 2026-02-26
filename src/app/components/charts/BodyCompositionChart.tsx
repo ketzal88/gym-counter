@@ -80,7 +80,7 @@ export default function BodyCompositionChart({ measurements }: BodyCompositionCh
                             color: '#fff',
                             fontSize: '12px',
                         }}
-                        formatter={(value: number | undefined, name: string) => [
+                        formatter={(value, name) => [
                             `${value ?? 0}%`,
                             name === 'muscle' ? 'Músculo' : 'Grasa'
                         ]}
