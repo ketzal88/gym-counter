@@ -152,6 +152,8 @@ const en = {
     errorGoogle: 'Error signing in with Google',
     signUpTitle: 'Create account',
     signUpSubtitle: 'Sign up for free and start your plan',
+    fullName: 'Full name',
+    fullNamePlaceholder: 'Your first and last name',
     confirmPassword: 'Confirm password',
     confirmPasswordPlaceholder: '········',
     signUpButton: 'Create account',

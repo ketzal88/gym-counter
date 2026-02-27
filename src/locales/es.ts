@@ -152,6 +152,8 @@ const es = {
     errorGoogle: 'Error iniciando sesi\u00f3n con Google',
     signUpTitle: 'Crear cuenta',
     signUpSubtitle: 'Registrate gratis y empez\u00e1 tu plan',
+    fullName: 'Nombre completo',
+    fullNamePlaceholder: 'Tu nombre y apellido',
     confirmPassword: 'Confirmar contrase\u00f1a',
     confirmPasswordPlaceholder: '\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7',
     signUpButton: 'Crear cuenta',

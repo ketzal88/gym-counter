@@ -9,6 +9,7 @@ import {
     signOut,
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
+    updateProfile,
     UserCredential
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -21,7 +22,7 @@ interface AuthContextType {
     onboardingCompleted: boolean;
     signInWithGoogle: () => Promise<void>;
     loginWithEmail: (email: string, password: string) => Promise<UserCredential>;
-    registerWithEmail: (email: string, password: string) => Promise<UserCredential>;
+    registerWithEmail: (email: string, password: string, displayName?: string) => Promise<UserCredential>;
     logout: () => Promise<void>;
 }
 
@@ -31,7 +32,7 @@ const AuthContext = createContext<AuthContextType>({
     onboardingCompleted: false,
     signInWithGoogle: async () => { },
     loginWithEmail: async () => { throw new Error('Not implemented'); },
-    registerWithEmail: async () => { throw new Error('Not implemented'); },
+    registerWithEmail: async () => { throw new Error('Not implemented') as never; },
     logout: async () => { },
 });
 
@@ -96,8 +97,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return await signInWithEmailAndPassword(auth, email, password);
     };
 
-    const registerWithEmail = async (email: string, password: string) => {
-        return await createUserWithEmailAndPassword(auth, email, password);
+    const registerWithEmail = async (email: string, password: string, displayName?: string) => {
+        const result = await createUserWithEmailAndPassword(auth, email, password);
+        if (displayName && result.user) {
+            await updateProfile(result.user, { displayName });
+        }
+        return result;
     };
 
     const logout = async () => {

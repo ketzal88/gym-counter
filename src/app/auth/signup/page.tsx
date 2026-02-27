@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 
 export default function SignUp() {
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -33,7 +34,7 @@ export default function SignUp() {
 
     setLoading(true);
     try {
-      await registerWithEmail(email, password);
+      await registerWithEmail(email, password, fullName.trim() || undefined);
       router.push('/');
     } catch (err: unknown) {
       console.error(err);
@@ -88,6 +89,21 @@ export default function SignUp() {
         {/* Form */}
         <form className="space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-3">
+            <div>
+              <label htmlFor="fullName" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                {t('auth.fullName')}
+              </label>
+              <input
+                id="fullName"
+                name="fullName"
+                type="text"
+                autoComplete="name"
+                className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none transition-colors"
+                placeholder={t('auth.fullNamePlaceholder')}
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+              />
+            </div>
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                 {t('auth.email')}
