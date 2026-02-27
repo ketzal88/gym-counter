@@ -38,7 +38,7 @@ const es = {
     heroLine3: 'Mirá cómo',
     heroLine3Accent: 'crecés.',
     heroSubtitle: 'Plan personalizado de 180 días que se adapta a tu objetivo, nivel y disponibilidad. Progresión automática. Tracking completo.',
-    ctaStart: 'Comenzar 7 días gratis',
+    ctaStart: 'Comenzar 14 días gratis',
     ctaPlans: 'Ver planes',
     trustNoCard: 'Sin tarjeta de crédito',
     trustCancel: 'Cancela cuando quieras',
@@ -87,7 +87,7 @@ const es = {
 
     // Pricing
     pricingTitle: 'Planes simples',
-    pricingSubtitle: 'Empezá con 7 días gratis. Sin tarjeta de crédito.',
+    pricingSubtitle: 'Empezá con 14 días gratis. Sin tarjeta de crédito.',
     planMonthly: 'Mensual',
     planAnnual: 'Anual',
     planAnnualSave: 'Ahorrá 2 meses gratis',
@@ -118,7 +118,7 @@ const es = {
     faqTitle: 'Preguntas frecuentes',
     faq: [
       { q: '¿Necesito experiencia previa?', a: 'No. GymCounter tiene variantes para principiantes, intermedios y avanzados. El plan se adapta a tu nivel de experiencia.' },
-      { q: '¿Qué incluye el período de prueba?', a: 'Acceso completo a todas las funciones durante 7 días. No se requiere tarjeta de crédito para empezar.' },
+      { q: '¿Qué incluye el período de prueba?', a: 'Acceso completo a todas las funciones durante 14 días. No se requiere tarjeta de crédito para empezar.' },
       { q: '¿Puedo cancelar en cualquier momento?', a: 'Sí. Puedes cancelar tu suscripción cuando quieras desde la configuración. Sin compromisos ni cargos ocultos.' },
       { q: '¿Funciona sin conexión a internet?', a: 'Sí. GymCounter funciona completamente offline. Tus datos se sincronizan automáticamente cuando recuperas la conexión.' },
       { q: '¿Qué pasa cuando termino los 180 días?', a: 'Puedes reiniciar el protocolo con pesos actualizados o mantener tu suscripción para seguir registrando y trackeando tus entrenos.' },
@@ -226,7 +226,7 @@ const es = {
     accessories: 'Accesorios',
     conditioning: 'Conditioning',
     exercisesTime: '4-6 ejercicios \u00b7 45-60 min',
-    trialBadgeTitle: '7 d\u00edas gratis para comenzar',
+    trialBadgeTitle: '14 d\u00edas gratis para comenzar',
     trialBadgeDesc: 'Prueba tu plan completo sin compromiso. Despu\u00e9s:',
     trialBadgeNoCard: 'Sin tarjeta requerida',
     startTraining: 'Comenzar entrenamiento',
@@ -376,6 +376,12 @@ const es = {
   guards: {
     verifying: 'Verificando...',
     loading: 'Cargando...',
+  },
+  freemium: {
+    bannerText: 'Tu prueba gratuita termin\u00f3. Suscrib\u00edte para desbloquear todas las funciones.',
+    lockedTitle: 'Funci\u00f3n Premium',
+    lockedDescription: 'Suscrib\u00edte para acceder a tu rutina de entrenamiento, an\u00e1lisis y r\u00e9cords personales.',
+    subscribeCTA: 'Suscribirme para desbloquear',
   },
 };
 

@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?checkout=success`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/paywall?checkout=cancelled`,
       subscription_data: {
-        trial_period_days: 7,
+        trial_period_days: 14,
         metadata: {
           userId,
         },

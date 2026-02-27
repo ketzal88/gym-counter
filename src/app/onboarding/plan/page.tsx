@@ -80,7 +80,7 @@ export default function OnboardingPlanPage() {
 
         try {
             const now = new Date();
-            const trialEndDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+            const trialEndDate = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
 
             await setDoc(doc(db, 'users', user.uid), {
                 uid: user.uid,

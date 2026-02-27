@@ -38,7 +38,7 @@ const en = {
     heroLine3: 'Watch yourself',
     heroLine3Accent: 'grow.',
     heroSubtitle: 'A personalized 180-day plan that adapts to your goal, level, and availability. Automatic progression. Full tracking.',
-    ctaStart: 'Start 7-day free trial',
+    ctaStart: 'Start 14-day free trial',
     ctaPlans: 'View plans',
     trustNoCard: 'No credit card required',
     trustCancel: 'Cancel anytime',
@@ -87,7 +87,7 @@ const en = {
 
     // Pricing
     pricingTitle: 'Simple plans',
-    pricingSubtitle: 'Start with 7 free days. No credit card required.',
+    pricingSubtitle: 'Start with 14 free days. No credit card required.',
     planMonthly: 'Monthly',
     planAnnual: 'Annual',
     planAnnualSave: 'Save 2 months free',
@@ -118,7 +118,7 @@ const en = {
     faqTitle: 'Frequently asked questions',
     faq: [
       { q: 'Do I need previous experience?', a: 'No. GymCounter has variants for beginners, intermediates, and advanced users. The plan adapts to your experience level.' },
-      { q: 'What does the trial include?', a: 'Full access to all features for 7 days. No credit card required to start.' },
+      { q: 'What does the trial include?', a: 'Full access to all features for 14 days. No credit card required to start.' },
       { q: 'Can I cancel anytime?', a: 'Yes. You can cancel your subscription at any time from settings. No commitments or hidden charges.' },
       { q: 'Does it work without internet?', a: 'Yes. GymCounter works fully offline. Your data syncs automatically when you regain connection.' },
       { q: 'What happens after 180 days?', a: 'You can restart the protocol with updated weights or keep your subscription to continue logging and tracking your workouts.' },
@@ -226,7 +226,7 @@ const en = {
     accessories: 'Accessories',
     conditioning: 'Conditioning',
     exercisesTime: '4-6 exercises · 45-60 min',
-    trialBadgeTitle: '7 free days to start',
+    trialBadgeTitle: '14 free days to start',
     trialBadgeDesc: 'Try your complete plan with no commitment. Then:',
     trialBadgeNoCard: 'No credit card required',
     startTraining: 'Start training',
@@ -376,6 +376,12 @@ const en = {
   guards: {
     verifying: 'Verifying...',
     loading: 'Loading...',
+  },
+  freemium: {
+    bannerText: 'Your free trial has ended. Subscribe to unlock all features.',
+    lockedTitle: 'Premium Feature',
+    lockedDescription: 'Subscribe to access your workout routine, analytics, and personal records.',
+    subscribeCTA: 'Subscribe to unlock',
   },
 };
 

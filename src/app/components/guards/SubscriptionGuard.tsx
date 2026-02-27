@@ -11,34 +11,25 @@ interface SubscriptionGuardProps {
 }
 
 /**
- * SubscriptionGuard - Redirige a /paywall si el trial expiró y no hay suscripción activa
- *
- * Uso: Envolver rutas que requieren suscripción activa (ej: /dashboard, /routine)
+ * SubscriptionGuard - Verifica autenticación. Permite acceso freemium al dashboard
+ * (features premium se bloquean a nivel de componente, no con redirect).
  */
 export default function SubscriptionGuard({ children }: SubscriptionGuardProps) {
     const { user, loading: authLoading } = useAuth();
     const { t } = useLanguage();
-    const { requiresPayment, loading: subLoading } = useSubscription();
+    const { loading: subLoading } = useSubscription();
     const router = useRouter();
 
     useEffect(() => {
         if (authLoading || subLoading) return;
 
-        // Si no está autenticado, redirigir a signin (AuthGuard debería manejar esto)
         if (!user) {
             router.push('/auth/signin');
             return;
         }
+    }, [user, authLoading, subLoading, router]);
 
-        // Si requiere pago, redirigir a paywall
-        if (requiresPayment) {
-            router.push('/paywall');
-            return;
-        }
-    }, [user, authLoading, requiresPayment, subLoading, router]);
-
-    // Mostrar loading mientras se verifica
-    if (authLoading || subLoading || !user || requiresPayment) {
+    if (authLoading || subLoading || !user) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
                 <div className="text-center">

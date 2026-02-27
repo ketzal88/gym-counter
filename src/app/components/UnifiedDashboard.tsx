@@ -32,10 +32,40 @@ import TabHeader from './TabHeader';
 import SubscriptionCard from './SubscriptionCard';
 import { isSameDay } from '@/utils/date';
 import { useLanguage } from '@/context/LanguageContext';
+import { useSubscription } from '@/context/SubscriptionContext';
+import { useRouter } from 'next/navigation';
+
+function LockedTabOverlay({ t, onSubscribe }: { t: (key: string) => string; onSubscribe: () => void }) {
+  return (
+    <div className="animate-fade-in flex-1 flex items-center justify-center px-6 pt-8 pb-28">
+      <div className="text-center space-y-6 max-w-sm">
+        <div className="w-20 h-20 rounded-full bg-slate-100 dark:bg-slate-900 flex items-center justify-center mx-auto">
+          <span className="material-symbols-rounded text-4xl text-slate-400 dark:text-slate-600">lock</span>
+        </div>
+        <div className="space-y-2">
+          <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+            {t('freemium.lockedTitle')}
+          </h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            {t('freemium.lockedDescription')}
+          </p>
+        </div>
+        <button
+          onClick={onSubscribe}
+          className="w-full py-3 rounded-lg bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 transition-colors"
+        >
+          {t('freemium.subscribeCTA')}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function UnifiedDashboard() {
   const { user, logout } = useAuth();
   const { t, locale, setLocale } = useLanguage();
+  const { requiresPayment } = useSubscription();
+  const router = useRouter();
 
   // Navigation State
   const [activeTab, setActiveTab] = useState<'home' | 'routine' | 'logs' | 'kpis' | 'records' | 'settings'>('home');
@@ -247,7 +277,7 @@ export default function UnifiedDashboard() {
             </div>
 
             {userTrainingState && (
-              <section className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex items-center justify-between group cursor-pointer hover:border-blue-500/50 transition-all" onClick={() => setActiveTab('records')}>
+              <section className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex items-center justify-between group cursor-pointer hover:border-blue-500/50 transition-all" onClick={() => requiresPayment ? router.push('/paywall') : setActiveTab('records')}>
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600">
                     <span className="material-symbols-rounded">rocket_launch</span>
@@ -440,42 +470,47 @@ export default function UnifiedDashboard() {
 
       {/* ---------------- ROUTINE TAB ---------------- */}
       {activeTab === 'routine' && (
-        <div className="animate-fade-in flex-1 overflow-y-auto px-6 pt-8 pb-28">
-          <TabHeader title={t('dashboard.tabRoutine')} onBack={() => setActiveTab('home')} />
-          <RoutineTracker userId={user?.uid || ''} />
-        </div>
+        requiresPayment ? <LockedTabOverlay t={t} onSubscribe={() => router.push('/paywall')} /> : (
+          <div className="animate-fade-in flex-1 overflow-y-auto px-6 pt-8 pb-28">
+            <TabHeader title={t('dashboard.tabRoutine')} onBack={() => setActiveTab('home')} />
+            <RoutineTracker userId={user?.uid || ''} />
+          </div>
+        )
       )}
 
       {/* ---------------- KPIs TAB ---------------- */}
       {activeTab === 'kpis' && (
-        <div className="animate-fade-in flex-1 overflow-y-auto px-6 pt-8 pb-28 space-y-6">
-          <TabHeader title={t('dashboard.tabProjection')} onBack={() => setActiveTab('home')} />
+        requiresPayment ? <LockedTabOverlay t={t} onSubscribe={() => router.push('/paywall')} /> : (
+          <div className="animate-fade-in flex-1 overflow-y-auto px-6 pt-8 pb-28 space-y-6">
+            <TabHeader title={t('dashboard.tabProjection')} onBack={() => setActiveTab('home')} />
 
-          <TrainingStreakCard visits={visits} />
+            <TrainingStreakCard visits={visits} />
 
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{t('dashboard.weekAttendance')}</span>
-                <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-4xl font-black text-slate-900 dark:text-white">{totalVisitsYear}</span>
-                  <span className="text-sm font-bold text-slate-400">{t('dashboard.visitsInYear')} {selectedYear}</span>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{t('dashboard.weekAttendance')}</span>
+                  <div className="flex items-baseline gap-2 mt-1">
+                    <span className="text-4xl font-black text-slate-900 dark:text-white">{totalVisitsYear}</span>
+                    <span className="text-sm font-bold text-slate-400">{t('dashboard.visitsInYear')} {selectedYear}</span>
+                  </div>
                 </div>
               </div>
+              <TotalVisitsChart visits={visits} currentYear={selectedYear} />
             </div>
-            <TotalVisitsChart visits={visits} currentYear={selectedYear} />
+
+            <LiftProgressionChart weights={maxWeights} />
+
+            <WeeklyVolumeChart workouts={workoutLogs} />
+
+            <BodyCompositionChart measurements={bodyMeasurements} />
           </div>
-
-          <LiftProgressionChart weights={maxWeights} />
-
-          <WeeklyVolumeChart workouts={workoutLogs} />
-
-          <BodyCompositionChart measurements={bodyMeasurements} />
-        </div>
+        )
       )}
 
       {/* ---------------- RECORDS TAB ---------------- */}
       {activeTab === 'records' && (
+        requiresPayment ? <LockedTabOverlay t={t} onSubscribe={() => router.push('/paywall')} /> : (
         <div className="animate-fade-in flex-1 overflow-y-auto px-6 pt-8 pb-28 space-y-6">
           <TabHeader title={t('dashboard.tabRecords')} onBack={() => setActiveTab('home')} />
           {userTrainingState && (
@@ -604,6 +639,7 @@ export default function UnifiedDashboard() {
             </div>
           </section>
         </div>
+        )
       )}
 
       {/* ---------------- SETTINGS TAB ---------------- */}
