@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
+import { notifySubscription, notifyError } from '@/lib/slack';
 
 function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -73,6 +74,11 @@ export async function POST(request: NextRequest) {
           },
           stripeEventId: event.id,
         });
+
+        // Slack notification
+        const checkoutUser = await db.collection('users').doc(userId).get();
+        const checkoutEmail = checkoutUser.data()?.email || userId;
+        await notifySubscription('started', userId, checkoutEmail, session.metadata?.tier || 'monthly');
 
         console.log(`✅ Checkout completed for user ${userId}`);
         break;
@@ -183,6 +189,10 @@ export async function POST(request: NextRequest) {
             stripeEventId: event.id,
           });
 
+          // Slack notification
+          const cancelledUser1 = await db.collection('users').doc(actualUserId).get();
+          await notifySubscription('cancelled', actualUserId, cancelledUser1.data()?.email || actualUserId);
+
           console.log(`✅ Subscription cancelled for user ${actualUserId}`);
         } else {
           // Marcar suscripción como cancelada
@@ -200,6 +210,10 @@ export async function POST(request: NextRequest) {
             },
             stripeEventId: event.id,
           });
+
+          // Slack notification
+          const cancelledUser2 = await db.collection('users').doc(userId).get();
+          await notifySubscription('cancelled', userId, cancelledUser2.data()?.email || userId);
 
           console.log(`✅ Subscription cancelled for user ${userId}`);
         }
@@ -246,6 +260,10 @@ export async function POST(request: NextRequest) {
             stripeEventId: event.id,
           });
 
+          // Slack notification
+          const failedUser1 = await db.collection('users').doc(actualUserId).get();
+          await notifySubscription('payment_failed', actualUserId, failedUser1.data()?.email || actualUserId);
+
           console.log(`⚠️ Payment failed for user ${actualUserId}`);
         } else {
           // Registrar evento de fallo de pago
@@ -259,6 +277,10 @@ export async function POST(request: NextRequest) {
             },
             stripeEventId: event.id,
           });
+
+          // Slack notification
+          const failedUser2 = await db.collection('users').doc(userId).get();
+          await notifySubscription('payment_failed', userId, failedUser2.data()?.email || userId);
 
           console.log(`⚠️ Payment failed for user ${userId}`);
         }
@@ -285,6 +307,10 @@ export async function POST(request: NextRequest) {
           stripeEventId: event.id,
         });
 
+        // Slack notification
+        const trialUser = await db.collection('users').doc(userId).get();
+        await notifySubscription('trial_ending', userId, trialUser.data()?.email || userId);
+
         console.log(`📅 Trial ending soon for user ${userId}`);
         break;
       }
@@ -296,6 +322,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: true });
   } catch (error: unknown) {
     console.error('Webhook handler error:', error);
+    await notifyError('stripe-webhook', error instanceof Error ? error.message : 'Webhook handler failed', error instanceof Error ? error.stack : undefined);
     return NextResponse.json(
       { message: error instanceof Error ? error.message : 'Webhook handler failed' },
       { status: 500 }

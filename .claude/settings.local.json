@@ -29,7 +29,11 @@
       "Bash(firebase deploy:*)",
       "Bash(npx next lint)",
       "Bash(node -e:*)",
-      "Bash(npx vitest run)"
+      "Bash(npx vitest run)",
+      "WebFetch(domain:www.strong.app)",
+      "WebFetch(domain:fitbod.me)",
+      "WebFetch(domain:www.jefit.com)",
+      "WebFetch(domain:row.gymshark.com)"
     ]
   }
 }

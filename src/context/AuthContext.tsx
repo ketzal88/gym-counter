@@ -14,7 +14,8 @@ import {
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { db } from '@/services/db';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { reportNewUser } from '@/lib/notifyClient';
 
 interface AuthContextType {
     user: User | null;
@@ -48,8 +49,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // Create/Update user profile in Firestore
+                // Check if this is a new user before creating profile
                 const userRef = doc(db, 'users', user.uid);
+                const existingDoc = await getDoc(userRef);
+                const isNewUser = !existingDoc.exists();
+
                 await setDoc(userRef, {
                     uid: user.uid,
                     displayName: user.displayName || 'Usuario',
@@ -57,6 +61,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     photoURL: user.photoURL,
                     lastLogin: serverTimestamp()
                 }, { merge: true });
+
+                // Notify Slack about new user registration
+                if (isNewUser) {
+                    const method = user.providerData[0]?.providerId === 'google.com' ? 'Google' : 'Email';
+                    reportNewUser(user.email || '', user.displayName || '', method);
+                }
 
                 // Subscribe to user profile to get onboarding status
                 const { onSnapshot } = await import('firebase/firestore');

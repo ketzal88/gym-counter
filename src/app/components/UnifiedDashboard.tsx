@@ -33,6 +33,7 @@ import SubscriptionCard from './SubscriptionCard';
 import { isSameDay } from '@/utils/date';
 import { useLanguage } from '@/context/LanguageContext';
 import { useSubscription } from '@/context/SubscriptionContext';
+import { submitFeedback } from '@/lib/notifyClient';
 import { useRouter } from 'next/navigation';
 
 function LockedTabOverlay({ t, onSubscribe }: { t: (key: string) => string; onSubscribe: () => void }) {
@@ -55,6 +56,52 @@ function LockedTabOverlay({ t, onSubscribe }: { t: (key: string) => string; onSu
           className="w-full py-3 rounded-lg bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 transition-colors"
         >
           {t('freemium.subscribeCTA')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function FeedbackBox({ t }: { t: (key: string) => string }) {
+  const [message, setMessage] = useState('');
+  const [sent, setSent] = useState(false);
+
+  const handleSend = () => {
+    if (!message.trim()) return;
+    submitFeedback(message.trim());
+    setMessage('');
+    setSent(true);
+    setTimeout(() => setSent(false), 3000);
+  };
+
+  return (
+    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+      <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+        <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+          <span className="material-symbols-rounded text-lg text-blue-600">chat_bubble</span>
+          {t('settings.feedbackTitle')}
+        </h3>
+      </div>
+      <div className="p-4 space-y-3">
+        <textarea
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder={t('settings.feedbackPlaceholder')}
+          rows={3}
+          className="w-full px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white placeholder-slate-400 text-sm resize-none outline-none focus:border-blue-600 transition-colors"
+        />
+        <button
+          onClick={handleSend}
+          disabled={!message.trim() || sent}
+          className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-colors ${
+            sent
+              ? 'bg-green-500/10 text-green-500 border border-green-500/20'
+              : message.trim()
+                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+          }`}
+        >
+          {sent ? t('settings.feedbackSent') : t('settings.feedbackSend')}
         </button>
       </div>
     </div>
@@ -706,6 +753,10 @@ export default function UnifiedDashboard() {
 
           <SubscriptionCard />
           <ProtocolSettings />
+
+          {/* Feedback Box */}
+          <FeedbackBox t={t} />
+
           <div className="text-center text-[10px] text-slate-600 font-mono mt-12 mb-4">
             {t('settings.version')}
           </div>

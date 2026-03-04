@@ -344,6 +344,10 @@ const es = {
     spanish: 'Espa\u00f1ol',
     english: 'English',
     version: 'GymCounter Military v1.0',
+    feedbackTitle: 'Feedback y sugerencias',
+    feedbackPlaceholder: 'Contanos qué podemos mejorar o qué te gustaría ver...',
+    feedbackSend: 'Enviar feedback',
+    feedbackSent: 'Enviado, gracias!',
   },
   subscription: {
     title: 'Suscripci\u00f3n',
