@@ -33,7 +33,9 @@
       "WebFetch(domain:www.strong.app)",
       "WebFetch(domain:fitbod.me)",
       "WebFetch(domain:www.jefit.com)",
-      "WebFetch(domain:row.gymshark.com)"
+      "WebFetch(domain:row.gymshark.com)",
+      "Bash(npm ls:*)",
+      "Bash(node scripts/generateIcons.mjs:*)"
     ]
   }
 }

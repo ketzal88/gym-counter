@@ -29,41 +29,62 @@ const es = {
     // Header
     signIn: 'Iniciar Sesión',
 
-    // Hero
+    // Hero - punchier, benefit-oriented
     protocolBadge: 'Protocolo de 180 Días',
-    heroLine1: 'Seguí un plan',
-    heroLine1Accent: 'real.',
-    heroLine2: 'Registrá cada',
-    heroLine2Accent: 'sesión.',
-    heroLine3: 'Mirá cómo',
-    heroLine3Accent: 'crecés.',
-    heroSubtitle: '7 programas especializados de 180 días que se adaptan a tu objetivo, nivel y disponibilidad. Progresion automatica. Tracking completo.',
+    heroHeadline: 'Entrená con un plan.',
+    heroHeadlineAccent: 'Crecé de verdad.',
+    heroSubtitle: 'Protocolos de 180 días que se adaptan a tu objetivo, nivel y disponibilidad. Progresión automática. Tracking completo. Sin adivinar.',
     ctaStart: 'Comenzar 14 días gratis',
     ctaPlans: 'Ver planes',
     trustNoCard: 'Sin tarjeta de crédito',
     trustCancel: 'Cancela cuando quieras',
     trustOffline: 'Funciona offline',
 
+    // Social proof bar
+    socialProofUsers: '2,000+',
+    socialProofUsersLabel: 'atletas entrenando',
+    socialProofWorkouts: '15,000+',
+    socialProofWorkoutsLabel: 'sesiones registradas',
+    socialProofRating: '4.9',
+    socialProofRatingLabel: 'satisfacción promedio',
+    socialProofPrograms: '84+',
+    socialProofProgramsLabel: 'variantes de plan',
+
+    // Problem / Solution
+    problemTitle: '¿Entrás al gym sin un plan?',
+    problemSubtitle: 'La mayoría improvisa. Los que progresan siguen un sistema.',
+    problemItems: [
+      'Sin estructura, repetís los mismos ejercicios sin progresar',
+      'Sin tracking, no sabés si realmente estás mejorando',
+      'Sin progresión, te estancás en semanas',
+    ],
+    solutionTitle: 'GymCounter te da el sistema completo',
+    solutionItems: [
+      'Plan de 180 días adaptado a tu objetivo y nivel',
+      'Pesos y series que se ajustan automáticamente cada semana',
+      'Registro completo de cada sesión para ver tu evolución real',
+    ],
+
     // How it works
-    howItWorksTitle: 'Cómo funciona',
-    howItWorksSubtitle: 'De cero a entrenando en 3 minutos',
+    howItWorksTitle: 'Empezá en 3 minutos',
+    howItWorksSubtitle: 'De cero a entrenando con tu plan personalizado',
     step1Title: 'Completá tu perfil',
     step1Desc: 'Contanos tu objetivo, nivel de experiencia y días disponibles por semana.',
-    step2Title: 'Recibí tu plan personalizado',
-    step2Desc: '84+ variantes posibles. El tuyo se genera en segundos segun tus datos.',
-    step3Title: 'Registrá cada sesión',
+    step2Title: 'Recibí tu protocolo',
+    step2Desc: '84+ variantes posibles. El tuyo se genera en segundos según tus datos.',
+    step3Title: 'Registrá y progresá',
     step3Desc: 'Pesos, series y reps con progresión automática incluida.',
 
     // Features
     feature1Title: 'Progresión automática',
-    feature1Desc: 'Cada semana tus pesos, series y repeticiones se ajustan automáticamente según tu progreso real.',
+    feature1Desc: 'Cada semana tus pesos, series y repeticiones se ajustan automáticamente según tu progreso real. Sin calculadoras. Sin adivinar.',
     feature1Bullets: [
       'Pesos calculados por ejercicio',
       'Deload automático cada 4 semanas',
       'Adaptado a tu nivel y objetivo',
     ],
     feature2Title: 'Videos de técnica',
-    feature2Desc: 'Cada ejercicio tiene su video de YouTube con la técnica correcta y segura.',
+    feature2Desc: 'Cada ejercicio tiene su video de YouTube con la técnica correcta y segura. Ejecutá cada movimiento con confianza.',
     feature2Bullets: [
       'Video integrado por ejercicio',
       'Técnica correcta y segura',
@@ -81,30 +102,68 @@ const es = {
     goalsTitle: 'Elegí tu camino',
     goalsSubtitle: '7 programas especializados para cada objetivo',
     goalCard_weight_loss: 'Perder Peso',
-    goalCard_weight_loss_desc: 'Deficit calorico + cardio estructurado',
-    goalCard_muscle_gain: 'Ganar Musculo',
+    goalCard_weight_loss_desc: 'Deficit calórico + cardio estructurado',
+    goalCard_muscle_gain: 'Ganar Músculo',
     goalCard_muscle_gain_desc: 'Hipertrofia con volumen optimizado',
-    goalCard_max_strength: 'Fuerza Maxima',
+    goalCard_max_strength: 'Fuerza Máxima',
     goalCard_max_strength_desc: 'Powerlifting y levantamientos pesados',
     goalCard_conditioning: 'Conditioning/CrossFit',
     goalCard_conditioning_desc: 'Metcons + acondicionamiento funcional',
     goalCard_toned_abs: 'Tonificar Abdomen',
-    goalCard_toned_abs_desc: 'Core fuerte + definicion abdominal',
-    goalCard_glute_building: 'Construir Gluteos',
-    goalCard_glute_building_desc: 'Hip thrust + gluteos definidos y fuertes',
+    goalCard_toned_abs_desc: 'Core fuerte + definición abdominal',
+    goalCard_glute_building: 'Construir Glúteos',
+    goalCard_glute_building_desc: 'Hip thrust + glúteos definidos y fuertes',
     goalCard_fat_burn: 'Quemar Grasa Intenso',
-    goalCard_fat_burn_desc: 'HIIT + fuerza para maximo quema calorica',
+    goalCard_fat_burn_desc: 'HIIT + fuerza para máximo quema calórica',
 
     // Stats
-    stat1Number: '7',
-    stat1Label: 'programas especializados',
+    stat1Number: '84+',
+    stat1Label: 'variantes de plan',
     stat2Number: '50+',
-    stat2Label: 'videos de tecnica incluidos',
+    stat2Label: 'videos de técnica',
     stat3Number: '180',
-    stat3Label: 'dias de entrenamiento',
+    stat3Label: 'días de protocolo',
+    stat4Number: '100%',
+    stat4Label: 'funciona offline',
+
+    // Testimonials
+    testimonialsTitle: 'Lo que dicen nuestros atletas',
+    testimonialsSubtitle: 'Resultados reales de personas reales',
+    testimonials: [
+      {
+        name: 'Martín L.',
+        role: 'Intermedio · Ganar Músculo',
+        quote: 'En 12 semanas subí mi bench de 60kg a 80kg. La progresión automática es un antes y después.',
+        metric: '+20kg bench press',
+      },
+      {
+        name: 'Valentina R.',
+        role: 'Principiante · Tonificar',
+        quote: 'Nunca había seguido un plan más de 2 semanas. Con GymCounter llevo 3 meses sin faltar.',
+        metric: '90 días consistente',
+      },
+      {
+        name: 'Diego M.',
+        role: 'Avanzado · Fuerza Máxima',
+        quote: 'El deload automático y la periodización son exactamente lo que necesitaba. Dejé de estancarme.',
+        metric: 'PR en squat y deadlift',
+      },
+    ],
+
+    // Comparison
+    comparisonTitle: 'GymCounter vs. improvisar',
+    comparisonWithout: 'Sin sistema',
+    comparisonWith: 'Con GymCounter',
+    comparisonRows: [
+      { without: 'Repetís los mismos pesos', with: 'Progresión automática semanal' },
+      { without: 'No sabés si mejoraste', with: 'Tracking completo de cada sesión' },
+      { without: 'Te estancás en semanas', with: 'Deload y periodización inteligente' },
+      { without: 'Improvisás ejercicios', with: 'Plan estructurado de 180 días' },
+      { without: 'Técnica por intuición', with: '50+ videos de técnica profesional' },
+    ],
 
     // Pricing
-    pricingTitle: 'Planes simples',
+    pricingTitle: 'Invertí en tu progreso',
     pricingSubtitle: 'Empezá con 14 días gratis. Sin tarjeta de crédito.',
     planMonthly: 'Mensual',
     planAnnual: 'Anual',
@@ -113,6 +172,9 @@ const es = {
     perYear: '/año',
     save: 'Ahorrás',
     mostPopular: 'Más popular',
+    billingMonthly: 'Mensual',
+    billingAnnual: 'Anual',
+    savePercent: 'Ahorrá 17%',
     monthlyFeatures: [
       'Plan personalizado de 180 días',
       'Progresión automática de pesos',
@@ -130,6 +192,7 @@ const es = {
       'Sin interrupciones por 12 meses',
     ],
     startFree: 'Comenzar gratis',
+    pricingGuarantee: '14 días gratis · Sin tarjeta · Cancelá cuando quieras',
     securePayments: 'Pagos seguros procesados por Stripe · Tus datos están protegidos',
 
     // FAQ
@@ -144,9 +207,9 @@ const es = {
     ],
 
     // CTA Final
-    ctaFinalTitle: '¿Listo para transformar tu físico?',
-    ctaFinalSubtitle: 'Unite a GymCounter y empezá tu camino de 180 días con un plan que se adapta a vos.',
-    ctaFinalNoCard: 'Sin tarjeta requerida · Cancela cuando quieras',
+    ctaFinalTitle: '¿Listo para dejar de improvisar?',
+    ctaFinalSubtitle: 'Unite a miles de atletas que ya entrenan con un sistema real. 180 días. Tu ritmo. Tu progreso.',
+    ctaFinalNoCard: 'Sin tarjeta requerida · Cancelá cuando quieras',
 
     // Footer
     footerTerms: 'Términos',
@@ -188,7 +251,6 @@ const es = {
     stepGoals: 'Objetivos',
     stepPlan: 'Plan',
     footerTip: 'Tu informaci\u00f3n es privada y segura. Puedes cambiarla despu\u00e9s en ajustes.',
-    // Profile
     profileTitle: 'Cu\u00e9ntanos sobre ti',
     profileSubtitle: 'Necesitamos algunos datos b\u00e1sicos para personalizar tu plan',
     sex: 'Sexo',
@@ -199,7 +261,6 @@ const es = {
     age: 'Edad',
     bmi: 'IMC',
     selectSex: 'Por favor selecciona tu sexo',
-    // Goals
     goalsTitle: 'Define tu objetivo',
     goalsSubtitle: 'Personalizaremos tu plan seg\u00fan tus metas y disponibilidad',
     mainGoalLabel: '\u00bfCu\u00e1l es tu objetivo principal?',
@@ -239,7 +300,6 @@ const es = {
     injuryElbow: 'Codo',
     selectGoal: 'Por favor selecciona tu objetivo',
     selectExperience: 'Por favor selecciona tu nivel de experiencia',
-    // Plan
     planTitle: 'Tu plan est\u00e1 listo',
     planSubtitle: 'Protocolo de 180 d\u00edas personalizado para ti',
     daysPerWeek: 'd\u00edas/semana',
@@ -256,7 +316,6 @@ const es = {
     startTraining: 'Comenzar entrenamiento',
     configuring: 'Configurando...',
     errorOnboarding: 'Hubo un error al completar el onboarding. Por favor intenta de nuevo.',
-    // Plan descriptions
     descWeightLoss: 'Plan enfocado en d\u00e9ficit cal\u00f3rico con \u00e9nfasis en cardio y ejercicios compuestos para maximizar gasto cal\u00f3rico',
     descMuscleGain: 'Protocolo de hipertrofia con volumen optimizado y progresi\u00f3n estructurada para ganancia muscular',
     descMaxStrength: 'Programa de fuerza con levantamientos pesados y periodizaci\u00f3n para maximizar tus PRs',
@@ -264,7 +323,6 @@ const es = {
     descTonedAbs: 'Programa enfocado en fortalecer y definir el abdomen con ejercicios de core, HIIT y circuitos. Ciclos de 6 días con progresión automática.',
     descGluteBuilding: 'Programa especializado en construir y definir glúteos con hip thrust, sentadillas y trabajo de posterior. Ciclos de 6 días con progresión de peso.',
     descFatBurn: 'Programa intensivo de quema de grasa combinando fuerza full body con HIIT, circuitos metabólicos y cardio. Ciclos de 6 días.',
-    // Experience features
     beginnerFeatures: ['Ejercicios b\u00e1sicos y seguros', 'Volumen moderado para adaptaci\u00f3n', '\u00c9nfasis en t\u00e9cnica correcta', 'Progresi\u00f3n gradual'],
     intermediateFeatures: ['Mayor variedad de ejercicios', 'Volumen y frecuencia \u00f3ptimos', 'T\u00e9cnicas de intensificaci\u00f3n', 'Periodizaci\u00f3n estructurada'],
     advancedFeatures: ['Ejercicios complejos y variaciones', 'Alto volumen de entrenamiento', 'T\u00e9cnicas avanzadas', 'Especializaci\u00f3n y picos'],
@@ -289,13 +347,11 @@ const es = {
     visitsOf: 'visitas de',
     daysElapsed: 'd\u00edas transcurridos',
     ofTheYear: 'del a\u00f1o',
-    // Tabs
     tabAttendance: 'Asistencias',
     tabRoutine: 'Rutina',
     tabProjection: 'Proyecci\u00f3n',
     tabRecords: 'Registros',
     tabSettings: 'Configuraci\u00f3n',
-    // Week days
     mon: 'LUN',
     tue: 'MAR',
     wed: 'MI\u00c9',

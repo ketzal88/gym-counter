@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const lexend = Lexend({ subsets: ["latin"], variable: "--font-lexend" });
 
 export const viewport: Viewport = {
-  themeColor: '#2563eb',
+  themeColor: '#f59e0b',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -15,17 +15,68 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "GymCounter - Military Protocol",
-  description: "Track your gym attendance and follow the 180-day Military Protocol",
+  title: {
+    default: 'GymCounter - Protocolos de entrenamiento de 180 días',
+    template: '%s | GymCounter',
+  },
+  description: 'Protocolos de 180 días con progresión automática. 7 programas especializados que se adaptan a tu objetivo, nivel y disponibilidad. Tracking completo. Funciona offline.',
+  keywords: [
+    'gym tracker', 'workout tracker', 'entrenamiento', 'rutina gym',
+    'progresión automática', 'plan de entrenamiento', 'fitness app',
+    'gym counter', 'workout log', 'exercise tracker',
+    'hypertrophy', 'strength training', 'periodización',
+  ],
+  authors: [{ name: 'GymCounter' }],
+  creator: 'GymCounter',
+  publisher: 'GymCounter',
   manifest: '/manifest.json',
   icons: {
-    icon: '/favicon.svg',
-    apple: '/favicon.svg',
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon-48.png', sizes: '48x48', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: 'GymCounter',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'es_AR',
+    alternateLocale: 'en_US',
+    siteName: 'GymCounter',
+    title: 'GymCounter - Protocolos de entrenamiento de 180 días',
+    description: 'Protocolos de 180 días con progresión automática. 7 programas especializados. Tracking completo. Funciona offline. Comenzá gratis.',
+    images: [
+      {
+        url: '/icon-512.png',
+        width: 512,
+        height: 512,
+        alt: 'GymCounter - Tu protocolo de entrenamiento',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary',
+    title: 'GymCounter - Protocolos de entrenamiento de 180 días',
+    description: 'Protocolos de 180 días con progresión automática. 7 programas. Tracking completo. Funciona offline.',
+    images: ['/icon-512.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
   },
 };
 

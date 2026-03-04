@@ -1,9 +1,10 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import PublicOnlyGuard from './components/guards/PublicOnlyGuard';
 import { useLanguage } from '@/context/LanguageContext';
-import { Check, ArrowRight, TrendingUp, Play, WifiOff, Dumbbell, Zap, Shield, Target, Sparkles, Heart, Flame } from 'lucide-react';
+import { Check, ArrowRight, TrendingUp, Play, WifiOff, Dumbbell, Zap, Shield, Target, Sparkles, Heart, Flame, X, Star, Users, BarChart3, ChevronRight } from 'lucide-react';
 
 // --- Phone Mockup Shell ---
 function PhoneMockup({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -34,24 +35,14 @@ function MockupProfileScreen() {
         </div>
       </div>
       <div className="space-y-3 mt-2">
-        <div>
-          <div className="h-2 w-10 bg-slate-200 dark:bg-slate-800 rounded mb-2" />
-          <div className="h-8 rounded-lg bg-slate-100 dark:bg-slate-900 flex items-center px-3">
-            <span className="text-xs font-semibold text-slate-500">80 kg</span>
+        {[{ label: '80 kg' }, { label: '178 cm' }, { label: '28' }].map((item) => (
+          <div key={item.label}>
+            <div className="h-2 w-10 bg-slate-200 dark:bg-slate-800 rounded mb-2" />
+            <div className="h-8 rounded-lg bg-slate-100 dark:bg-slate-900 flex items-center px-3">
+              <span className="text-xs font-semibold text-slate-500">{item.label}</span>
+            </div>
           </div>
-        </div>
-        <div>
-          <div className="h-2 w-10 bg-slate-200 dark:bg-slate-800 rounded mb-2" />
-          <div className="h-8 rounded-lg bg-slate-100 dark:bg-slate-900 flex items-center px-3">
-            <span className="text-xs font-semibold text-slate-500">178 cm</span>
-          </div>
-        </div>
-        <div>
-          <div className="h-2 w-10 bg-slate-200 dark:bg-slate-800 rounded mb-2" />
-          <div className="h-8 rounded-lg bg-slate-100 dark:bg-slate-900 flex items-center px-3">
-            <span className="text-xs font-semibold text-slate-500">28</span>
-          </div>
-        </div>
+        ))}
       </div>
       <div className="h-10 rounded-lg bg-slate-900 dark:bg-white mt-4" />
     </div>
@@ -217,6 +208,16 @@ function MockupOfflineScreen() {
 // --- Main Landing Page ---
 export default function LandingPage() {
   const { t, dict } = useLanguage();
+  const [billingAnnual, setBillingAnnual] = useState(true);
+  const [showStickyCta, setShowStickyCta] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowStickyCta(window.scrollY > 600);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
     <PublicOnlyGuard>
@@ -227,44 +228,51 @@ export default function LandingPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-slate-900 dark:bg-white flex items-center justify-center">
-                  <span className="text-xl">💪</span>
+                  <Dumbbell className="w-5 h-5 text-white dark:text-slate-900" />
                 </div>
                 <span className="font-display font-bold text-xl text-slate-900 dark:text-white tracking-tight">
                   GymCounter
                 </span>
               </div>
-              <Link
-                href="/auth/signin"
-                className="px-5 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
-              >
-                {t('landing.signIn')}
-              </Link>
+              <div className="flex items-center gap-4">
+                <a
+                  href="#pricing"
+                  className="hidden sm:inline-flex text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                >
+                  {t('landing.ctaPlans')}
+                </a>
+                <Link
+                  href="/auth/signin"
+                  className="px-5 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
+                >
+                  {t('landing.signIn')}
+                </Link>
+              </div>
             </div>
           </div>
         </header>
 
         {/* 2. Hero */}
-        <section className="overflow-hidden">
-          <div className="max-w-5xl mx-auto px-6 md:px-8 py-20 md:py-28">
+        <section className="overflow-hidden relative">
+          {/* Subtle gradient bg */}
+          <div className="absolute inset-0 bg-gradient-to-b from-amber-50/50 via-white to-white dark:from-amber-950/10 dark:via-slate-950 dark:to-slate-950 pointer-events-none" />
+          <div className="relative max-w-5xl mx-auto px-6 md:px-8 py-20 md:py-28">
             <div className="max-w-3xl mx-auto text-center space-y-8 animate-fade-in-up">
               {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
                 <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                 <span className="text-xs font-medium text-slate-700 dark:text-slate-300 tracking-wide uppercase">
                   {t('landing.protocolBadge')}
                 </span>
               </div>
 
-              {/* Stacked headline */}
-              <h1 className="font-display text-5xl sm:text-6xl md:text-7xl font-bold text-slate-900 dark:text-white tracking-tight leading-[1.1]">
-                {t('landing.heroLine1')}{' '}
-                <span className="text-amber-500 dark:text-amber-400">{t('landing.heroLine1Accent')}</span>
+              {/* Two-line headline */}
+              <h1 className="font-display text-5xl sm:text-6xl md:text-7xl font-bold text-slate-900 dark:text-white tracking-tight leading-[1.08]">
+                {t('landing.heroHeadline')}
                 <br />
-                {t('landing.heroLine2')}{' '}
-                <span className="text-amber-500 dark:text-amber-400">{t('landing.heroLine2Accent')}</span>
-                <br />
-                {t('landing.heroLine3')}{' '}
-                <span className="text-amber-500 dark:text-amber-400">{t('landing.heroLine3Accent')}</span>
+                <span className="bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
+                  {t('landing.heroHeadlineAccent')}
+                </span>
               </h1>
 
               {/* Subtitle */}
@@ -276,21 +284,21 @@ export default function LandingPage() {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
                 <Link
                   href="/auth/signup"
-                  className="group w-full sm:w-auto px-8 py-4 rounded-lg font-semibold text-base bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 transition-colors flex items-center justify-center gap-2"
+                  className="group w-full sm:w-auto px-8 py-4 rounded-xl font-semibold text-base bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 transition-all shadow-lg shadow-slate-900/10 dark:shadow-white/10 flex items-center justify-center gap-2"
                 >
                   {t('landing.ctaStart')}
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                 </Link>
                 <a
                   href="#pricing"
-                  className="w-full sm:w-auto px-8 py-4 rounded-lg font-medium text-base border border-amber-400 dark:border-amber-500 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20 transition-colors text-center"
+                  className="w-full sm:w-auto px-8 py-4 rounded-xl font-medium text-base border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-400 dark:hover:border-slate-600 transition-colors text-center"
                 >
                   {t('landing.ctaPlans')}
                 </a>
               </div>
 
               {/* Trust badges */}
-              <div className="flex flex-wrap items-center justify-center gap-6 pt-6 text-sm text-slate-500 dark:text-slate-500">
+              <div className="flex flex-wrap items-center justify-center gap-6 pt-4 text-sm text-slate-500 dark:text-slate-500">
                 {[t('landing.trustNoCard'), t('landing.trustCancel'), t('landing.trustOffline')].map((trust) => (
                   <div key={trust} className="flex items-center gap-2">
                     <Check className="w-4 h-4 text-amber-500 dark:text-amber-400" />
@@ -302,7 +310,79 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 2.5 Goals Section */}
+        {/* 2.5 Social Proof Bar */}
+        <section className="border-y border-slate-200/80 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50">
+          <div className="max-w-5xl mx-auto px-6 md:px-8 py-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+              {[
+                { icon: Users, number: t('landing.socialProofUsers'), label: t('landing.socialProofUsersLabel') },
+                { icon: BarChart3, number: t('landing.socialProofWorkouts'), label: t('landing.socialProofWorkoutsLabel') },
+                { icon: Star, number: t('landing.socialProofRating'), label: t('landing.socialProofRatingLabel') },
+                { icon: Target, number: t('landing.socialProofPrograms'), label: t('landing.socialProofProgramsLabel') },
+              ].map((stat) => (
+                <div key={stat.label} className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-950/40 flex items-center justify-center flex-shrink-0">
+                    <stat.icon className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div>
+                    <div className="font-display text-xl font-bold text-slate-900 dark:text-white">{stat.number}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">{stat.label}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 3. Problem → Solution */}
+        <section>
+          <div className="max-w-5xl mx-auto px-6 md:px-8 py-20 md:py-24">
+            <div className="text-center space-y-3 mb-16">
+              <h2 className="font-display text-3xl md:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
+                {t('landing.problemTitle')}
+              </h2>
+              <p className="text-lg text-slate-600 dark:text-slate-400">
+                {t('landing.problemSubtitle')}
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+              {/* Without system */}
+              <div className="p-8 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-2 mb-6">
+                  <X className="w-5 h-5 text-red-500" />
+                  <h3 className="font-semibold text-slate-900 dark:text-white">{t('landing.comparisonWithout')}</h3>
+                </div>
+                <ul className="space-y-4">
+                  {(dict.landing.problemItems as string[]).map((item, idx) => (
+                    <li key={idx} className="flex items-start gap-3">
+                      <X className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
+                      <span className="text-sm text-slate-600 dark:text-slate-400">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* With GymCounter */}
+              <div className="p-8 rounded-2xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40">
+                <div className="flex items-center gap-2 mb-6">
+                  <Check className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                  <h3 className="font-semibold text-slate-900 dark:text-white">{t('landing.solutionTitle')}</h3>
+                </div>
+                <ul className="space-y-4">
+                  {(dict.landing.solutionItems as string[]).map((item, idx) => (
+                    <li key={idx} className="flex items-start gap-3">
+                      <Check className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                      <span className="text-sm text-slate-700 dark:text-slate-300">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 4. Goals Section */}
         <section className="bg-slate-50 dark:bg-slate-900">
           <div className="max-w-6xl mx-auto px-6 md:px-8 py-20 md:py-24">
             <div className="text-center space-y-3 mb-12">
@@ -346,8 +426,8 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 3. How It Works */}
-        <section className="bg-slate-50 dark:bg-slate-900">
+        {/* 5. How It Works */}
+        <section>
           <div className="max-w-6xl mx-auto px-6 md:px-8 py-20 md:py-24">
             <div className="text-center space-y-3 mb-16">
               <h2 className="font-display text-3xl md:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
@@ -378,7 +458,7 @@ export default function LandingPage() {
                 <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-amber-500 text-white font-bold text-lg">
                   2
                 </div>
-                <PhoneMockup className="animate-phone-float" style-delay="1s">
+                <PhoneMockup className="animate-phone-float">
                   <MockupPlanScreen />
                 </PhoneMockup>
                 <div className="space-y-2">
@@ -404,10 +484,10 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 4. Features (Alternating Left-Right) */}
-        <section>
+        {/* 6. Features (Alternating Left-Right) */}
+        <section className="bg-slate-50 dark:bg-slate-900">
           <div className="max-w-6xl mx-auto px-6 md:px-8 py-20 md:py-24 space-y-24">
-            {/* Feature 1: Automatic Progression - text LEFT, mockup RIGHT */}
+            {/* Feature 1: Automatic Progression */}
             <div className="flex flex-col md:flex-row items-center gap-12 md:gap-16">
               <div className="flex-1 space-y-6">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
@@ -438,7 +518,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Feature 2: Technique Videos - mockup LEFT, text RIGHT */}
+            {/* Feature 2: Technique Videos */}
             <div className="flex flex-col md:flex-row-reverse items-center gap-12 md:gap-16">
               <div className="flex-1 space-y-6">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
@@ -469,7 +549,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Feature 3: Offline Mode - text LEFT, mockup RIGHT */}
+            {/* Feature 3: Offline Mode */}
             <div className="flex flex-col md:flex-row items-center gap-12 md:gap-16">
               <div className="flex-1 space-y-6">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
@@ -502,17 +582,100 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 5. Stats / Social Proof */}
+        {/* 7. Comparison Table */}
+        <section>
+          <div className="max-w-4xl mx-auto px-6 md:px-8 py-20 md:py-24">
+            <div className="text-center space-y-3 mb-12">
+              <h2 className="font-display text-3xl md:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
+                {t('landing.comparisonTitle')}
+              </h2>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+              {/* Table header */}
+              <div className="grid grid-cols-2 bg-slate-100 dark:bg-slate-900">
+                <div className="px-6 py-4 text-sm font-semibold text-slate-500 dark:text-slate-400 border-r border-slate-200 dark:border-slate-800">
+                  {t('landing.comparisonWithout')}
+                </div>
+                <div className="px-6 py-4 text-sm font-semibold text-amber-600 dark:text-amber-400">
+                  {t('landing.comparisonWith')}
+                </div>
+              </div>
+              {/* Table rows */}
+              {(dict.landing.comparisonRows as { without: string; with: string }[]).map((row, idx) => (
+                <div key={idx} className={`grid grid-cols-2 ${idx < (dict.landing.comparisonRows as { without: string; with: string }[]).length - 1 ? 'border-b border-slate-200 dark:border-slate-800' : ''}`}>
+                  <div className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400 border-r border-slate-200 dark:border-slate-800 flex items-center gap-2">
+                    <X className="w-4 h-4 text-red-400 flex-shrink-0" />
+                    <span>{row.without}</span>
+                  </div>
+                  <div className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                    <Check className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                    <span>{row.with}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 8. Testimonials */}
         <section className="bg-slate-50 dark:bg-slate-900">
-          <div className="max-w-4xl mx-auto px-6 md:px-8 py-16">
-            <div className="grid grid-cols-3 gap-8">
+          <div className="max-w-6xl mx-auto px-6 md:px-8 py-20 md:py-24">
+            <div className="text-center space-y-3 mb-12">
+              <h2 className="font-display text-3xl md:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
+                {t('landing.testimonialsTitle')}
+              </h2>
+              <p className="text-lg text-slate-600 dark:text-slate-400">
+                {t('landing.testimonialsSubtitle')}
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6">
+              {(dict.landing.testimonials as { name: string; role: string; quote: string; metric: string }[]).map((testimonial, idx) => (
+                <div key={idx} className="p-6 rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-4">
+                  {/* Stars */}
+                  <div className="flex gap-0.5">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star key={s} className="w-4 h-4 text-amber-400 fill-amber-400" />
+                    ))}
+                  </div>
+                  {/* Quote */}
+                  <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed italic">
+                    &ldquo;{testimonial.quote}&rdquo;
+                  </p>
+                  {/* Metric badge */}
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800/40">
+                    <TrendingUp className="w-3 h-3 text-green-600 dark:text-green-400" />
+                    <span className="text-xs font-semibold text-green-700 dark:text-green-400">{testimonial.metric}</span>
+                  </div>
+                  {/* Author */}
+                  <div className="flex items-center gap-3 pt-2">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                      <span className="text-sm font-bold text-white">{testimonial.name.charAt(0)}</span>
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-slate-900 dark:text-white">{testimonial.name}</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400">{testimonial.role}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 9. Stats */}
+        <section>
+          <div className="max-w-5xl mx-auto px-6 md:px-8 py-16">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
               {[
                 { number: t('landing.stat1Number'), label: t('landing.stat1Label') },
                 { number: t('landing.stat2Number'), label: t('landing.stat2Label') },
                 { number: t('landing.stat3Number'), label: t('landing.stat3Label') },
+                { number: t('landing.stat4Number'), label: t('landing.stat4Label') },
               ].map((stat) => (
-                <div key={stat.number} className="text-center">
-                  <div className="font-display text-4xl md:text-5xl font-bold text-amber-500 dark:text-amber-400">
+                <div key={stat.label} className="text-center">
+                  <div className="font-display text-4xl md:text-5xl font-bold bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
                     {stat.number}
                   </div>
                   <div className="text-sm text-slate-600 dark:text-slate-400 mt-2">{stat.label}</div>
@@ -522,10 +685,10 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 6. Pricing */}
-        <section id="pricing">
+        {/* 10. Pricing */}
+        <section id="pricing" className="bg-slate-50 dark:bg-slate-900">
           <div className="max-w-6xl mx-auto px-6 md:px-8 py-20 md:py-24">
-            <div className="text-center space-y-3 mb-16">
+            <div className="text-center space-y-3 mb-10">
               <h2 className="font-display text-3xl md:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
                 {t('landing.pricingTitle')}
               </h2>
@@ -534,90 +697,88 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-              {/* Monthly Plan */}
-              <div className="p-8 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 hover:border-slate-300 dark:hover:border-slate-700 transition-colors">
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-1">
-                      {t('landing.planMonthly')}
-                    </h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-500">
-                      {t('landing.trustCancel')}
-                    </p>
-                  </div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="font-display text-4xl font-bold text-slate-900 dark:text-white tracking-tight">$4.99</span>
-                    <span className="text-slate-500 dark:text-slate-500">{t('landing.perMonth')}</span>
-                  </div>
-                  <ul className="space-y-3">
-                    {(dict.landing.monthlyFeatures as string[]).map((feature, idx) => (
-                      <li key={idx} className="flex items-start gap-3">
-                        <Check className="w-5 h-5 text-slate-400 dark:text-slate-600 flex-shrink-0 mt-0.5" />
-                        <span className="text-sm text-slate-600 dark:text-slate-400">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Link
-                    href="/auth/signup"
-                    className="block w-full py-3.5 rounded-lg font-medium text-center border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-400 dark:hover:border-slate-600 transition-colors"
-                  >
-                    {t('landing.startFree')}
-                  </Link>
-                </div>
-              </div>
+            {/* Billing Toggle */}
+            <div className="flex items-center justify-center gap-3 mb-12">
+              <button
+                onClick={() => setBillingAnnual(false)}
+                className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-colors ${!billingAnnual ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
+              >
+                {t('landing.billingMonthly')}
+              </button>
+              <button
+                onClick={() => setBillingAnnual(true)}
+                className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${billingAnnual ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
+              >
+                {t('landing.billingAnnual')}
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${billingAnnual ? 'bg-amber-400 text-slate-900' : 'bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400'}`}>
+                  {t('landing.savePercent')}
+                </span>
+              </button>
+            </div>
 
-              {/* Annual Plan - Highlighted */}
-              <div className="relative p-8 rounded-2xl border-2 border-amber-500 dark:border-amber-400 bg-white dark:bg-slate-950">
+            {/* Single pricing card */}
+            <div className="max-w-lg mx-auto">
+              <div className="relative p-8 md:p-10 rounded-2xl border-2 border-amber-500 dark:border-amber-400 bg-white dark:bg-slate-950 shadow-xl shadow-amber-500/5">
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-amber-500 text-white text-xs font-semibold">
-                  {t('landing.mostPopular')}
+                  {billingAnnual ? t('landing.mostPopular') : t('landing.planMonthly')}
                 </div>
                 <div className="space-y-6">
-                  <div>
-                    <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-1">
-                      {t('landing.planAnnual')}
+                  <div className="text-center">
+                    <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
+                      {billingAnnual ? t('landing.planAnnual') : t('landing.planMonthly')}
                     </h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-500">
-                      {t('landing.planAnnualSave')}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-baseline gap-1">
-                      <span className="font-display text-4xl font-bold text-slate-900 dark:text-white tracking-tight">$49.90</span>
-                      <span className="text-slate-500 dark:text-slate-500">{t('landing.perYear')}</span>
+                    <div className="flex items-baseline justify-center gap-1">
+                      <span className="font-display text-5xl font-bold text-slate-900 dark:text-white tracking-tight">
+                        {billingAnnual ? '$4.16' : '$4.99'}
+                      </span>
+                      <span className="text-slate-500 dark:text-slate-500">{t('landing.perMonth')}</span>
                     </div>
-                    <div className="text-sm text-slate-500 dark:text-slate-500">
-                      <span className="line-through">$59.88</span>
-                      {' · '}
-                      <span className="text-amber-600 dark:text-amber-400 font-medium">{t('landing.save')} $9.98</span>
-                    </div>
+                    {billingAnnual && (
+                      <div className="text-sm text-slate-500 dark:text-slate-500 mt-1">
+                        <span className="line-through">$59.88</span>
+                        {' '}
+                        <span className="text-amber-600 dark:text-amber-400 font-medium">$49.90{t('landing.perYear')}</span>
+                        {' · '}
+                        <span className="text-amber-600 dark:text-amber-400 font-medium">{t('landing.save')} $9.98</span>
+                      </div>
+                    )}
                   </div>
+
                   <ul className="space-y-3">
-                    {(dict.landing.annualFeatures as string[]).map((feature, idx) => (
+                    {(billingAnnual
+                      ? (dict.landing.annualFeatures as string[])
+                      : (dict.landing.monthlyFeatures as string[])
+                    ).map((feature, idx) => (
                       <li key={idx} className="flex items-start gap-3">
                         <Check className="w-5 h-5 text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                         <span className="text-sm text-slate-600 dark:text-slate-400">{feature}</span>
                       </li>
                     ))}
                   </ul>
+
                   <Link
                     href="/auth/signup"
-                    className="block w-full py-3.5 rounded-lg font-semibold text-center bg-amber-500 text-white hover:bg-amber-600 transition-colors"
+                    className="group block w-full py-4 rounded-xl font-semibold text-center bg-amber-500 text-white hover:bg-amber-600 transition-colors text-base flex items-center justify-center gap-2"
                   >
-                    {t('landing.startFree')}
+                    {t('landing.ctaStart')}
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                   </Link>
+
+                  <p className="text-center text-xs text-slate-500 dark:text-slate-500">
+                    {t('landing.pricingGuarantee')}
+                  </p>
                 </div>
               </div>
             </div>
 
-            <div className="text-center mt-12">
+            <div className="text-center mt-10">
               <p className="text-sm text-slate-500 dark:text-slate-500">{t('landing.securePayments')}</p>
             </div>
           </div>
         </section>
 
-        {/* 7. FAQ */}
-        <section className="bg-slate-50 dark:bg-slate-900">
+        {/* 11. FAQ */}
+        <section>
           <div className="max-w-3xl mx-auto px-6 md:px-8 py-20 md:py-24">
             <div className="text-center space-y-3 mb-12">
               <h2 className="font-display text-3xl md:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
@@ -647,35 +808,39 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 8. Final CTA */}
+        {/* 12. Final CTA */}
         <section className="px-4 md:px-8 py-12">
-          <div className="max-w-4xl mx-auto rounded-3xl bg-gradient-to-br from-amber-500 to-orange-600 dark:from-amber-600 dark:to-orange-700 p-12 md:p-16 text-center space-y-6">
-            <h2 className="font-display text-3xl md:text-4xl font-bold text-white tracking-tight">
+          <div className="max-w-4xl mx-auto rounded-3xl bg-gradient-to-br from-amber-500 to-orange-600 dark:from-amber-600 dark:to-orange-700 p-12 md:p-16 text-center space-y-6 relative overflow-hidden">
+            {/* Decorative circles */}
+            <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-white/5 -translate-y-1/2 translate-x-1/2" />
+            <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full bg-white/5 translate-y-1/2 -translate-x-1/2" />
+
+            <h2 className="font-display text-3xl md:text-4xl font-bold text-white tracking-tight relative">
               {t('landing.ctaFinalTitle')}
             </h2>
-            <p className="text-lg text-white/80 max-w-2xl mx-auto">
+            <p className="text-lg text-white/80 max-w-2xl mx-auto relative">
               {t('landing.ctaFinalSubtitle')}
             </p>
             <Link
               href="/auth/signup"
-              className="inline-flex items-center gap-2 px-8 py-4 rounded-lg font-semibold text-base bg-white text-amber-600 hover:bg-slate-50 transition-colors"
+              className="relative inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold text-base bg-white text-amber-600 hover:bg-slate-50 transition-colors shadow-lg"
             >
               {t('landing.ctaStart')}
               <ArrowRight className="w-4 h-4" />
             </Link>
-            <p className="text-sm text-white/60">
+            <p className="text-sm text-white/60 relative">
               {t('landing.ctaFinalNoCard')}
             </p>
           </div>
         </section>
 
-        {/* 9. Footer */}
+        {/* 13. Footer */}
         <footer className="border-t border-slate-200 dark:border-slate-800">
           <div className="max-w-6xl mx-auto px-6 md:px-8 py-12">
             <div className="flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-slate-900 dark:bg-white flex items-center justify-center">
-                  <span className="text-lg">💪</span>
+                  <Dumbbell className="w-4 h-4 text-white dark:text-slate-900" />
                 </div>
                 <span className="font-display font-bold text-base text-slate-900 dark:text-white">
                   GymCounter
@@ -698,6 +863,19 @@ export default function LandingPage() {
             </div>
           </div>
         </footer>
+
+        {/* Sticky Mobile CTA */}
+        <div className={`fixed bottom-0 left-0 right-0 z-40 md:hidden transition-transform duration-300 ${showStickyCta ? 'translate-y-0' : 'translate-y-full'}`}>
+          <div className="bg-white/95 dark:bg-slate-950/95 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 px-4 py-3">
+            <Link
+              href="/auth/signup"
+              className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl font-semibold text-sm bg-amber-500 text-white hover:bg-amber-600 transition-colors"
+            >
+              {t('landing.ctaStart')}
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
       </div>
     </PublicOnlyGuard>
   );
