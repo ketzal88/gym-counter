@@ -65,6 +65,8 @@ export interface WorkoutLog {
     cycleIndex?: number;
     isDeload?: boolean;
     unlockResult?: Partial<UserTrainingState['liftState']> | null;
+    startTime?: string;
+    endTime?: string;
 }
 
 export interface UserTrainingState {
@@ -76,6 +78,7 @@ export interface UserTrainingState {
         deadlift: number;
         ohp: number;
         pullupsLevel: number;
+        hip_thrust: number;
     };
     benchmarkResults?: {
         maxPushUps?: number;
@@ -154,7 +157,7 @@ export const subscribeToVisits = (userId: string | null, callback: (visits: Visi
             timestamp: doc.data().timestamp?.toDate(),
         })) as Visit[];
         callback(visits);
-    });
+    }, () => {});
 };
 
 export const addVisit = async (userId: string, date: Date) => {
@@ -223,7 +226,7 @@ export const subscribeToBodyMeasurements = (userId: string, callback: (measureme
             timestamp: doc.data().timestamp?.toDate(),
         })) as BodyMeasurement[];
         callback(measurements);
-    });
+    }, () => {});
 };
 
 export const addBodyMeasurement = async (userId: string, date: Date, muscle: number, fat: number) => {
@@ -252,7 +255,7 @@ export const subscribeToMaxWeights = (userId: string, callback: (weights: MaxWei
             timestamp: doc.data().timestamp?.toDate(),
         })) as MaxWeight[];
         callback(weights);
-    });
+    }, () => {});
 };
 
 export const addMaxWeight = async (userId: string, date: Date, exercise: string, weight: number, reps: number) => {
@@ -289,7 +292,7 @@ export const subscribeToWorkoutLogs = (userId: string, callback: (workouts: Work
             timestamp: doc.data().timestamp?.toDate(),
         })) as WorkoutLog[];
         callback(workouts);
-    });
+    }, () => {});
 };
 
 // --- USER TRAINING STATE ---
@@ -314,7 +317,7 @@ export const subscribeToUserTrainingState = (userId: string, callback: (state: U
         } else {
             callback(null);
         }
-    });
+    }, () => {});
 };
 
 export const updateUserTrainingState = async (userId: string, updates: Partial<UserTrainingState>) => {
@@ -336,7 +339,7 @@ export const updateUserProfile = async (userId: string, updates: Partial<UserPro
 export interface PlanVariant {
     id: string; // ej: "muscle_gain_intermediate_5day"
     name: string; // ej: "Ganancia Muscular - Intermedio (5 días)"
-    goal: 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning';
+    goal: 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn';
     experienceLevel: 'beginner' | 'intermediate' | 'advanced';
     weeklyDays: 3 | 4 | 5 | 6;
 

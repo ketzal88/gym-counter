@@ -1,28 +1,113 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
 import { User, Scale, Ruler, Calendar } from 'lucide-react';
+
+function NumberStepper({
+    value,
+    onChange,
+    min,
+    max,
+    unit,
+    icon: Icon,
+    label,
+}: {
+    value: number;
+    onChange: (v: number) => void;
+    min: number;
+    max: number;
+    unit: string;
+    icon: typeof Scale;
+    label: string;
+}) {
+    const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const clamp = (v: number) => Math.max(min, Math.min(max, v));
+
+    const stopRepeat = useCallback(() => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        timeoutRef.current = null;
+        intervalRef.current = null;
+    }, []);
+
+    const startRepeat = useCallback((delta: number) => {
+        timeoutRef.current = setTimeout(() => {
+            intervalRef.current = setInterval(() => {
+                onChange(clamp(value + delta));
+            }, 80);
+        }, 400);
+    }, [value, onChange, min, max]);
+
+    const handlePointerDown = (delta: number) => {
+        onChange(clamp(value + delta));
+        startRepeat(delta);
+    };
+
+    return (
+        <div className="space-y-3">
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                <Icon className="w-4 h-4" />
+                {label}
+            </label>
+            <div className="flex items-center gap-3">
+                <button
+                    type="button"
+                    onPointerDown={() => handlePointerDown(-1)}
+                    onPointerUp={stopRepeat}
+                    onPointerLeave={stopRepeat}
+                    className="w-14 h-12 rounded-xl border border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 bg-white dark:bg-slate-950 font-semibold text-xl transition-colors select-none active:bg-slate-100 dark:active:bg-slate-900"
+                >
+                    −
+                </button>
+                <div className="flex-1 h-14 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex items-center justify-center gap-1 relative">
+                    <input
+                        type="number"
+                        value={value}
+                        onChange={(e) => {
+                            const v = parseInt(e.target.value);
+                            if (!isNaN(v)) onChange(clamp(v));
+                        }}
+                        className="w-20 text-center text-3xl font-bold text-slate-900 dark:text-white bg-transparent outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    <span className="text-sm text-slate-500 dark:text-slate-500">{unit}</span>
+                </div>
+                <button
+                    type="button"
+                    onPointerDown={() => handlePointerDown(1)}
+                    onPointerUp={stopRepeat}
+                    onPointerLeave={stopRepeat}
+                    className="w-14 h-12 rounded-xl border border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 bg-white dark:bg-slate-950 font-semibold text-xl transition-colors select-none active:bg-slate-100 dark:active:bg-slate-900"
+                >
+                    +
+                </button>
+            </div>
+            <div className="flex justify-between text-xs text-slate-400">
+                <span>{min} {unit}</span>
+                <span>{max} {unit}</span>
+            </div>
+        </div>
+    );
+}
 
 export default function OnboardingProfilePage() {
     const router = useRouter();
     const { t } = useLanguage();
 
-    // Estados del formulario
     const [weight, setWeight] = useState(70);
     const [sex, setSex] = useState<'M' | 'F' | null>(null);
     const [age, setAge] = useState(25);
     const [height, setHeight] = useState(170);
 
     const handleContinue = () => {
-        // Validación básica
         if (!sex) {
             alert(t('onboarding.selectSex'));
             return;
         }
 
-        // Guardar en localStorage temporalmente
         localStorage.setItem('onboarding_profile', JSON.stringify({
             weight,
             sex,
@@ -33,7 +118,6 @@ export default function OnboardingProfilePage() {
         router.push('/onboarding/goals');
     };
 
-    // Calcular IMC
     const calculateBMI = () => {
         const heightInMeters = height / 100;
         return (weight / (heightInMeters * heightInMeters)).toFixed(1);
@@ -113,94 +197,38 @@ export default function OnboardingProfilePage() {
                     </div>
                 </div>
 
-                {/* Peso con Slider */}
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                        <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-                            <Scale className="w-4 h-4" />
-                            {t('onboarding.weight')}
-                        </label>
-                        <div className="text-right">
-                            <span className="text-2xl font-bold text-slate-900 dark:text-white">
-                                {weight}
-                            </span>
-                            <span className="text-sm text-slate-500 dark:text-slate-500 ml-1">kg</span>
-                        </div>
-                    </div>
-                    <input
-                        type="range"
-                        min="40"
-                        max="150"
-                        value={weight}
-                        onChange={(e) => setWeight(Number(e.target.value))}
-                        className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full appearance-none cursor-pointer accent-blue-600"
-                    />
-                    <div className="flex justify-between text-xs text-slate-400">
-                        <span>40 kg</span>
-                        <span>150 kg</span>
-                    </div>
-                </div>
+                {/* Peso */}
+                <NumberStepper
+                    value={weight}
+                    onChange={setWeight}
+                    min={40}
+                    max={150}
+                    unit="kg"
+                    icon={Scale}
+                    label={t('onboarding.weight')}
+                />
 
-                {/* Altura con Slider */}
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                        <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-                            <Ruler className="w-4 h-4" />
-                            {t('onboarding.height')}
-                        </label>
-                        <div className="text-right">
-                            <span className="text-2xl font-bold text-slate-900 dark:text-white">
-                                {height}
-                            </span>
-                            <span className="text-sm text-slate-500 dark:text-slate-500 ml-1">cm</span>
-                        </div>
-                    </div>
-                    <input
-                        type="range"
-                        min="140"
-                        max="220"
-                        value={height}
-                        onChange={(e) => setHeight(Number(e.target.value))}
-                        className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full appearance-none cursor-pointer accent-blue-600"
-                    />
-                    <div className="flex justify-between text-xs text-slate-400">
-                        <span>140 cm</span>
-                        <span>220 cm</span>
-                    </div>
-                </div>
+                {/* Altura */}
+                <NumberStepper
+                    value={height}
+                    onChange={setHeight}
+                    min={140}
+                    max={220}
+                    unit="cm"
+                    icon={Ruler}
+                    label={t('onboarding.height')}
+                />
 
-                {/* Edad con Selector Numérico */}
-                <div className="space-y-3">
-                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-                        <Calendar className="w-4 h-4" />
-                        {t('onboarding.age')}
-                    </label>
-                    <div className="flex items-center gap-3">
-                        <button
-                            type="button"
-                            onClick={() => setAge(Math.max(15, age - 1))}
-                            className="w-12 h-12 rounded-lg border border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 bg-white dark:bg-slate-950 font-semibold text-lg transition-colors"
-                        >
-                            −
-                        </button>
-                        <div className="flex-1 h-14 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
-                            <span className="text-3xl font-bold text-slate-900 dark:text-white">
-                                {age}
-                            </span>
-                            <span className="text-sm text-slate-500 dark:text-slate-500 ml-2">{t('common.years')}</span>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => setAge(Math.min(80, age + 1))}
-                            className="w-12 h-12 rounded-lg border border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 bg-white dark:bg-slate-950 font-semibold text-lg transition-colors"
-                        >
-                            +
-                        </button>
-                    </div>
-                    <div className="flex justify-between text-xs text-slate-400">
-                        <span>15-80 {t('common.years')}</span>
-                    </div>
-                </div>
+                {/* Edad */}
+                <NumberStepper
+                    value={age}
+                    onChange={setAge}
+                    min={15}
+                    max={80}
+                    unit={t('common.years')}
+                    icon={Calendar}
+                    label={t('onboarding.age')}
+                />
             </div>
 
             {/* Botón de Continuar */}

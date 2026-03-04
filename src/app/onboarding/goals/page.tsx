@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
-import { Target, Activity, Dumbbell, Zap, Calendar, AlertCircle } from 'lucide-react';
+import { Target, Activity, Dumbbell, Zap, Calendar, AlertCircle, Flame, Heart, Sparkles } from 'lucide-react';
 
-type FitnessGoal = 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning';
+type FitnessGoal = 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn';
 type ExperienceLevel = 'beginner' | 'intermediate' | 'advanced';
 type WeeklyAvailability = 3 | 4 | 5 | 6;
 
@@ -18,6 +18,9 @@ export default function OnboardingGoalsPage() {
         { id: 'muscle_gain' as FitnessGoal, icon: Dumbbell, title: t('onboarding.goalMuscleGain'), description: t('onboarding.goalMuscleGainDesc'), color: 'text-blue-600 dark:text-blue-500', bgSelected: 'bg-blue-600', borderSelected: 'border-blue-600' },
         { id: 'max_strength' as FitnessGoal, icon: Target, title: t('onboarding.goalMaxStrength'), description: t('onboarding.goalMaxStrengthDesc'), color: 'text-purple-600 dark:text-purple-500', bgSelected: 'bg-purple-600', borderSelected: 'border-purple-600' },
         { id: 'conditioning' as FitnessGoal, icon: Zap, title: t('onboarding.goalConditioning'), description: t('onboarding.goalConditioningDesc'), color: 'text-green-600 dark:text-green-500', bgSelected: 'bg-green-600', borderSelected: 'border-green-600' },
+        { id: 'toned_abs' as FitnessGoal, icon: Sparkles, title: t('onboarding.goalTonedAbs'), description: t('onboarding.goalTonedAbsDesc'), color: 'text-pink-500 dark:text-pink-400', bgSelected: 'bg-pink-500', borderSelected: 'border-pink-500' },
+        { id: 'glute_building' as FitnessGoal, icon: Heart, title: t('onboarding.goalGluteBuilding'), description: t('onboarding.goalGluteBuildingDesc'), color: 'text-rose-600 dark:text-rose-500', bgSelected: 'bg-rose-600', borderSelected: 'border-rose-600' },
+        { id: 'fat_burn' as FitnessGoal, icon: Flame, title: t('onboarding.goalFatBurn'), description: t('onboarding.goalFatBurnDesc'), color: 'text-red-600 dark:text-red-500', bgSelected: 'bg-red-600', borderSelected: 'border-red-600' },
     ];
 
     const EXPERIENCE_LEVELS = [

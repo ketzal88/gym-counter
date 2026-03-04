@@ -15,6 +15,7 @@ const mockLiftState = {
     deadlift: 100,
     ohp: 40,
     pullupsLevel: 5,
+    hip_thrust: 60,
 };
 
 describe('getDayType', () => {

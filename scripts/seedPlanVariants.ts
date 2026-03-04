@@ -21,7 +21,7 @@ const db = getFirestore(app);
 interface PlanVariantConfig {
     id: string;
     name: string;
-    goal: 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning';
+    goal: 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn';
     experienceLevel: 'beginner' | 'intermediate' | 'advanced';
     weeklyDays: 3 | 4 | 5 | 6;
     totalDays: number;
@@ -242,9 +242,146 @@ const PLAN_VARIANTS: PlanVariantConfig[] = [
         targetAudience: 'Atletas competitivos de CrossFit y conditioning'
     },
 
-    // TODO: Expandir con las 36 variantes restantes
-    // Las 12 variantes ejemplo cubren todos los goals y algunos niveles/días
-    // El patrón se repite para el resto de combinaciones
+    // TONED ABS VARIANTS (Tonificar Abdomen)
+    {
+        id: 'toned_abs_beginner_3day',
+        name: 'Tonificar Abdomen - Principiante (3 días)',
+        goal: 'toned_abs',
+        experienceLevel: 'beginner',
+        weeklyDays: 3,
+        totalDays: 180,
+        cycleLength: 6,
+        deloadFrequency: 4,
+        volumeMultiplier: 0.7,
+        intensityMultiplier: 0.75,
+        exerciseComplexity: 'basic',
+        description: 'Programa básico de core para principiantes con énfasis en técnica y estabilidad',
+        targetAudience: 'Mujeres nuevas en el gym que quieren tonificar su abdomen'
+    },
+    {
+        id: 'toned_abs_intermediate_5day',
+        name: 'Tonificar Abdomen - Intermedio (5 días)',
+        goal: 'toned_abs',
+        experienceLevel: 'intermediate',
+        weeklyDays: 5,
+        totalDays: 180,
+        cycleLength: 6,
+        deloadFrequency: 4,
+        volumeMultiplier: 1.0,
+        intensityMultiplier: 0.9,
+        exerciseComplexity: 'standard',
+        description: 'Programa intermedio de core con HIIT y circuitos para definición abdominal',
+        targetAudience: 'Mujeres con experiencia buscando definir abdomen'
+    },
+    {
+        id: 'toned_abs_advanced_6day',
+        name: 'Tonificar Abdomen - Avanzado (6 días)',
+        goal: 'toned_abs',
+        experienceLevel: 'advanced',
+        weeklyDays: 6,
+        totalDays: 180,
+        cycleLength: 6,
+        deloadFrequency: 4,
+        volumeMultiplier: 1.2,
+        intensityMultiplier: 1.0,
+        exerciseComplexity: 'advanced',
+        description: 'Programa avanzado de core con ejercicios complejos y alto volumen',
+        targetAudience: 'Atletas avanzadas buscando abdomen definido y fuerte'
+    },
+
+    // GLUTE BUILDING VARIANTS (Construir Glúteos)
+    {
+        id: 'glute_building_beginner_3day',
+        name: 'Construir Glúteos - Principiante (3 días)',
+        goal: 'glute_building',
+        experienceLevel: 'beginner',
+        weeklyDays: 3,
+        totalDays: 180,
+        cycleLength: 6,
+        deloadFrequency: 4,
+        volumeMultiplier: 0.7,
+        intensityMultiplier: 0.75,
+        exerciseComplexity: 'basic',
+        description: 'Programa básico enfocado en activación y fortalecimiento de glúteos',
+        targetAudience: 'Mujeres principiantes que quieren construir glúteos desde cero'
+    },
+    {
+        id: 'glute_building_intermediate_5day',
+        name: 'Construir Glúteos - Intermedio (5 días)',
+        goal: 'glute_building',
+        experienceLevel: 'intermediate',
+        weeklyDays: 5,
+        totalDays: 180,
+        cycleLength: 6,
+        deloadFrequency: 4,
+        volumeMultiplier: 1.0,
+        intensityMultiplier: 1.0,
+        exerciseComplexity: 'standard',
+        description: 'Programa intermedio con hip thrust pesado y trabajo de posterior chain',
+        targetAudience: 'Mujeres con experiencia buscando maximizar crecimiento de glúteos'
+    },
+    {
+        id: 'glute_building_advanced_6day',
+        name: 'Construir Glúteos - Avanzado (6 días)',
+        goal: 'glute_building',
+        experienceLevel: 'advanced',
+        weeklyDays: 6,
+        totalDays: 180,
+        cycleLength: 6,
+        deloadFrequency: 4,
+        volumeMultiplier: 1.3,
+        intensityMultiplier: 1.1,
+        exerciseComplexity: 'advanced',
+        description: 'Programa avanzado de alta frecuencia para glúteos con técnicas de intensificación',
+        targetAudience: 'Atletas avanzadas especializadas en desarrollo de glúteos'
+    },
+
+    // FAT BURN VARIANTS (Quemar Grasa Intenso)
+    {
+        id: 'fat_burn_beginner_3day',
+        name: 'Quemar Grasa - Principiante (3 días)',
+        goal: 'fat_burn',
+        experienceLevel: 'beginner',
+        weeklyDays: 3,
+        totalDays: 180,
+        cycleLength: 6,
+        deloadFrequency: 4,
+        volumeMultiplier: 0.7,
+        intensityMultiplier: 0.75,
+        exerciseComplexity: 'basic',
+        description: 'Programa de quema de grasa con ejercicios básicos y cardio moderado',
+        targetAudience: 'Mujeres nuevas en el gym que buscan perder peso de forma efectiva'
+    },
+    {
+        id: 'fat_burn_intermediate_5day',
+        name: 'Quemar Grasa - Intermedio (5 días)',
+        goal: 'fat_burn',
+        experienceLevel: 'intermediate',
+        weeklyDays: 5,
+        totalDays: 180,
+        cycleLength: 6,
+        deloadFrequency: 4,
+        volumeMultiplier: 1.0,
+        intensityMultiplier: 0.9,
+        exerciseComplexity: 'standard',
+        description: 'Programa intensivo con HIIT, circuitos metabólicos y fuerza full body',
+        targetAudience: 'Mujeres con experiencia en entrenamiento buscando quemar grasa agresivamente'
+    },
+    {
+        id: 'fat_burn_advanced_6day',
+        name: 'Quemar Grasa - Avanzado (6 días)',
+        goal: 'fat_burn',
+        experienceLevel: 'advanced',
+        weeklyDays: 6,
+        totalDays: 180,
+        cycleLength: 6,
+        deloadFrequency: 4,
+        volumeMultiplier: 1.2,
+        intensityMultiplier: 0.95,
+        exerciseComplexity: 'advanced',
+        description: 'Programa de alta intensidad para máxima quema calórica con doble sesiones y técnicas avanzadas',
+        targetAudience: 'Atletas avanzadas en fase de definición agresiva'
+    },
 ];
 
 /**

@@ -71,7 +71,7 @@ export async function getAllPlanVariants(): Promise<PlanVariant[]> {
  * Selecciona la variante de plan apropiada basada en el perfil del usuario
  */
 export function selectPlanVariant(profile: {
-    fitnessGoal: 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning';
+    fitnessGoal: 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn';
     experienceLevel: 'beginner' | 'intermediate' | 'advanced';
     weeklyAvailability: 3 | 4 | 5 | 6;
 }): string {
@@ -93,7 +93,7 @@ export function clearVariantsCache(): void {
  * Obtiene variantes filtradas por criterios
  */
 export async function getPlanVariantsByGoal(
-    goal: 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning'
+    goal: 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn'
 ): Promise<PlanVariant[]> {
     const allVariants = await getAllPlanVariants();
     return allVariants.filter(variant => variant.goal === goal);
@@ -103,11 +103,14 @@ export async function getPlanVariantsByGoal(
  * Obtiene el nombre descriptivo de una variante en español
  */
 export function getVariantDisplayName(variantId: string): string {
-    const goalNames = {
+    const goalNames: Record<string, string> = {
         weight_loss: 'Pérdida de Peso',
         muscle_gain: 'Ganancia Muscular',
         max_strength: 'Fuerza Máxima',
-        conditioning: 'Resistencia/CrossFit'
+        conditioning: 'Resistencia/CrossFit',
+        toned_abs: 'Tonificar Abdomen',
+        glute_building: 'Construir Glúteos',
+        fat_burn: 'Quemar Grasa Intenso',
     };
 
     const levelNames = {
@@ -123,18 +126,17 @@ export function getVariantDisplayName(variantId: string): string {
     let goal = '';
     let level = '';
 
-    if (variantId.includes('weight_loss')) {
-        goal = goalNames.weight_loss;
-        level = parts[2];
-    } else if (variantId.includes('muscle_gain')) {
-        goal = goalNames.muscle_gain;
-        level = parts[2];
-    } else if (variantId.includes('max_strength')) {
-        goal = goalNames.max_strength;
-        level = parts[2];
-    } else if (variantId.includes('conditioning')) {
-        goal = goalNames.conditioning;
-        level = parts[1];
+    // Detectar goal y nivel desde el variantId
+    const goalKeys = ['weight_loss', 'muscle_gain', 'max_strength', 'conditioning', 'toned_abs', 'glute_building', 'fat_burn'];
+    for (const key of goalKeys) {
+        if (variantId.includes(key)) {
+            goal = goalNames[key] || key;
+            // El nivel está después del goal prefix
+            const afterGoal = variantId.replace(key + '_', '');
+            const levelPart = afterGoal.split('_')[0];
+            level = levelPart;
+            break;
+        }
     }
 
     const levelDisplay = levelNames[level as keyof typeof levelNames] || level;

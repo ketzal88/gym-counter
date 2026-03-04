@@ -66,7 +66,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         setOnboardingCompleted(userData.onboardingCompleted || false);
                     }
                     setLoading(false);
-                });
+                }, () => {});
                 setUser(user);
             } else {
                 setOnboardingCompleted(false);

@@ -52,7 +52,8 @@ export default function ProtocolSettings() {
                     squat: parseFloat(editLifts.squat) || 0,
                     deadlift: parseFloat(editLifts.deadlift) || 0,
                     ohp: parseFloat(editLifts.ohp) || 0,
-                    pullupsLevel: parseInt(editLifts.pullupsLevel) || 0
+                    pullupsLevel: parseInt(editLifts.pullupsLevel) || 0,
+                    hip_thrust: userState.liftState.hip_thrust || 0
                 }
             });
             addToast('Pesos actualizados correctamente', 'success');

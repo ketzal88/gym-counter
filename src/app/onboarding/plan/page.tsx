@@ -9,7 +9,7 @@ import { db } from '@/services/db';
 import { selectPlanVariant, getVariantDisplayName } from '@/services/planVariantService';
 import { Check, Calendar, Clock, Layers } from 'lucide-react';
 
-type FitnessGoal = 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning';
+type FitnessGoal = 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn';
 type ExperienceLevel = 'beginner' | 'intermediate' | 'advanced';
 type WeeklyAvailability = 3 | 4 | 5 | 6;
 
@@ -34,6 +34,9 @@ export default function OnboardingPlanPage() {
         muscle_gain: t('onboarding.descMuscleGain'),
         max_strength: t('onboarding.descMaxStrength'),
         conditioning: t('onboarding.descConditioning'),
+        toned_abs: t('onboarding.descTonedAbs'),
+        glute_building: t('onboarding.descGluteBuilding'),
+        fat_burn: t('onboarding.descFatBurn'),
     };
 
     const EXPERIENCE_FEATURES: Record<ExperienceLevel, string[]> = {
@@ -113,7 +116,8 @@ export default function OnboardingPlanPage() {
                     squat: 80,
                     deadlift: 100,
                     ohp: 40,
-                    pullupsLevel: 0
+                    pullupsLevel: 0,
+                    hip_thrust: 60
                 },
                 planVersion: planVariantId,
                 assignedVariant: planVariantId,
@@ -149,7 +153,9 @@ export default function OnboardingPlanPage() {
         );
     }
 
-    const estimatedWeeks = Math.ceil(180 / onboardingData.weeklyAvailability);
+    const isNewGoal = ['toned_abs', 'glute_building', 'fat_burn'].includes(onboardingData.fitnessGoal);
+    const totalDays = 180;
+    const estimatedWeeks = Math.ceil(totalDays / onboardingData.weeklyAvailability);
 
     return (
         <div className="space-y-10">
@@ -226,7 +232,10 @@ export default function OnboardingPlanPage() {
                             </div>
                             <div className="flex-1">
                                 <div className="font-medium text-sm text-slate-900 dark:text-white">
-                                    {t('onboarding.dayLabel')} {idx + 1} - {idx % 3 === 0 ? t('onboarding.mainStrength') : idx % 3 === 1 ? t('onboarding.accessories') : t('onboarding.conditioning')}
+                                    {t('onboarding.dayLabel')} {idx + 1} - {isNewGoal
+                                        ? (idx % 2 === 0 ? t('onboarding.mainStrength') : t('onboarding.conditioning'))
+                                        : (idx % 3 === 0 ? t('onboarding.mainStrength') : idx % 3 === 1 ? t('onboarding.accessories') : t('onboarding.conditioning'))
+                                    }
                                 </div>
                                 <div className="text-xs text-slate-500 dark:text-slate-500">
                                     {t('onboarding.exercisesTime')}

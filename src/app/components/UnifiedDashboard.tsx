@@ -21,7 +21,7 @@ import RecentVisitsManager from './RecentVisitsManager';
 import RoutineTracker from './RoutineTracker';
 import BottomNav from './BottomNav';
 import { UserTrainingState, subscribeToUserTrainingState } from '@/services/db';
-import { getCycleIndex, isDeload } from '@/services/protocolEngine';
+import { getCycleIndex, isDeload, GOAL_CONFIG, resolveGoalFromVariantId } from '@/services/protocolEngine';
 import TrainingStreakCard from './charts/TrainingStreakCard';
 import LiftProgressionChart from './charts/LiftProgressionChart';
 import WeeklyVolumeChart from './charts/WeeklyVolumeChart';
@@ -125,6 +125,12 @@ export default function UnifiedDashboard() {
       unsubscribeWorkouts();
     };
   }, [user]);
+
+  // --- Goal-aware cycle length ---
+  const userGoal = userTrainingState?.assignedVariant
+    ? resolveGoalFromVariantId(userTrainingState.assignedVariant)
+    : 'military_v1';
+  const userCycleLength = GOAL_CONFIG[userGoal].cycleLength;
 
   // --- Statistics Calculation ---
   const currentYear = new Date().getFullYear();
@@ -285,12 +291,12 @@ export default function UnifiedDashboard() {
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('dashboard.currentProtocol')}</p>
-                      {isDeload(getCycleIndex(userTrainingState.currentDay)) && (
+                      {isDeload(getCycleIndex(userTrainingState.currentDay, userCycleLength)) && (
                         <span className="text-[8px] font-black bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded uppercase">{t('dashboard.deload')}</span>
                       )}
                     </div>
                     <p className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">
-                      {t('dashboard.day')} {userTrainingState.currentDay} • <span className="text-blue-500">{t('dashboard.cycle')} {getCycleIndex(userTrainingState.currentDay)}</span>
+                      {t('dashboard.day')} {userTrainingState.currentDay} • <span className="text-blue-500">{t('dashboard.cycle')} {getCycleIndex(userTrainingState.currentDay, userCycleLength)}</span>
                     </p>
                   </div>
                 </div>
@@ -522,7 +528,7 @@ export default function UnifiedDashboard() {
                       <span className="text-xs font-medium bg-blue-600/20 text-blue-400 px-2.5 py-1 rounded-lg uppercase tracking-wide border border-blue-500/20">
                         {t('records.militaryProtocol')}
                       </span>
-                      {isDeload(getCycleIndex(userTrainingState.currentDay)) && (
+                      {isDeload(getCycleIndex(userTrainingState.currentDay, userCycleLength)) && (
                         <span className="text-xs font-medium bg-amber-600/20 text-amber-500 px-2.5 py-1 rounded-lg uppercase tracking-wide border border-amber-500/20">
                           {t('dashboard.deload')}
                         </span>
@@ -535,7 +541,7 @@ export default function UnifiedDashboard() {
                   </div>
                   <div className="text-right">
                     <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">{t('dashboard.cycle')}</p>
-                    <p className="text-2xl font-bold text-blue-500">{getCycleIndex(userTrainingState.currentDay)}</p>
+                    <p className="text-2xl font-bold text-blue-500">{getCycleIndex(userTrainingState.currentDay, userCycleLength)}</p>
                   </div>
                 </div>
 
@@ -751,6 +757,7 @@ export default function UnifiedDashboard() {
         <ProtocolOverview
           currentDay={userTrainingState.currentDay}
           onClose={() => setShowProtocolOverview(false)}
+          variantId={userTrainingState.assignedVariant}
         />
       )}
 

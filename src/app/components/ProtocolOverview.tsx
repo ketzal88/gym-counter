@@ -1,27 +1,32 @@
 'use client';
 
 import React, { useState } from 'react';
-import { DAY_LABELS, TEMPLATES, WARMUP, getDayType, getCycleIndex, isDeload } from '@/services/protocolEngine';
+import { getDayType, getCycleIndex, isDeload, GOAL_CONFIG, GoalType, resolveGoalFromVariantId } from '@/services/protocolEngine';
 
 interface ProtocolOverviewProps {
     currentDay: number;
     onClose: () => void;
+    variantId?: string;
 }
 
-export default function ProtocolOverview({ currentDay, onClose }: ProtocolOverviewProps) {
-    const currentDayType = getDayType(currentDay);
-    const currentCycle = getCycleIndex(currentDay);
+export default function ProtocolOverview({ currentDay, onClose, variantId }: ProtocolOverviewProps) {
+    const goal: GoalType = variantId ? resolveGoalFromVariantId(variantId) : 'military_v1';
+    const config = GOAL_CONFIG[goal];
+    const { templates: activeTemplates, dayLabels: activeDayLabels, cycleLength, warmup: activeWarmup } = config;
+
+    const currentDayType = getDayType(currentDay, cycleLength);
+    const currentCycle = getCycleIndex(currentDay, cycleLength);
     const [expandedDay, setExpandedDay] = useState<number | null>(null);
     const [view, setView] = useState<'overview' | 'full'>('overview');
 
     // Calculate next 6 days
     const nextDays = Array.from({ length: 6 }).map((_, i) => {
         const dayNum = currentDay + i;
-        const type = getDayType(dayNum);
+        const type = getDayType(dayNum, cycleLength);
         return {
             dayNum,
-            type: DAY_LABELS[type],
-            isDeload: isDeload(getCycleIndex(dayNum))
+            type: activeDayLabels[type],
+            isDeload: isDeload(getCycleIndex(dayNum, cycleLength))
         };
     });
 
@@ -41,17 +46,19 @@ export default function ProtocolOverview({ currentDay, onClose }: ProtocolOvervi
     };
 
     // Generate 180-day timeline grouped by cycles
-    const cycles = Array.from({ length: 15 }).map((_, cycleIdx) => {
+    const totalCycles = Math.ceil(180 / cycleLength);
+    const cycles = Array.from({ length: totalCycles }).map((_, cycleIdx) => {
         const cycleNum = cycleIdx + 1;
-        const startDay = cycleIdx * 12 + 1;
+        const startDay = cycleIdx * cycleLength + 1;
         const deload = isDeload(cycleNum);
-        const days = Array.from({ length: 12 }).map((_, dayIdx) => {
+        const daysInCycle = Math.min(cycleLength, 180 - (startDay - 1));
+        const days = Array.from({ length: daysInCycle }).map((_, dayIdx) => {
             const absoluteDay = startDay + dayIdx;
             const dayType = dayIdx + 1;
             return {
                 absoluteDay,
                 dayType,
-                label: DAY_LABELS[dayType],
+                label: activeDayLabels[dayType] || `Día ${dayType}`,
                 completed: absoluteDay < currentDay,
                 isCurrent: absoluteDay === currentDay,
                 isDeload: deload
@@ -160,7 +167,7 @@ export default function ProtocolOverview({ currentDay, onClose }: ProtocolOvervi
                             </div>
 
                             <div className="space-y-2">
-                                {Object.entries(TEMPLATES).map(([num, template]) => {
+                                {Object.entries(activeTemplates).map(([num, template]) => {
                                     const dayNum = Number(num);
                                     const isCurrent = dayNum === currentDayType;
                                     const isExpanded = expandedDay === dayNum;
@@ -195,7 +202,7 @@ export default function ProtocolOverview({ currentDay, onClose }: ProtocolOvervi
                                                     <div className="mb-3">
                                                         <p className="text-[9px] font-black text-orange-500 uppercase tracking-widest mb-2">Calentamiento</p>
                                                         <div className="flex flex-wrap gap-1.5">
-                                                            {WARMUP.map((w, i) => (
+                                                            {activeWarmup.map((w, i) => (
                                                                 <span key={i} className="text-[10px] font-bold text-slate-500 bg-slate-800/60 px-2 py-1 rounded-lg">
                                                                     {w.name} x{w.reps}
                                                                 </span>
@@ -298,7 +305,7 @@ export default function ProtocolOverview({ currentDay, onClose }: ProtocolOvervi
                                         )}
                                     </div>
                                     <span className="text-[10px] font-bold text-slate-600">
-                                        Día {cycle.startDay} - {cycle.startDay + 11}
+                                        Día {cycle.startDay} - {Math.min(cycle.startDay + cycleLength - 1, 180)}
                                     </span>
                                 </div>
 
@@ -341,15 +348,15 @@ export default function ProtocolOverview({ currentDay, onClose }: ProtocolOvervi
                                     <p className="text-[10px] text-slate-500 font-bold">Días totales</p>
                                 </div>
                                 <div className="bg-slate-900/50 p-3 rounded-xl">
-                                    <p className="text-2xl font-black text-white">15</p>
-                                    <p className="text-[10px] text-slate-500 font-bold">Ciclos de 12 días</p>
+                                    <p className="text-2xl font-black text-white">{totalCycles}</p>
+                                    <p className="text-[10px] text-slate-500 font-bold">Ciclos de {cycleLength} días</p>
                                 </div>
                                 <div className="bg-slate-900/50 p-3 rounded-xl">
-                                    <p className="text-2xl font-black text-amber-400">4</p>
+                                    <p className="text-2xl font-black text-amber-400">{Math.floor(totalCycles / 4)}</p>
                                     <p className="text-[10px] text-slate-500 font-bold">Semanas deload</p>
                                 </div>
                                 <div className="bg-slate-900/50 p-3 rounded-xl">
-                                    <p className="text-2xl font-black text-blue-400">12</p>
+                                    <p className="text-2xl font-black text-blue-400">{cycleLength}</p>
                                     <p className="text-[10px] text-slate-500 font-bold">Tipos de sesión</p>
                                 </div>
                             </div>

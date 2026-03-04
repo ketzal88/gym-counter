@@ -189,6 +189,303 @@ export const TEMPLATES: Record<number, {
     }
 };
 
+// ============================================================
+// TEMPLATES: TONIFICAR ABDOMEN (ciclo de 6 días)
+// ============================================================
+export const TEMPLATES_TONED_ABS: Record<number, {
+    type: string,
+    mainLift?: keyof LiftState,
+    accessories: {
+        id: string,
+        name: string,
+        sets: number,
+        reps: string,
+        exerciseType?: ProtocolExercise['exerciseType'],
+        blockType?: ProtocolExercise['blockType'],
+        conditioning?: ProtocolExercise['conditioningMetadata']
+    }[]
+}> = {
+    1: {
+        type: "Core Strength",
+        accessories: [
+            { id: "weighted_crunch", name: "Crunch con Peso", sets: 4, reps: "15", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "russian_twist", name: "Russian Twist", sets: 3, reps: "20", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "hanging_leg_raise", name: "Hanging Leg Raises", sets: 4, reps: "12", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "cable_woodchop", name: "Cable Woodchops", sets: 3, reps: "12/lado", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "plank_hold", name: "Plancha", sets: 3, reps: "45s", exerciseType: "bodyweight", blockType: "strength" }
+        ]
+    },
+    2: {
+        type: "Lower + Core",
+        mainLift: "squat",
+        accessories: [
+            { id: "rdl_abs", name: "Romanian Deadlift", sets: 3, reps: "10", exerciseType: "barbell", blockType: "strength" },
+            { id: "hip_thrust_abs", name: "Hip Thrust", sets: 3, reps: "12", exerciseType: "barbell", blockType: "strength" },
+            { id: "ab_wheel", name: "Ab Wheel Rollout", sets: 3, reps: "10", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "dead_bug", name: "Dead Bug", sets: 3, reps: "12/lado", exerciseType: "bodyweight", blockType: "strength" }
+        ]
+    },
+    3: {
+        type: "HIIT Cardio + Abs",
+        accessories: [
+            {
+                id: "tabata_abs", name: "Tabata Core", sets: 1, reps: "20 min", blockType: "conditioning", conditioning: {
+                    format: "Tabata",
+                    duration: "20 min",
+                    instructions: "4 rondas de 4 min (20s ON / 10s OFF):\n1. Mountain Climbers\n2. V-Ups\n3. Flutter Kicks\n4. Burpees\nDescanso 1 min entre rondas"
+                }
+            }
+        ]
+    },
+    4: {
+        type: "Upper + Core",
+        mainLift: "bench",
+        accessories: [
+            { id: "row_abs", name: "Barbell Row", sets: 3, reps: "10", exerciseType: "barbell", blockType: "strength" },
+            { id: "pallof_press", name: "Pallof Press", sets: 3, reps: "12/lado", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "side_plank", name: "Plancha Lateral", sets: 3, reps: "30s/lado", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "bird_dog", name: "Bird Dog", sets: 3, reps: "12/lado", exerciseType: "bodyweight", blockType: "strength" }
+        ]
+    },
+    5: {
+        type: "Core Power",
+        accessories: [
+            { id: "hanging_leg_raise_2", name: "Hanging Leg Raises", sets: 4, reps: "12", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "cable_crunch", name: "Cable Crunch", sets: 4, reps: "15", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "dragon_flag", name: "Dragon Flag (Progresión)", sets: 3, reps: "6-8", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "plank_variations", name: "Plancha con Variaciones", sets: 3, reps: "40s", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "bicycle_crunch", name: "Bicycle Crunch", sets: 3, reps: "20", exerciseType: "bodyweight", blockType: "strength" }
+        ]
+    },
+    6: {
+        type: "Full Body Circuit + Core",
+        accessories: [
+            {
+                id: "metcon_core", name: "Metcon Core", sets: 1, reps: "1", blockType: "conditioning", conditioning: {
+                    format: "For Time",
+                    duration: "20-25 min",
+                    instructions: "3 rondas:\n15 KB Swings\n10 Ball Slams\n5 Turkish Get-ups (cada lado)\n15 Sit-ups\n200m Run"
+                }
+            }
+        ]
+    }
+};
+
+// ============================================================
+// TEMPLATES: GLUTE BUILDING (ciclo de 6 días)
+// ============================================================
+export const TEMPLATES_GLUTE_BUILDING: Record<number, {
+    type: string,
+    mainLift?: keyof LiftState,
+    accessories: {
+        id: string,
+        name: string,
+        sets: number,
+        reps: string,
+        exerciseType?: ProtocolExercise['exerciseType'],
+        blockType?: ProtocolExercise['blockType'],
+        conditioning?: ProtocolExercise['conditioningMetadata']
+    }[]
+}> = {
+    1: {
+        type: "Glute Strength (Hip Thrust)",
+        mainLift: "hip_thrust",
+        accessories: [
+            { id: "glute_bridge", name: "Glute Bridge", sets: 3, reps: "15", exerciseType: "barbell", blockType: "strength" },
+            { id: "cable_kickback", name: "Cable Kickback", sets: 3, reps: "12/pierna", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "abductor_machine", name: "Abductor Machine", sets: 3, reps: "15", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "fire_hydrant", name: "Fire Hydrant con Banda", sets: 3, reps: "15/lado", exerciseType: "bodyweight", blockType: "strength" }
+        ]
+    },
+    2: {
+        type: "Quad Dominant (Squat)",
+        mainLift: "squat",
+        accessories: [
+            { id: "bulgarian_split", name: "Bulgarian Split Squat", sets: 3, reps: "10/pierna", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "leg_press", name: "Leg Press", sets: 3, reps: "12", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "step_ups", name: "Step-ups", sets: 3, reps: "10/pierna", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "leg_curl", name: "Leg Curl", sets: 3, reps: "12", exerciseType: "dumbbell", blockType: "strength" }
+        ]
+    },
+    3: {
+        type: "Glute Activation + Cardio",
+        accessories: [
+            { id: "band_walk", name: "Band Walks", sets: 3, reps: "20 pasos", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "clamshell", name: "Clamshells con Banda", sets: 3, reps: "15/lado", exerciseType: "bodyweight", blockType: "strength" },
+            {
+                id: "hiit_glute", name: "HIIT Sprints", sets: 1, reps: "15 min", blockType: "conditioning", conditioning: {
+                    format: "Other",
+                    duration: "15 min",
+                    instructions: "Sprint 30s / Caminata 60s\nAlternar entre correr y Stairmaster si hay disponible"
+                }
+            }
+        ]
+    },
+    4: {
+        type: "Posterior Chain (RDL)",
+        mainLift: "deadlift",
+        accessories: [
+            { id: "good_morning", name: "Good Morning", sets: 3, reps: "10", exerciseType: "barbell", blockType: "strength" },
+            { id: "cable_pull_through", name: "Cable Pull-through", sets: 3, reps: "12", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "nordic_curl", name: "Nordic Curl (Progresión)", sets: 3, reps: "6-8", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "single_leg_rdl", name: "Single Leg RDL", sets: 3, reps: "10/pierna", exerciseType: "dumbbell", blockType: "strength" }
+        ]
+    },
+    5: {
+        type: "Glute Volume",
+        accessories: [
+            { id: "hip_thrust_var", name: "Hip Thrust Pausa", sets: 4, reps: "10", exerciseType: "barbell", blockType: "strength" },
+            { id: "sumo_deadlift", name: "Sumo Deadlift", sets: 3, reps: "10", exerciseType: "barbell", blockType: "strength" },
+            { id: "frog_pump", name: "Frog Pump", sets: 3, reps: "20", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "donkey_kick", name: "Donkey Kicks con Banda", sets: 3, reps: "15/lado", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "hip_abduction", name: "Hip Abduction Cable", sets: 3, reps: "12/lado", exerciseType: "dumbbell", blockType: "strength" }
+        ]
+    },
+    6: {
+        type: "Lower Body Metcon",
+        accessories: [
+            {
+                id: "metcon_glute", name: "Lower Body For Time", sets: 1, reps: "1", blockType: "conditioning", conditioning: {
+                    format: "For Time",
+                    duration: "20-25 min",
+                    instructions: "3 rondas:\n20 Walking Lunges\n15 KB Swings\n12 Box Jumps\n15 Goblet Squats\n200m Run"
+                }
+            }
+        ]
+    }
+};
+
+// ============================================================
+// TEMPLATES: FAT BURN / BAJAR DE PESO FUERTE (ciclo de 6 días)
+// ============================================================
+export const TEMPLATES_FAT_BURN: Record<number, {
+    type: string,
+    mainLift?: keyof LiftState,
+    accessories: {
+        id: string,
+        name: string,
+        sets: number,
+        reps: string,
+        exerciseType?: ProtocolExercise['exerciseType'],
+        blockType?: ProtocolExercise['blockType'],
+        conditioning?: ProtocolExercise['conditioningMetadata']
+    }[]
+}> = {
+    1: {
+        type: "Full Body Strength A",
+        mainLift: "squat",
+        accessories: [
+            { id: "bench_fb", name: "Bench Press", sets: 3, reps: "10", exerciseType: "barbell", blockType: "strength" },
+            { id: "row_fb", name: "Barbell Row", sets: 3, reps: "10", exerciseType: "barbell", blockType: "strength" },
+            { id: "shoulder_press_fb", name: "Shoulder Press", sets: 3, reps: "10", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "plank_fb", name: "Plancha", sets: 3, reps: "45s", exerciseType: "bodyweight", blockType: "strength" }
+        ]
+    },
+    2: {
+        type: "HIIT Cardio",
+        accessories: [
+            {
+                id: "tabata_fat", name: "Tabata Full Body", sets: 1, reps: "20 min", blockType: "conditioning", conditioning: {
+                    format: "Tabata",
+                    duration: "20 min",
+                    instructions: "5 rondas de 4 min (20s ON / 10s OFF):\n1. Burpees\n2. Jump Squats\n3. Mountain Climbers\n4. High Knees\nDescanso 1 min entre rondas"
+                }
+            }
+        ]
+    },
+    3: {
+        type: "Full Body Strength B",
+        mainLift: "deadlift",
+        accessories: [
+            { id: "incline_fb", name: "Incline Press", sets: 3, reps: "10", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "lat_pulldown_fb", name: "Lat Pulldown", sets: 3, reps: "10", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "lunges_fb", name: "Lunges", sets: 3, reps: "10/pierna", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "russian_twist_fb", name: "Russian Twist", sets: 3, reps: "20", exerciseType: "dumbbell", blockType: "strength" }
+        ]
+    },
+    4: {
+        type: "Metabolic Circuit",
+        accessories: [
+            {
+                id: "amrap_fat", name: "AMRAP 25", sets: 1, reps: "25 min", blockType: "conditioning", conditioning: {
+                    format: "AMRAP",
+                    duration: "25 min",
+                    instructions: "15 KB Swings\n10 Box Jumps\n12 Wall Balls\n10 Rope Slams / Battle Ropes\n200m Run"
+                }
+            }
+        ]
+    },
+    5: {
+        type: "Upper + Cardio Intervals",
+        mainLift: "bench",
+        accessories: [
+            { id: "row_upper_fb", name: "Barbell Row", sets: 3, reps: "10", exerciseType: "barbell", blockType: "strength" },
+            { id: "lateral_raise_fb", name: "Lateral Raises", sets: 3, reps: "15", exerciseType: "dumbbell", blockType: "strength" },
+            {
+                id: "emom_fat", name: "EMOM Cardio", sets: 1, reps: "10 min", blockType: "conditioning", conditioning: {
+                    format: "EMOM",
+                    duration: "10 min",
+                    instructions: "Minuto par: 15 Burpees\nMinuto impar: 20 Jump Squats"
+                }
+            }
+        ]
+    },
+    6: {
+        type: "Long Endurance + Core",
+        accessories: [
+            {
+                id: "endurance_fat", name: "Cardio Steady State", sets: 1, reps: "30-45 min", blockType: "conditioning", conditioning: {
+                    format: "Other",
+                    duration: "30-45 min",
+                    instructions: "Cardio a ritmo constante (zona 2-3):\nCorrer, Bici, Elíptica o Remo\nMantener frecuencia cardíaca moderada-alta"
+                }
+            },
+            { id: "core_finisher_fb", name: "Core Finisher", sets: 3, reps: "1 round", blockType: "strength", exerciseType: "bodyweight" }
+        ]
+    }
+};
+
+// ============================================================
+// Warmup específico para rutinas de mujeres
+// ============================================================
+export const WARMUP_WOMEN = [
+    { name: 'Jumping Jacks', reps: '20' },
+    { name: 'Sentadillas sin Peso', reps: '15' },
+    { name: 'Glute Bridge', reps: '12' },
+    { name: 'Estocadas con Rotación', reps: '10' },
+    { name: 'Cat-Cow Stretch', reps: '10' }
+];
+
+// ============================================================
+// DAY LABELS por variante
+// ============================================================
+export const DAY_LABELS_TONED_ABS: Record<number, string> = {
+    1: "Core Strength",
+    2: "Lower + Core",
+    3: "HIIT Cardio + Abs",
+    4: "Upper + Core",
+    5: "Core Power",
+    6: "Full Body Circuit + Core"
+};
+
+export const DAY_LABELS_GLUTE_BUILDING: Record<number, string> = {
+    1: "Glute Strength (Hip Thrust)",
+    2: "Quad Dominant (Squat)",
+    3: "Glute Activation + Cardio",
+    4: "Posterior Chain (RDL)",
+    5: "Glute Volume",
+    6: "Lower Body Metcon"
+};
+
+export const DAY_LABELS_FAT_BURN: Record<number, string> = {
+    1: "Full Body Strength A",
+    2: "HIIT Cardio",
+    3: "Full Body Strength B",
+    4: "Metabolic Circuit",
+    5: "Upper + Cardio Intervals",
+    6: "Long Endurance + Core"
+};
+
 export const DAY_LABELS: Record<number, string> = {
     1: "Upper Strength (Bench)",
     2: "Lower Strength (Squat)",
@@ -204,8 +501,50 @@ export const DAY_LABELS: Record<number, string> = {
     12: "Benchmark/Test"
 };
 
-export const getDayType = (dayNumber: number) => ((dayNumber - 1) % 12) + 1;
-export const getCycleIndex = (dayNumber: number) => Math.floor((dayNumber - 1) / 12) + 1;
+// ============================================================
+// Mapeo de goal a templates, labels y cycle length
+// ============================================================
+export type GoalType = 'military_v1' | 'toned_abs' | 'glute_building' | 'fat_burn';
+
+export const GOAL_CONFIG: Record<GoalType, {
+    templates: typeof TEMPLATES,
+    dayLabels: Record<number, string>,
+    cycleLength: number,
+    warmup: typeof WARMUP,
+    totalDays: number,
+}> = {
+    military_v1: {
+        templates: TEMPLATES,
+        dayLabels: DAY_LABELS,
+        cycleLength: 12,
+        warmup: WARMUP,
+        totalDays: 180,
+    },
+    toned_abs: {
+        templates: TEMPLATES_TONED_ABS,
+        dayLabels: DAY_LABELS_TONED_ABS,
+        cycleLength: 6,
+        warmup: WARMUP_WOMEN,
+        totalDays: 180,
+    },
+    glute_building: {
+        templates: TEMPLATES_GLUTE_BUILDING,
+        dayLabels: DAY_LABELS_GLUTE_BUILDING,
+        cycleLength: 6,
+        warmup: WARMUP_WOMEN,
+        totalDays: 180,
+    },
+    fat_burn: {
+        templates: TEMPLATES_FAT_BURN,
+        dayLabels: DAY_LABELS_FAT_BURN,
+        cycleLength: 6,
+        warmup: WARMUP_WOMEN,
+        totalDays: 180,
+    },
+};
+
+export const getDayType = (dayNumber: number, cycleLength = 12) => ((dayNumber - 1) % cycleLength) + 1;
+export const getCycleIndex = (dayNumber: number, cycleLength = 12) => Math.floor((dayNumber - 1) / cycleLength) + 1;
 export const isDeload = (cycleIndex: number) => cycleIndex % 4 === 0;
 
 export const generateWorkout = (dayNumber: number, liftState: LiftState): ProtocolWorkout => {
@@ -349,37 +688,8 @@ export const evaluateUnlock = (
             ohp: 2.5,
             squat: 5,
             deadlift: 5,
-            // Pullups handling is separate/special or included here?
-            // Main Lift logic usually applies to weighted lifts.
-            // If main lift is Bodyweight Pullups (not current case), we'd need logic.
-            // BUT: instruction said "pullups: +1 rep hasta 12".
-            // However, evaluateUnlock triggers on MAIN LIFT completion.
-            // Pullups is usually accessory in Day 1.
-            // Is there a Day where Pullups is MAIN? 
-            // Day 7 is Strict Calisthenics but no "mainLift" defined in template?
-            // If Pullups is never Main Lift, it never Unlocks via this function.
-            // We need to check if we should unlock pullups based on accessory performance?
-            // The instruction "Evaluate Unlock (modo B)" lists pullups in the effect.
-            // If pullups is an accessory, we should probably check it independently?
-            // For now, let's keep Main Lift logic. If Pullups ever becomes Main, it needs handling.
-            // But Day 1 Main is Bench. Day 6 Main is Deadlift. 
-            // So Pullups progression is static? No, that's bad.
+            hip_thrust: 5,
         };
-
-        // Wait, if Pull Ups is accessory, it won't trigger unlock of Pull Ups level.
-        // We need to verify if we should track Accessory Progress.
-        // Instruction says: "Unlock si: completionRatio >= 0.9 (del main lift)".
-        // "Efecto: bench+2.5... pullups +1".
-        // This implies completing the MAIN lift (e.g. Bench) increments PULLUPS too?
-        // That sounds weird unless they are coupled.
-        // OR, the instruction applies to when Pullups IS the main lift (Day 7?).
-        // Checking Day 7 Template: type "Strict Calisthenics", no "mainLift".
-        // Checking Day 12 Benchmark: "Max Pull Ups".
-        // Maybe we just increment it on successful completion of Day 1 (Bench Day)?
-        // Or maybe we should check the pullup accessory specifically?
-
-        // Let's assume for now we only unlock the Main Lift performed.
-        // We will add pullups increment ONLY if it's the main lift.
 
         const lift = dayWorkout.mainLift;
         const newState = { ...liftState };
@@ -415,6 +725,7 @@ export function applyMultipliers(
         deadlift: Math.round(liftState.deadlift * intensityMultiplier / 5) * 5, // Round to nearest 5kg
         ohp: Math.round(liftState.ohp * intensityMultiplier * 2) / 2, // Round to nearest 2.5kg
         pullupsLevel: liftState.pullupsLevel, // No afectado por multiplicadores
+        hip_thrust: Math.round(liftState.hip_thrust * intensityMultiplier / 5) * 5, // Round to nearest 5kg
     };
 }
 
@@ -442,32 +753,140 @@ export async function getTemplatesForVariant(_variantId: string): Promise<typeof
 }
 
 /**
- * Versión futura de generateWorkout que acepta variantId
- * NOTA: Por ahora mantiene compatibilidad con código existente
+ * Genera un workout según el goal del usuario
+ * Soporta military_v1 (12 días), toned_abs, glute_building, fat_burn (6 días)
+ */
+export function generateWorkoutForGoal(
+    dayNumber: number,
+    liftState: LiftState,
+    goal: GoalType = 'military_v1'
+): ProtocolWorkout {
+    // Military v1 usa la función original para mantener compatibilidad
+    if (goal === 'military_v1') {
+        return generateWorkout(dayNumber, liftState);
+    }
+
+    const config = GOAL_CONFIG[goal];
+    const { templates, cycleLength, warmup } = config;
+
+    const dayTypeIndex = getDayType(dayNumber, cycleLength);
+    const cycleIndex = getCycleIndex(dayNumber, cycleLength);
+    const deload = isDeload(cycleIndex);
+
+    // En deload, el último día del ciclo se convierte en recovery
+    let template = templates[dayTypeIndex];
+    if (deload && dayTypeIndex === cycleLength) {
+        template = {
+            type: "Deload Recovery (Movilidad + Cardio Suave)",
+            accessories: [
+                { id: "mobility_flow", name: "Full Body Mobility Flow", sets: 1, reps: "20 min", blockType: "strength", exerciseType: "bodyweight" },
+                { id: "zone2", name: "Zone 2 Cardio (Easy)", sets: 1, reps: "20 min", blockType: "conditioning", conditioning: { format: "Other", duration: "20 min", instructions: "Cardio ligero a ritmo constante." } }
+            ]
+        };
+    }
+
+    const workout: ProtocolWorkout = {
+        dayNumber,
+        dayType: template.type,
+        cycleIndex,
+        isDeload: deload,
+        mainLift: template.mainLift,
+        exercises: []
+    };
+
+    // Add Warmup
+    warmup.forEach((w, i) => {
+        workout.exercises.push({
+            id: `warmup_${i}`,
+            name: w.name,
+            sets: 1,
+            reps: w.reps,
+            blockType: 'warmup',
+            exerciseType: 'bodyweight'
+        });
+    });
+
+    // Calculate Main Lift
+    if (template.mainLift) {
+        const liftKey = template.mainLift as keyof LiftState;
+        const tm = liftState[liftKey];
+        let sets = 4;
+        const reps = liftKey === 'hip_thrust' ? "8" : "5";
+
+        if (deload) {
+            sets = Math.max(2, Math.floor(sets * 0.7));
+        }
+
+        workout.exercises.push({
+            id: template.mainLift,
+            name: template.mainLift.toUpperCase().replace('_', ' ') + (deload ? " (DELOAD)" : " (MAIN)"),
+            sets,
+            reps,
+            weight: tm,
+            blockType: 'strength',
+            exerciseType: 'barbell'
+        });
+    }
+
+    // Add Accessories
+    if (template.accessories) {
+        template.accessories.forEach(acc => {
+            let sets = acc.sets;
+            const reps = acc.reps;
+            const exerciseType = acc.exerciseType || 'barbell';
+            let blockType = acc.blockType || 'strength';
+
+            if (acc.id.startsWith("metcon") || acc.id.startsWith("tabata") || acc.id.startsWith("hiit") || acc.id.startsWith("amrap") || acc.id.startsWith("emom") || acc.id.startsWith("endurance")) {
+                blockType = "conditioning";
+            }
+
+            if (deload) {
+                sets = Math.max(2, Math.floor(sets * 0.7));
+            }
+
+            workout.exercises.push({
+                id: acc.id,
+                name: acc.name,
+                sets,
+                reps,
+                exerciseType,
+                blockType,
+                conditioningMetadata: acc.conditioning
+            });
+        });
+    }
+
+    if (deload) {
+        workout.note = "SEMANA DE DELOAD: Volumen reducido. Enfócate en técnica perfecta y recuperación.";
+    }
+
+    return workout;
+}
+
+/**
+ * Versión async de generateWorkout que resuelve el goal desde un variantId
  */
 export async function generateWorkoutWithVariant(
     dayNumber: number,
     liftState: LiftState,
     variantId?: string
 ): Promise<ProtocolWorkout> {
-    // Si no hay variantId, usar comportamiento default (military_v1)
     if (!variantId || variantId === 'military_v1') {
         return generateWorkout(dayNumber, liftState);
     }
 
-    // TODO: Implementar lógica para variantes dinámicas en próximas fases
-    // const { getPlanVariant } = await import('./planVariantService');
-    // const variant = await getPlanVariant(variantId);
-    //
-    // if (variant) {
-    //     const adjustedLiftState = applyMultipliers(
-    //         liftState,
-    //         variant.volumeMultiplier,
-    //         variant.intensityMultiplier
-    //     );
-    //     // Generar workout con templates de la variante
-    // }
+    // Detectar goal desde variantId (ej: "toned_abs_intermediate_5day" -> "toned_abs")
+    const goal = resolveGoalFromVariantId(variantId);
+    return generateWorkoutForGoal(dayNumber, liftState, goal);
+}
 
-    // Fallback a comportamiento default
-    return generateWorkout(dayNumber, liftState);
+/**
+ * Extrae el GoalType desde un variantId
+ */
+export function resolveGoalFromVariantId(variantId: string): GoalType {
+    if (variantId.startsWith('toned_abs')) return 'toned_abs';
+    if (variantId.startsWith('glute_building')) return 'glute_building';
+    if (variantId.startsWith('fat_burn')) return 'fat_burn';
+    if (variantId.startsWith('military') || variantId.startsWith('muscle_gain') || variantId.startsWith('max_strength') || variantId.startsWith('conditioning') || variantId.startsWith('weight_loss')) return 'military_v1';
+    return 'military_v1';
 }

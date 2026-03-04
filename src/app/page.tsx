@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import PublicOnlyGuard from './components/guards/PublicOnlyGuard';
 import { useLanguage } from '@/context/LanguageContext';
-import { Check, ArrowRight, TrendingUp, Play, WifiOff } from 'lucide-react';
+import { Check, ArrowRight, TrendingUp, Play, WifiOff, Dumbbell, Zap, Shield, Target, Sparkles, Heart, Flame } from 'lucide-react';
 
 // --- Phone Mockup Shell ---
 function PhoneMockup({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -298,6 +298,50 @@ export default function LandingPage() {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 2.5 Goals Section */}
+        <section className="bg-slate-50 dark:bg-slate-900">
+          <div className="max-w-6xl mx-auto px-6 md:px-8 py-20 md:py-24">
+            <div className="text-center space-y-3 mb-12">
+              <h2 className="font-display text-3xl md:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
+                {t('landing.goalsTitle')}
+              </h2>
+              <p className="text-lg text-slate-600 dark:text-slate-400">
+                {t('landing.goalsSubtitle')}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {[
+                { key: 'weight_loss', icon: TrendingUp, color: 'text-green-500', bg: 'bg-green-500/10', border: 'border-green-500/20' },
+                { key: 'muscle_gain', icon: Dumbbell, color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
+                { key: 'max_strength', icon: Shield, color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
+                { key: 'conditioning', icon: Zap, color: 'text-orange-500', bg: 'bg-orange-500/10', border: 'border-orange-500/20' },
+                { key: 'toned_abs', icon: Sparkles, color: 'text-pink-500', bg: 'bg-pink-500/10', border: 'border-pink-500/20' },
+                { key: 'glute_building', icon: Heart, color: 'text-rose-500', bg: 'bg-rose-500/10', border: 'border-rose-500/20' },
+                { key: 'fat_burn', icon: Flame, color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20' },
+              ].map(({ key, icon: Icon, color, bg, border }) => (
+                <Link
+                  key={key}
+                  href="/auth/signup"
+                  className={`group p-5 rounded-2xl border ${border} ${bg} hover:scale-[1.02] transition-all space-y-3`}
+                >
+                  <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center`}>
+                    <Icon className={`w-5 h-5 ${color}`} />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm text-slate-900 dark:text-white">
+                      {t(`landing.goalCard_${key}`)}
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      {t(`landing.goalCard_${key}_desc`)}
+                    </p>
+                  </div>
+                </Link>
+              ))}
             </div>
           </div>
         </section>
