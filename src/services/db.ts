@@ -112,7 +112,7 @@ export interface UserProfile {
     height?: number; // cm
 
     // Perfil fitness
-    fitnessGoal?: 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning';
+    fitnessGoal?: 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn' | 'greek_god';
     experienceLevel?: 'beginner' | 'intermediate' | 'advanced';
     weeklyAvailability?: 3 | 4 | 5 | 6; // días por semana
     injuries?: string; // texto libre opcional
@@ -334,12 +334,26 @@ export const updateUserProfile = async (userId: string, updates: Partial<UserPro
     await updateDoc(doc(db, 'users', userId), updates);
 };
 
+/**
+ * Suscribe al perfil del propio usuario (users/{uid}).
+ * Usado por la UI de cambio de plan para leer el objetivo/plan actual.
+ */
+export const subscribeToUserProfile = (userId: string, callback: (profile: UserProfile | null) => void) => {
+    return onSnapshot(doc(db, 'users', userId), (docSnap) => {
+        if (docSnap.exists()) {
+            callback({ uid: docSnap.id, ...docSnap.data() } as UserProfile);
+        } else {
+            callback(null);
+        }
+    }, () => {});
+};
+
 // --- PLAN VARIANTS ---
 
 export interface PlanVariant {
     id: string; // ej: "muscle_gain_intermediate_5day"
     name: string; // ej: "Ganancia Muscular - Intermedio (5 días)"
-    goal: 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn';
+    goal: 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn' | 'greek_god';
     experienceLevel: 'beginner' | 'intermediate' | 'advanced';
     weeklyDays: 3 | 4 | 5 | 6;
 

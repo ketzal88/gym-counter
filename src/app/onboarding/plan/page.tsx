@@ -7,9 +7,10 @@ import { useLanguage } from '@/context/LanguageContext';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/services/db';
 import { selectPlanVariant, getVariantDisplayName } from '@/services/planVariantService';
+import { GOAL_CONFIG, resolveGoalFromVariantId } from '@/services/protocolEngine';
 import { Check, Calendar, Clock, Layers } from 'lucide-react';
 
-type FitnessGoal = 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn';
+type FitnessGoal = 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn' | 'greek_god';
 type ExperienceLevel = 'beginner' | 'intermediate' | 'advanced';
 type WeeklyAvailability = 3 | 4 | 5 | 6;
 
@@ -37,6 +38,7 @@ export default function OnboardingPlanPage() {
         toned_abs: t('onboarding.descTonedAbs'),
         glute_building: t('onboarding.descGluteBuilding'),
         fat_burn: t('onboarding.descFatBurn'),
+        greek_god: t('onboarding.descGreekGod'),
     };
 
     const EXPERIENCE_FEATURES: Record<ExperienceLevel, string[]> = {
@@ -153,7 +155,9 @@ export default function OnboardingPlanPage() {
         );
     }
 
-    const isNewGoal = ['toned_abs', 'glute_building', 'fat_burn'].includes(onboardingData.fitnessGoal);
+    // Estructura real del plan (etiquetas de día y largo de ciclo) según el goal,
+    // así el preview refleja exactamente lo que generará el motor para cada plan.
+    const planConfig = GOAL_CONFIG[resolveGoalFromVariantId(planVariantId)];
     const totalDays = 180;
     const estimatedWeeks = Math.ceil(totalDays / onboardingData.weeklyAvailability);
 
@@ -232,10 +236,7 @@ export default function OnboardingPlanPage() {
                             </div>
                             <div className="flex-1">
                                 <div className="font-medium text-sm text-slate-900 dark:text-white">
-                                    {t('onboarding.dayLabel')} {idx + 1} - {isNewGoal
-                                        ? (idx % 2 === 0 ? t('onboarding.mainStrength') : t('onboarding.conditioning'))
-                                        : (idx % 3 === 0 ? t('onboarding.mainStrength') : idx % 3 === 1 ? t('onboarding.accessories') : t('onboarding.conditioning'))
-                                    }
+                                    {t('onboarding.dayLabel')} {idx + 1} - {planConfig.dayLabels[(idx % planConfig.cycleLength) + 1]}
                                 </div>
                                 <div className="text-xs text-slate-500 dark:text-slate-500">
                                     {t('onboarding.exercisesTime')}

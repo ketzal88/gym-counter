@@ -21,7 +21,7 @@ const db = getFirestore(app);
 interface PlanVariantConfig {
     id: string;
     name: string;
-    goal: 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn';
+    goal: 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn' | 'greek_god';
     experienceLevel: 'beginner' | 'intermediate' | 'advanced';
     weeklyDays: 3 | 4 | 5 | 6;
     totalDays: number;
@@ -381,6 +381,53 @@ const PLAN_VARIANTS: PlanVariantConfig[] = [
         exerciseComplexity: 'advanced',
         description: 'Programa de alta intensidad para máxima quema calórica con doble sesiones y técnicas avanzadas',
         targetAudience: 'Atletas avanzadas en fase de definición agresiva'
+    },
+
+    // GREEK GOD VARIANTS (Físico Griego) — Full Body 3 días, calistenia avanzada
+    {
+        id: 'greek_god_intermediate_3day',
+        name: 'Físico Griego - Intermedio (3 días)',
+        goal: 'greek_god',
+        experienceLevel: 'intermediate',
+        weeklyDays: 3,
+        totalDays: 180,
+        cycleLength: 3,
+        deloadFrequency: 4,
+        volumeMultiplier: 1.0,
+        intensityMultiplier: 1.0,
+        exerciseComplexity: 'advanced',
+        description: 'Plan Full Body de 3 días para físico griego con calistenia avanzada (planche, front lever, muscle-up) y énfasis en deltoides laterales',
+        targetAudience: 'Atletas con base que buscan estética griega y skills de calistenia'
+    },
+    {
+        id: 'greek_god_advanced_3day',
+        name: 'Físico Griego - Avanzado (3 días)',
+        goal: 'greek_god',
+        experienceLevel: 'advanced',
+        weeklyDays: 3,
+        totalDays: 180,
+        cycleLength: 3,
+        deloadFrequency: 4,
+        volumeMultiplier: 1.2,
+        intensityMultiplier: 1.1,
+        exerciseComplexity: 'advanced',
+        description: 'Plan Full Body avanzado para físico griego: progresión a planche/front lever, muscle-ups y máximo desarrollo de hombros y espalda en V',
+        targetAudience: 'Atletas avanzados de calistenia buscando estética y skills de brazo extendido'
+    },
+    {
+        id: 'greek_god_advanced_4day',
+        name: 'Físico Griego - Avanzado (4 días)',
+        goal: 'greek_god',
+        experienceLevel: 'advanced',
+        weeklyDays: 4,
+        totalDays: 180,
+        cycleLength: 3,
+        deloadFrequency: 4,
+        volumeMultiplier: 1.3,
+        intensityMultiplier: 1.1,
+        exerciseComplexity: 'advanced',
+        description: 'Físico griego con mayor frecuencia semanal: rota empuje/tracción/full body con práctica de skills 4 veces por semana',
+        targetAudience: 'Atletas avanzados con disponibilidad de 4 días buscando físico griego'
     },
 ];
 

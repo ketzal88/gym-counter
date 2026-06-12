@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import PublicOnlyGuard from './components/guards/PublicOnlyGuard';
 import { useLanguage } from '@/context/LanguageContext';
-import { Check, ArrowRight, TrendingUp, Play, WifiOff, Dumbbell, Zap, Shield, Target, Sparkles, Heart, Flame, X, Star, Users, BarChart3, ChevronRight } from 'lucide-react';
+import { Check, ArrowRight, TrendingUp, Play, WifiOff, Dumbbell, Zap, Shield, Target, Sparkles, Heart, Flame, Crown, X, Star, Users, BarChart3, ChevronRight } from 'lucide-react';
 
 // --- Phone Mockup Shell ---
 function PhoneMockup({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -403,6 +403,7 @@ export default function LandingPage() {
                 { key: 'toned_abs', icon: Sparkles, color: 'text-pink-500', bg: 'bg-pink-500/10', border: 'border-pink-500/20' },
                 { key: 'glute_building', icon: Heart, color: 'text-rose-500', bg: 'bg-rose-500/10', border: 'border-rose-500/20' },
                 { key: 'fat_burn', icon: Flame, color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20' },
+                { key: 'greek_god', icon: Crown, color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
               ].map(({ key, icon: Icon, color, bg, border }) => (
                 <Link
                   key={key}

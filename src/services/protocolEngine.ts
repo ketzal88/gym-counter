@@ -446,6 +446,82 @@ export const TEMPLATES_FAT_BURN: Record<number, {
 };
 
 // ============================================================
+// TEMPLATES: FÍSICO GRIEGO (Greek God) — Full Body 3 días
+// Basado en la research del físico griego + calistenia avanzada.
+// Calistenia (peso corporal) + 2 mancuernas. Skills SIEMPRE al
+// principio (sistema nervioso fresco): planche/front lever (brazo
+// extendido) y muscle-up (brazo flexionado). Énfasis en empuje
+// vertical y deltoides laterales para hombros anchos (Adonis Index).
+// ============================================================
+export const TEMPLATES_GREEK_GOD: Record<number, {
+    type: string,
+    mainLift?: keyof LiftState,
+    accessories: {
+        id: string,
+        name: string,
+        sets: number,
+        reps: string,
+        exerciseType?: ProtocolExercise['exerciseType'],
+        blockType?: ProtocolExercise['blockType'],
+        conditioning?: ProtocolExercise['conditioningMetadata']
+    }[]
+}> = {
+    1: {
+        // DÍA A — Énfasis Empuje + Planche
+        type: "Empuje + Planche",
+        accessories: [
+            { id: "greek_planche", name: "Planche (progresión a tu nivel)", sets: 5, reps: "10-15 seg", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "greek_muscleup_a", name: "Muscle-up (explosivo)", sets: 4, reps: "2-4", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "greek_pseudo_planche", name: "Pseudo Planche Push-ups", sets: 4, reps: "6-10", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "greek_weighted_pullups", name: "Pull-ups con Peso", sets: 4, reps: "5-8", exerciseType: "bodyweight_weighted", blockType: "strength" },
+            { id: "greek_pike_pushups", name: "Pike Push-ups / HSPU pared", sets: 3, reps: "6-10", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "greek_pistol_squats", name: "Pistol Squats", sets: 3, reps: "5-8/pierna", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "greek_lateral_raises_a", name: "Lateral Raises (última serie drop set)", sets: 4, reps: "12-20", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "greek_hanging_leg_raises", name: "Hanging Leg Raises", sets: 3, reps: "10-15", exerciseType: "bodyweight", blockType: "strength" }
+        ]
+    },
+    2: {
+        // DÍA B — Énfasis Tracción + Front Lever
+        type: "Tracción + Front Lever",
+        accessories: [
+            { id: "greek_front_lever", name: "Front Lever (tuck → adv → straddle)", sets: 5, reps: "8-12 seg", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "greek_muscleup_b", name: "Muscle-up / High Pulls explosivos", sets: 4, reps: "3-5", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "greek_weighted_dips", name: "Weighted Dips", sets: 4, reps: "6-10", exerciseType: "bodyweight_weighted", blockType: "strength" },
+            { id: "greek_archer_pullups", name: "Archer Pull-ups / Pull-ups con peso", sets: 4, reps: "5-8/lado", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "greek_australian_rows", name: "Australian / Inverted Rows", sets: 3, reps: "10-15", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "greek_single_leg_rdl", name: "Single-leg RDL (mancuernas)", sets: 3, reps: "8-10/pierna", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "greek_lateral_raises_b", name: "Lateral Raises (lean-away, un brazo)", sets: 4, reps: "12-20", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "greek_curls", name: "Curl Bíceps + Hammer Curl", sets: 3, reps: "10-12", exerciseType: "dumbbell", blockType: "strength" }
+        ]
+    },
+    3: {
+        // DÍA C — Full Body / Balance + Skills mixtos
+        type: "Full Body + Skills",
+        accessories: [
+            { id: "greek_skill_weakest", name: "Skill más atrasado (planche o front lever)", sets: 5, reps: "10-12 seg", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "greek_muscleup_transitions", name: "Muscle-up Transitions (negativos)", sets: 4, reps: "3-5", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "greek_archer_pushups", name: "Archer / Decline Push-ups", sets: 4, reps: "8-12", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "greek_chinups", name: "Chin-ups (supinado)", sets: 4, reps: "6-10", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "greek_bulgarian_split", name: "Bulgarian Split Squat (mancuernas)", sets: 3, reps: "8-12/pierna", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "greek_overhead_press", name: "Overhead Press (mancuernas)", sets: 3, reps: "8-12", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "greek_lateral_raises_c", name: "Lateral Raises (drop set al fallo)", sets: 3, reps: "12-20", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "greek_calf_raises", name: "Standing Calf Raises (una pierna)", sets: 4, reps: "15-20/pierna", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "greek_core_hold", name: "Plank / Hollow Body / Ab Wheel", sets: 3, reps: "30-45 seg", exerciseType: "bodyweight", blockType: "strength" }
+        ]
+    }
+};
+
+// Warmup específico para el plan Físico Griego (muñecas/escápulas/hombros).
+// Los skills cargan muñecas/codos/hombros de forma extrema: no negociable.
+export const WARMUP_GREEK = [
+    { name: 'Saltar la cuerda / Jumping Jacks', reps: '60 seg' },
+    { name: 'Círculos y flexión/extensión de muñeca', reps: '10' },
+    { name: 'Scapular Pull-ups', reps: '8' },
+    { name: 'Band Pull-aparts / Círculos de Hombro', reps: '15' },
+    { name: 'Planche Leans + Hollow Body (activación)', reps: '20 seg' }
+];
+
+// ============================================================
 // Warmup específico para rutinas de mujeres
 // ============================================================
 export const WARMUP_WOMEN = [
@@ -486,6 +562,12 @@ export const DAY_LABELS_FAT_BURN: Record<number, string> = {
     6: "Long Endurance + Core"
 };
 
+export const DAY_LABELS_GREEK_GOD: Record<number, string> = {
+    1: "Empuje + Planche",
+    2: "Tracción + Front Lever",
+    3: "Full Body + Skills"
+};
+
 export const DAY_LABELS: Record<number, string> = {
     1: "Upper Strength (Bench)",
     2: "Lower Strength (Squat)",
@@ -504,7 +586,7 @@ export const DAY_LABELS: Record<number, string> = {
 // ============================================================
 // Mapeo de goal a templates, labels y cycle length
 // ============================================================
-export type GoalType = 'military_v1' | 'toned_abs' | 'glute_building' | 'fat_burn';
+export type GoalType = 'military_v1' | 'toned_abs' | 'glute_building' | 'fat_burn' | 'greek_god';
 
 export const GOAL_CONFIG: Record<GoalType, {
     templates: typeof TEMPLATES,
@@ -539,6 +621,13 @@ export const GOAL_CONFIG: Record<GoalType, {
         dayLabels: DAY_LABELS_FAT_BURN,
         cycleLength: 6,
         warmup: WARMUP_WOMEN,
+        totalDays: 180,
+    },
+    greek_god: {
+        templates: TEMPLATES_GREEK_GOD,
+        dayLabels: DAY_LABELS_GREEK_GOD,
+        cycleLength: 3,
+        warmup: WARMUP_GREEK,
         totalDays: 180,
     },
 };
@@ -887,6 +976,7 @@ export function resolveGoalFromVariantId(variantId: string): GoalType {
     if (variantId.startsWith('toned_abs')) return 'toned_abs';
     if (variantId.startsWith('glute_building')) return 'glute_building';
     if (variantId.startsWith('fat_burn')) return 'fat_burn';
+    if (variantId.startsWith('greek_god')) return 'greek_god';
     if (variantId.startsWith('military') || variantId.startsWith('muscle_gain') || variantId.startsWith('max_strength') || variantId.startsWith('conditioning') || variantId.startsWith('weight_loss')) return 'military_v1';
     return 'military_v1';
 }

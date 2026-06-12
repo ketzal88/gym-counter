@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
-import { Target, Activity, Dumbbell, Zap, Calendar, AlertCircle, Flame, Heart, Sparkles } from 'lucide-react';
+import { Target, Activity, Dumbbell, Zap, Calendar, AlertCircle, Flame, Heart, Sparkles, Crown } from 'lucide-react';
 
-type FitnessGoal = 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn';
+type FitnessGoal = 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn' | 'greek_god';
 type ExperienceLevel = 'beginner' | 'intermediate' | 'advanced';
 type WeeklyAvailability = 3 | 4 | 5 | 6;
 
@@ -21,6 +21,7 @@ export default function OnboardingGoalsPage() {
         { id: 'toned_abs' as FitnessGoal, icon: Sparkles, title: t('onboarding.goalTonedAbs'), description: t('onboarding.goalTonedAbsDesc'), color: 'text-pink-500 dark:text-pink-400', bgSelected: 'bg-pink-500', borderSelected: 'border-pink-500' },
         { id: 'glute_building' as FitnessGoal, icon: Heart, title: t('onboarding.goalGluteBuilding'), description: t('onboarding.goalGluteBuildingDesc'), color: 'text-rose-600 dark:text-rose-500', bgSelected: 'bg-rose-600', borderSelected: 'border-rose-600' },
         { id: 'fat_burn' as FitnessGoal, icon: Flame, title: t('onboarding.goalFatBurn'), description: t('onboarding.goalFatBurnDesc'), color: 'text-red-600 dark:text-red-500', bgSelected: 'bg-red-600', borderSelected: 'border-red-600' },
+        { id: 'greek_god' as FitnessGoal, icon: Crown, title: t('onboarding.goalGreekGod'), description: t('onboarding.goalGreekGodDesc'), color: 'text-amber-600 dark:text-amber-500', bgSelected: 'bg-amber-600', borderSelected: 'border-amber-600' },
     ];
 
     const EXPERIENCE_LEVELS = [

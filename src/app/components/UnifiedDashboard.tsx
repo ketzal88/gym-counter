@@ -27,6 +27,7 @@ import LiftProgressionChart from './charts/LiftProgressionChart';
 import WeeklyVolumeChart from './charts/WeeklyVolumeChart';
 import BodyCompositionChart from './charts/BodyCompositionChart';
 import ProtocolSettings from './ProtocolSettings';
+import ChangePlanCard from './ChangePlanCard';
 import ProtocolOverview from './ProtocolOverview';
 import TabHeader from './TabHeader';
 import SubscriptionCard from './SubscriptionCard';
@@ -178,6 +179,17 @@ export default function UnifiedDashboard() {
     ? resolveGoalFromVariantId(userTrainingState.assignedVariant)
     : 'military_v1';
   const userCycleLength = GOAL_CONFIG[userGoal].cycleLength;
+
+  // Etiqueta del protocolo según el plan del usuario (no siempre "Military").
+  const protocolLabel: Record<typeof userGoal, string> = {
+    military_v1: t('records.militaryProtocol'),
+    toned_abs: t('onboarding.goalTonedAbs'),
+    glute_building: t('onboarding.goalGluteBuilding'),
+    fat_burn: t('onboarding.goalFatBurn'),
+    greek_god: t('onboarding.goalGreekGod'),
+  };
+  // Planes de pura calistenia (sin levantamientos con barra) no muestran la grilla de cargas.
+  const usesBarbellLifts = userGoal !== 'greek_god';
 
   // --- Statistics Calculation ---
   const currentYear = new Date().getFullYear();
@@ -573,7 +585,7 @@ export default function UnifiedDashboard() {
                   <div>
                     <div className="flex items-center gap-2 mb-3">
                       <span className="text-xs font-medium bg-blue-600/20 text-blue-400 px-2.5 py-1 rounded-lg uppercase tracking-wide border border-blue-500/20">
-                        {t('records.militaryProtocol')}
+                        {protocolLabel[userGoal]}
                       </span>
                       {isDeload(getCycleIndex(userTrainingState.currentDay, userCycleLength)) && (
                         <span className="text-xs font-medium bg-amber-600/20 text-amber-500 px-2.5 py-1 rounded-lg uppercase tracking-wide border border-amber-500/20">
@@ -592,22 +604,24 @@ export default function UnifiedDashboard() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-4 gap-2">
-                  {[
-                    { id: 'bench', label: 'BNCH' },
-                    { id: 'squat', label: 'SQUT' },
-                    { id: 'deadlift', label: 'DEAD' },
-                    { id: 'ohp', label: 'OHP' }
-                  ].map(lift => (
-                    <div key={lift.id} className="bg-slate-800 rounded-lg p-3 text-center border border-slate-700">
-                      <p className="text-[9px] font-semibold text-slate-500 uppercase mb-1">{lift.label}</p>
-                      <p className="text-sm font-bold text-white">
-                        {userTrainingState.liftState?.[lift.id as keyof typeof userTrainingState.liftState] || '-'}
-                        <span className="text-[10px] text-slate-600 ml-0.5">kg</span>
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                {usesBarbellLifts && (
+                  <div className="grid grid-cols-4 gap-2">
+                    {[
+                      { id: 'bench', label: 'BNCH' },
+                      { id: 'squat', label: 'SQUT' },
+                      { id: 'deadlift', label: 'DEAD' },
+                      { id: 'ohp', label: 'OHP' }
+                    ].map(lift => (
+                      <div key={lift.id} className="bg-slate-800 rounded-lg p-3 text-center border border-slate-700">
+                        <p className="text-[9px] font-semibold text-slate-500 uppercase mb-1">{lift.label}</p>
+                        <p className="text-sm font-bold text-white">
+                          {userTrainingState.liftState?.[lift.id as keyof typeof userTrainingState.liftState] || '-'}
+                          <span className="text-[10px] text-slate-600 ml-0.5">kg</span>
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   {!userTrainingState.protocolCompleted ? (
@@ -752,6 +766,7 @@ export default function UnifiedDashboard() {
           </div>
 
           <SubscriptionCard />
+          <ChangePlanCard />
           <ProtocolSettings />
 
           {/* Feedback Box */}

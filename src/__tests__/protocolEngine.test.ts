@@ -4,9 +4,14 @@ import {
     getCycleIndex,
     isDeload,
     generateWorkout,
+    generateWorkoutForGoal,
     evaluateUnlock,
+    resolveGoalFromVariantId,
     DAY_LABELS,
+    DAY_LABELS_GREEK_GOD,
     TEMPLATES,
+    TEMPLATES_GREEK_GOD,
+    GOAL_CONFIG,
 } from '@/services/protocolEngine';
 
 const mockLiftState = {
@@ -120,6 +125,69 @@ describe('generateWorkout', () => {
     it('replaces day 12 with recovery during deload', () => {
         const workout = generateWorkout(48, mockLiftState); // cycle 4, day 12
         expect(workout.dayType).toContain('Deload Recovery');
+    });
+});
+
+describe('Greek God plan (greek_god)', () => {
+    it('resolves the greek_god goal from its variantId', () => {
+        expect(resolveGoalFromVariantId('greek_god_advanced_3day')).toBe('greek_god');
+        expect(resolveGoalFromVariantId('greek_god_intermediate_3day')).toBe('greek_god');
+    });
+
+    it('is registered in GOAL_CONFIG with a 3-day cycle', () => {
+        expect(GOAL_CONFIG.greek_god).toBeDefined();
+        expect(GOAL_CONFIG.greek_god.cycleLength).toBe(3);
+        expect(GOAL_CONFIG.greek_god.totalDays).toBe(180);
+    });
+
+    it('has all 3 day types defined with labels', () => {
+        for (let i = 1; i <= 3; i++) {
+            expect(TEMPLATES_GREEK_GOD[i]).toBeDefined();
+            expect(TEMPLATES_GREEK_GOD[i].type).toBeTruthy();
+            expect(DAY_LABELS_GREEK_GOD[i]).toBeTruthy();
+        }
+    });
+
+    it('cycles through 3 day types', () => {
+        expect(getDayType(1, 3)).toBe(1);
+        expect(getDayType(3, 3)).toBe(3);
+        expect(getDayType(4, 3)).toBe(1);
+    });
+
+    it('generates the push/planche day (day 1) with skills first and lateral raises', () => {
+        const workout = generateWorkoutForGoal(1, mockLiftState, 'greek_god');
+        expect(workout.dayType).toBe('Empuje + Planche');
+        // No barbell main lift: calisthenics plan progresses via skills, not weight
+        expect(workout.mainLift).toBeUndefined();
+        const ids = workout.exercises.map(e => e.id);
+        // First non-warmup exercise is the planche skill
+        const firstStrength = workout.exercises.find(e => e.blockType !== 'warmup');
+        expect(firstStrength?.id).toBe('greek_planche');
+        expect(ids).toContain('greek_lateral_raises_a');
+    });
+
+    it('uses the Greek-specific warmup (wrists/scapulae/shoulders)', () => {
+        const workout = generateWorkoutForGoal(2, mockLiftState, 'greek_god');
+        const warmups = workout.exercises.filter(e => e.blockType === 'warmup');
+        expect(warmups.length).toBe(GOAL_CONFIG.greek_god.warmup.length);
+        expect(warmups.some(w => /Muñeca/i.test(w.name))).toBe(true);
+    });
+
+    it('reduces volume during deload (cycle 4 starts at day 10)', () => {
+        // cycleLength 3 → cycle 4 = days 10-12; day 10 is day type 1
+        expect(getCycleIndex(10, 3)).toBe(4);
+        const normal = generateWorkoutForGoal(1, mockLiftState, 'greek_god');
+        const deload = generateWorkoutForGoal(10, mockLiftState, 'greek_god');
+        expect(deload.isDeload).toBe(true);
+        const normalSets = normal.exercises.find(e => e.id === 'greek_planche')!.sets;
+        const deloadSets = deload.exercises.find(e => e.id === 'greek_planche')!.sets;
+        expect(deloadSets).toBeLessThan(normalSets);
+    });
+
+    it('never unlocks weight increments (no main lift)', () => {
+        const workout = generateWorkoutForGoal(1, mockLiftState, 'greek_god');
+        const result = evaluateUnlock([], mockLiftState, workout);
+        expect(result).toBeNull();
     });
 });
 

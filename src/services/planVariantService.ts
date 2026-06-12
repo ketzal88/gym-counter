@@ -71,7 +71,7 @@ export async function getAllPlanVariants(): Promise<PlanVariant[]> {
  * Selecciona la variante de plan apropiada basada en el perfil del usuario
  */
 export function selectPlanVariant(profile: {
-    fitnessGoal: 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn';
+    fitnessGoal: 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn' | 'greek_god';
     experienceLevel: 'beginner' | 'intermediate' | 'advanced';
     weeklyAvailability: 3 | 4 | 5 | 6;
 }): string {
@@ -93,7 +93,7 @@ export function clearVariantsCache(): void {
  * Obtiene variantes filtradas por criterios
  */
 export async function getPlanVariantsByGoal(
-    goal: 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn'
+    goal: 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn' | 'greek_god'
 ): Promise<PlanVariant[]> {
     const allVariants = await getAllPlanVariants();
     return allVariants.filter(variant => variant.goal === goal);
@@ -111,6 +111,7 @@ export function getVariantDisplayName(variantId: string): string {
         toned_abs: 'Tonificar Abdomen',
         glute_building: 'Construir Glúteos',
         fat_burn: 'Quemar Grasa Intenso',
+        greek_god: 'Físico Griego',
     };
 
     const levelNames = {
@@ -127,7 +128,7 @@ export function getVariantDisplayName(variantId: string): string {
     let level = '';
 
     // Detectar goal y nivel desde el variantId
-    const goalKeys = ['weight_loss', 'muscle_gain', 'max_strength', 'conditioning', 'toned_abs', 'glute_building', 'fat_burn'];
+    const goalKeys = ['weight_loss', 'muscle_gain', 'max_strength', 'conditioning', 'toned_abs', 'glute_building', 'fat_burn', 'greek_god'];
     for (const key of goalKeys) {
         if (variantId.includes(key)) {
             goal = goalNames[key] || key;
