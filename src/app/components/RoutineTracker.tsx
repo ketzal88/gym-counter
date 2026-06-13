@@ -22,6 +22,7 @@ import { useWakeLock } from '@/hooks/useWakeLock';
 import { useToast } from '@/hooks/useToast';
 import { useLanguage } from '@/context/LanguageContext';
 import { hasVideo } from '@/data/exerciseVideos';
+import { saveWorkoutDraft, loadWorkoutDraft, clearWorkoutDraft } from '@/utils/workoutDraft';
 import YouTubeVideoModal from './YouTubeVideoModal';
 import ToastContainer from './ui/ToastContainer';
 import ConfirmDialog from './ui/ConfirmDialog';
@@ -162,15 +163,33 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                 }
 
                 setWorkout(generated);
-                setExerciseLogs(logs);
-                setCompletedExercises({});
+
+                // Restaurar un borrador EN CURSO de este mismo día si existe (sobrevive
+                // al cambio de pestaña / recarga). Si no, arrancar con los defaults.
+                const draft = loadWorkoutDraft(userId, userState.currentDay);
+                if (draft) {
+                    const restoredLogs = { ...logs };
+                    for (const ex of generated.exercises) {
+                        if (draft.exerciseLogs[ex.id]) {
+                            restoredLogs[ex.id] = draft.exerciseLogs[ex.id];
+                        }
+                    }
+                    setExerciseLogs(restoredLogs);
+                    setCompletedExercises(draft.completedExercises || {});
+                    setActiveExerciseIndex(draft.activeExerciseIndex || 0);
+                    setWorkoutStartTime(draft.workoutStartTime ? new Date(draft.workoutStartTime) : new Date());
+                    setWorkoutStarted(true);
+                } else {
+                    setExerciseLogs(logs);
+                    setCompletedExercises({});
+                }
             }
         };
 
         if (userState) {
             prepareWorkout();
         }
-    }, [userState, fetchLastPerformance]);
+    }, [userState, fetchLastPerformance, userId]);
 
     // Auto-advance when all sets of current exercise are completed
     useEffect(() => {
@@ -191,6 +210,19 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
             return () => clearTimeout(timer);
         }
     }, [exerciseLogs, completedExercises, activeExerciseIndex, workoutStarted, workout]);
+
+    // Persistir el workout en curso para que sobreviva al cambio de pestaña / recarga.
+    useEffect(() => {
+        if (!userId || !userState || !workout || !workoutStarted) return;
+        saveWorkoutDraft(userId, {
+            currentDay: userState.currentDay,
+            workoutStartTime: workoutStartTime ? workoutStartTime.toISOString() : null,
+            activeExerciseIndex,
+            exerciseLogs,
+            completedExercises,
+            savedAt: new Date().toISOString(),
+        });
+    }, [userId, userState, workout, workoutStarted, workoutStartTime, activeExerciseIndex, exerciseLogs, completedExercises]);
 
     const handleInitialize = async () => {
         setLoading(true);
@@ -350,6 +382,9 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
 
             await updateUserTrainingState(userId, updates);
 
+            // Sesión completada: el borrador en curso ya no aplica.
+            clearWorkoutDraft(userId);
+
             const successPhrases = unlockResult
                 ? ["TITAN! Desbloqueaste +Carga", "GOAT! Subimos el nivel.", "INTENSIDAD PURA! Nuevo PR desbloqueado."]
                 : ["Trabajo hecho. Mantenemos y atacamos.", "Solido. La consistencia es clave.", "Buen trabajo. A recuperar."];
@@ -470,6 +505,7 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                         confirmText="Reiniciar"
                         onConfirm={() => {
                             updateUserTrainingState(userId, { currentDay: 1, protocolCompleted: false });
+                            clearWorkoutDraft(userId);
                             setShowResetConfirm(false);
                         }}
                         onCancel={() => setShowResetConfirm(false)}
@@ -773,6 +809,45 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                             </div>
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* UP NEXT — preview/prepare the upcoming exercises */}
+            {activeExerciseIndex < workout.exercises.length - 1 && (
+                <div className="space-y-2">
+                    <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                        <span className="material-symbols-rounded text-sm">playlist_play</span>
+                        {t('routine.upNext')}
+                    </h3>
+                    <div className="space-y-1.5">
+                        {workout.exercises.slice(activeExerciseIndex + 1).map((ex, i) => {
+                            const isMain = ex.id === workout.mainLift;
+                            return (
+                                <div key={ex.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-800/30 border border-slate-800/50">
+                                    <span className="text-[10px] font-black text-slate-600 w-5 text-center shrink-0">{activeExerciseIndex + 2 + i}</span>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-bold text-slate-300 truncate">{ex.name}</p>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                            {ex.blockType === 'strength' && <span className="text-[9px] font-bold text-slate-500">{ex.sets}x{ex.reps}</span>}
+                                            {ex.blockType === 'warmup' && <span className="text-[9px] font-black text-orange-400/80 uppercase">Warmup</span>}
+                                            {ex.blockType === 'conditioning' && <span className="text-[9px] font-black text-indigo-400/80 uppercase">{ex.conditioningMetadata?.format || 'Metcon'}</span>}
+                                            {ex.exerciseType === 'bodyweight_weighted' && <span className="text-[9px] font-black text-amber-500/80 uppercase">+ Lastre</span>}
+                                        </div>
+                                    </div>
+                                    {isMain && <span className="text-[8px] font-black text-blue-400 bg-blue-600/20 px-1.5 py-0.5 rounded uppercase shrink-0">Main</span>}
+                                    {hasVideo(ex.id) && (
+                                        <button
+                                            onClick={() => setVideoExercise({ id: ex.id, name: ex.name })}
+                                            className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors shrink-0"
+                                            aria-label={`Video: ${ex.name}`}
+                                        >
+                                            <span className="material-symbols-rounded text-base">smart_display</span>
+                                        </button>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             )}
 

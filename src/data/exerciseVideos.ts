@@ -303,6 +303,50 @@ export const EXERCISE_VIDEOS: Record<string, ExerciseVideoData> = {
     channel: 'Funk Roberts',
     title: 'Battle Ropes Tutorial - 10 Exercises'
   },
+
+  // CALISTENIA / SKILLS (Físico Griego)
+  'planche': {
+    videoId: 'BeGUXwZmATQ',
+    title: 'All Planche Progressions from 0 to Full'
+  },
+  'pseudo_planche': {
+    videoId: 'TZ63httkob4',
+    channel: 'FitnessFAQs',
+    title: 'How To Planche Push-Up (BEST PROGRESSIONS)'
+  },
+  'front_lever': {
+    videoId: 'BwhZYpIdhro',
+    title: 'Go From Zero to Tuck Front Lever | Full Guide'
+  },
+  'muscle_up': {
+    videoId: '_eQ2gw_Gg5Y',
+    channel: 'FitnessFAQs',
+    title: 'How To Muscle-Up For Beginners (BEST EXERCISES)'
+  },
+  'pike_pushup': {
+    videoId: 'paCOGgmLCA0',
+    title: 'PIKE PUSH UP Tutorial for the Complete Beginner'
+  },
+  'pistol_squat': {
+    videoId: 'vq5-vdgJc0I',
+    title: 'How to Get Your First PISTOL SQUAT (Step-by-Step Progression)'
+  },
+  'archer_pullup': {
+    videoId: 'NuqcoOAsTMA',
+    title: 'The BEST Archer PULL UP Tutorial | Step By Step Analysis'
+  },
+  'archer_pushup': {
+    videoId: 'A0r8ploEnZY',
+    title: 'Archer Push Ups | Correct Form Tutorial'
+  },
+  'australian_row': {
+    videoId: '5S3Wt8y6OpE',
+    title: 'How to Australian Rows / Inverted Pull Ups (Good for Beginners)'
+  },
+  'single_leg_rdl': {
+    videoId: 'iS7atZhcRnw',
+    title: 'Single Leg Romanian Deadlift (1 Dumbbell)'
+  },
 };
 
 // Alias map: protocol engine IDs → exerciseVideos keys
@@ -329,6 +373,33 @@ const EXERCISE_ID_ALIASES: Record<string, string> = {
   'db_shoulder_press': 'military_press',
   'pushups_vol': 'dips', // closest match
   'chest_dips': 'dips',
+
+  // FÍSICO GRIEGO (greek_god) — skills nuevos + reuso de videos existentes
+  'greek_planche': 'planche',
+  'greek_skill_weakest': 'planche',
+  'greek_pseudo_planche': 'pseudo_planche',
+  'greek_front_lever': 'front_lever',
+  'greek_muscleup_a': 'muscle_up',
+  'greek_muscleup_b': 'muscle_up',
+  'greek_muscleup_transitions': 'muscle_up',
+  'greek_pike_pushups': 'pike_pushup',
+  'greek_pistol_squats': 'pistol_squat',
+  'greek_archer_pullups': 'archer_pullup',
+  'greek_archer_pushups': 'archer_pushup',
+  'greek_australian_rows': 'australian_row',
+  'greek_single_leg_rdl': 'single_leg_rdl',
+  'greek_weighted_pullups': 'pullups',
+  'greek_weighted_dips': 'dips',
+  'greek_chinups': 'chinups',
+  'greek_lateral_raises_a': 'lateral_raises',
+  'greek_lateral_raises_b': 'lateral_raises',
+  'greek_lateral_raises_c': 'lateral_raises',
+  'greek_curls': 'dumbbell_curls',
+  'greek_overhead_press': 'ohp',
+  'greek_bulgarian_split': 'bulgarian_split_squat',
+  'greek_calf_raises': 'calf_raises',
+  'greek_hanging_leg_raises': 'hanging_leg_raises',
+  'greek_core_hold': 'planks',
 };
 
 function resolveExerciseId(exerciseId: string): string {

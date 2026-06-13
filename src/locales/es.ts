@@ -396,6 +396,7 @@ const es = {
     inProgress: 'EN CURSO',
     exerciseOf: 'Ejercicio {current} de {total}',
     workoutPreview: 'Ejercicios de hoy',
+    upNext: 'Próximos ejercicios',
     duration: 'Duración',
   },
   settings: {
