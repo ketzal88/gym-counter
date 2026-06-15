@@ -347,6 +347,10 @@ export const EXERCISE_VIDEOS: Record<string, ExerciseVideoData> = {
     videoId: 'iS7atZhcRnw',
     title: 'Single Leg Romanian Deadlift (1 Dumbbell)'
   },
+  'jump_rope': {
+    videoId: 'nMHfZ-yrFjA',
+    title: 'How To Jump Rope For Beginners | Basics You Need To Know'
+  },
 };
 
 // Alias map: protocol engine IDs → exerciseVideos keys
@@ -400,6 +404,28 @@ const EXERCISE_ID_ALIASES: Record<string, string> = {
   'greek_calf_raises': 'calf_raises',
   'greek_hanging_leg_raises': 'hanging_leg_raises',
   'greek_core_hold': 'planks',
+
+  // FÍSICO GRIEGO — Día 4 (Sesión Extra) variante GIMNASIO
+  'greek_x_pulldown': 'lat_pulldowns',
+  'greek_x_incline_db': 'dumbbell_bench',
+  'greek_x_lateral': 'lateral_raises',
+  'greek_x_row': 'dumbbell_rows',
+  'greek_x_facepull': 'face_pulls',
+  'greek_x_arms': 'dumbbell_curls',
+  'greek_x_legs': 'leg_press',
+  'greek_x_rope': 'jump_rope',
+
+  // FÍSICO GRIEGO — Día 4 (Sesión Extra) variante CASA (sin barra)
+  'greek_xh_pseudo_planche': 'pseudo_planche',
+  'greek_xh_ohp': 'ohp',
+  'greek_xh_lateral': 'lateral_raises',
+  'greek_xh_db_row': 'dumbbell_rows',
+  'greek_xh_curls': 'dumbbell_curls',
+  'greek_xh_bulgarian': 'bulgarian_split_squat',
+  'greek_xh_single_leg_rdl': 'single_leg_rdl',
+  'greek_xh_calf': 'calf_raises',
+  'greek_xh_core': 'planks',
+  'greek_xh_rope': 'jump_rope',
 };
 
 function resolveExerciseId(exerciseId: string): string {

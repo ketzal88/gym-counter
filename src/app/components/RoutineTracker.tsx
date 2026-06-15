@@ -50,6 +50,8 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
     const [workoutStartTime, setWorkoutStartTime] = useState<Date | null>(null);
     const [activeExerciseIndex, setActiveExerciseIndex] = useState(0);
     const [elapsedTime, setElapsedTime] = useState(0);
+    // greek_god día 4 (Sesión Extra): ubicación elegida — gimnasio o casa.
+    const [extraLocation, setExtraLocation] = useState<'gym' | 'home'>('gym');
 
     // Rest Timer & Wake Lock
     const { restTimer, timerActive, restDuration, startRestTimer, cancelRestTimer, formatTime } = useRestTimer();
@@ -137,9 +139,15 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                 const goal = userState.assignedVariant
                     ? resolveGoalFromVariantId(userState.assignedVariant)
                     : 'military_v1';
+
+                // Cargar borrador en curso (si existe) ANTES de generar: define la
+                // variante (gym/casa) de la sesión extra a reconstruir.
+                const draft = loadWorkoutDraft(userId, userState.currentDay);
+                const loc = draft?.extraLocation ?? extraLocation;
+
                 const generated = goal === 'military_v1'
                     ? generateWorkout(userState.currentDay, userState.liftState)
-                    : generateWorkoutForGoal(userState.currentDay, userState.liftState, goal);
+                    : generateWorkoutForGoal(userState.currentDay, userState.liftState, goal, loc);
 
                 const logs: Record<string, { reps: string; weight: string; completed: boolean }[]> = {};
 
@@ -164,9 +172,8 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
 
                 setWorkout(generated);
 
-                // Restaurar un borrador EN CURSO de este mismo día si existe (sobrevive
-                // al cambio de pestaña / recarga). Si no, arrancar con los defaults.
-                const draft = loadWorkoutDraft(userId, userState.currentDay);
+                // Restaurar el borrador EN CURSO si existe (sobrevive al cambio de
+                // pestaña / recarga). Si no, arrancar con los defaults.
                 if (draft) {
                     const restoredLogs = { ...logs };
                     for (const ex of generated.exercises) {
@@ -189,7 +196,7 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
         if (userState) {
             prepareWorkout();
         }
-    }, [userState, fetchLastPerformance, userId]);
+    }, [userState, fetchLastPerformance, userId, extraLocation]);
 
     // Auto-advance when all sets of current exercise are completed
     useEffect(() => {
@@ -220,6 +227,7 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
             activeExerciseIndex,
             exerciseLogs,
             completedExercises,
+            extraLocation: workout.extraLocation,
             savedAt: new Date().toISOString(),
         });
     }, [userId, userState, workout, workoutStarted, workoutStartTime, activeExerciseIndex, exerciseLogs, completedExercises]);
@@ -392,11 +400,12 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
             const phrase = successPhrases[Math.floor(Math.random() * successPhrases.length)];
             addToast(phrase, 'success');
 
-            // Reset workout flow
+            // Reset workout flow (vuelve a 'gym' = sesión programada; casa es opt-in por día)
             setWorkoutStarted(false);
             setWorkoutStartTime(null);
             setActiveExerciseIndex(0);
             setElapsedTime(0);
+            setExtraLocation('gym');
             window.scrollTo(0, 0);
 
         } catch (error) {
@@ -538,6 +547,30 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                         {workout.isDeload && <span className="text-[10px] font-bold text-amber-500 bg-amber-900/20 px-2 py-1 rounded mt-1 inline-block">{t('dashboard.deload')}</span>}
                     </div>
                 </div>
+
+                {/* GREEK GOD: Gym / Home location toggle (available any day) */}
+                {workout.locationChoice && (
+                    <div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">{t('routine.extraWhere')}</p>
+                        <div className="grid grid-cols-2 gap-2">
+                            {([['gym', 'fitness_center', t('routine.atGym')], ['home', 'home', t('routine.atHome')]] as const).map(([loc, icon, label]) => (
+                                <button
+                                    key={loc}
+                                    onClick={() => setExtraLocation(loc)}
+                                    className={`flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all border ${extraLocation === loc
+                                        ? 'bg-blue-600 border-blue-500 text-white'
+                                        : 'bg-slate-900/50 border-slate-700 text-slate-400 hover:border-slate-600'}`}
+                                >
+                                    <span className="material-symbols-rounded text-lg">{icon}</span>
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+                        {extraLocation === 'home' && (
+                            <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">{t('routine.homeEquip')}</p>
+                        )}
+                    </div>
+                )}
 
                 {/* Exercise Preview */}
                 <div className="space-y-2">

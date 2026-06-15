@@ -398,6 +398,10 @@ const en = {
     workoutPreview: 'Today\'s exercises',
     upNext: 'Up next',
     duration: 'Duration',
+    extraWhere: 'Where are you training today?',
+    atGym: 'Gym',
+    atHome: 'At home',
+    homeEquip: 'Home full-body session: just your 2 dumbbells, a jump rope and your bodyweight. No bar. Pick it as often as you want.',
   },
   settings: {
     title: 'Settings',

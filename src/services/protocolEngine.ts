@@ -32,6 +32,8 @@ export interface ProtocolWorkout {
     exercises: ProtocolExercise[];
     note?: string;
     unlockResult?: Partial<LiftState>;
+    locationChoice?: boolean; // greek_god: este día ofrece elección gimnasio/casa
+    extraLocation?: 'gym' | 'home';
 }
 
 export const WARMUP = [
@@ -508,7 +510,51 @@ export const TEMPLATES_GREEK_GOD: Record<number, {
             { id: "greek_calf_raises", name: "Standing Calf Raises (una pierna)", sets: 4, reps: "15-20/pierna", exerciseType: "dumbbell", blockType: "strength" },
             { id: "greek_core_hold", name: "Plank / Hollow Body / Ab Wheel", sets: 3, reps: "30-45 seg", exerciseType: "bodyweight", blockType: "strength" }
         ]
+    },
+    4: {
+        // DÍA D — Sesión Extra (Full Body) · VARIANTE GIMNASIO (equipo completo)
+        type: "Sesión Extra · Gimnasio",
+        accessories: [
+            { id: "greek_x_pulldown", name: "Lat Pulldown / Pull-ups", sets: 4, reps: "8-12", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "greek_x_incline_db", name: "Incline Dumbbell Press", sets: 4, reps: "8-12", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "greek_x_lateral", name: "Lateral Raises (cable o mancuerna)", sets: 4, reps: "12-20", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "greek_x_row", name: "Seated Row / Machine Row", sets: 3, reps: "10-12", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "greek_x_facepull", name: "Face Pulls", sets: 3, reps: "15-20", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "greek_x_arms", name: "Curl + Tríceps Pushdown", sets: 3, reps: "10-12", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "greek_x_legs", name: "Leg Press / Goblet Squat", sets: 3, reps: "10-12", exerciseType: "dumbbell", blockType: "strength" },
+            {
+                id: "greek_x_rope", name: "Finisher: Soga (intervalos)", sets: 1, reps: "8-10 min", blockType: "conditioning", conditioning: {
+                    format: "Other",
+                    duration: "8-10 min",
+                    instructions: "Saltar la soga 40s ON / 20s OFF.\nSi no hay soga: bici o remo a ritmo fuerte."
+                }
+            }
+        ]
     }
+};
+
+// VARIANTE CASA del Día D — sin barra: solo peso corporal + 2 mancuernas + soga.
+// "Ejercicios que no necesiten nada": nada de pull-ups/dips (requieren barra).
+export const TEMPLATES_GREEK_EXTRA_HOME: { type: string, accessories: typeof TEMPLATES_GREEK_GOD[1]['accessories'] } = {
+    type: "Sesión Extra · Casa",
+    accessories: [
+        { id: "greek_xh_pseudo_planche", name: "Pseudo Planche / Archer Push-ups", sets: 4, reps: "8-12", exerciseType: "bodyweight", blockType: "strength" },
+        { id: "greek_xh_ohp", name: "Overhead Press (mancuernas)", sets: 4, reps: "8-12", exerciseType: "dumbbell", blockType: "strength" },
+        { id: "greek_xh_lateral", name: "Lateral Raises (mancuernas)", sets: 4, reps: "12-20", exerciseType: "dumbbell", blockType: "strength" },
+        { id: "greek_xh_db_row", name: "Bent-over Rows (mancuernas)", sets: 4, reps: "10-12", exerciseType: "dumbbell", blockType: "strength" },
+        { id: "greek_xh_curls", name: "Curl Bíceps + Hammer (mancuernas)", sets: 3, reps: "10-12", exerciseType: "dumbbell", blockType: "strength" },
+        { id: "greek_xh_bulgarian", name: "Bulgarian Split Squat (mancuernas)", sets: 3, reps: "8-12/pierna", exerciseType: "dumbbell", blockType: "strength" },
+        { id: "greek_xh_single_leg_rdl", name: "Single-leg RDL (mancuernas)", sets: 3, reps: "10/pierna", exerciseType: "dumbbell", blockType: "strength" },
+        { id: "greek_xh_calf", name: "Standing Calf Raises (mancuernas)", sets: 3, reps: "15-20/pierna", exerciseType: "dumbbell", blockType: "strength" },
+        { id: "greek_xh_core", name: "Core: Plank / Hollow / V-ups", sets: 3, reps: "30-45 seg", exerciseType: "bodyweight", blockType: "strength" },
+        {
+            id: "greek_xh_rope", name: "Finisher: Soga (intervalos)", sets: 1, reps: "8-10 min", blockType: "conditioning", conditioning: {
+                format: "Other",
+                duration: "8-10 min",
+                instructions: "Saltar la soga 40s ON / 20s OFF x 8-10 min.\nAlternar pies / doble salto si te sobra."
+            }
+        }
+    ]
 };
 
 // Warmup específico para el plan Físico Griego (muñecas/escápulas/hombros).
@@ -565,7 +611,8 @@ export const DAY_LABELS_FAT_BURN: Record<number, string> = {
 export const DAY_LABELS_GREEK_GOD: Record<number, string> = {
     1: "Empuje + Planche",
     2: "Tracción + Front Lever",
-    3: "Full Body + Skills"
+    3: "Full Body + Skills",
+    4: "Sesión Extra (Full Body)"
 };
 
 export const DAY_LABELS: Record<number, string> = {
@@ -626,7 +673,7 @@ export const GOAL_CONFIG: Record<GoalType, {
     greek_god: {
         templates: TEMPLATES_GREEK_GOD,
         dayLabels: DAY_LABELS_GREEK_GOD,
-        cycleLength: 3,
+        cycleLength: 4,
         warmup: WARMUP_GREEK,
         totalDays: 180,
     },
@@ -848,7 +895,8 @@ export async function getTemplatesForVariant(_variantId: string): Promise<typeof
 export function generateWorkoutForGoal(
     dayNumber: number,
     liftState: LiftState,
-    goal: GoalType = 'military_v1'
+    goal: GoalType = 'military_v1',
+    extraLocation: 'gym' | 'home' = 'gym'
 ): ProtocolWorkout {
     // Military v1 usa la función original para mantener compatibilidad
     if (goal === 'military_v1') {
@@ -862,9 +910,18 @@ export function generateWorkoutForGoal(
     const cycleIndex = getCycleIndex(dayNumber, cycleLength);
     const deload = isDeload(cycleIndex);
 
-    // En deload, el último día del ciclo se convierte en recovery
+    // Greek God: CUALQUIER día se puede hacer en gimnasio (la sesión programada) o
+    // en casa (full body sin barra). El usuario elige cuándo y las veces que quiera.
+    const isDeloadRecovery = deload && dayTypeIndex === cycleLength;
+    const greekLocationChoice = goal === 'greek_god' && !isDeloadRecovery;
+
     let template = templates[dayTypeIndex];
-    if (deload && dayTypeIndex === cycleLength) {
+    if (greekLocationChoice && extraLocation === 'home') {
+        template = TEMPLATES_GREEK_EXTRA_HOME;
+    }
+
+    // En deload, el último día del ciclo se convierte en recovery
+    if (isDeloadRecovery) {
         template = {
             type: "Deload Recovery (Movilidad + Cardio Suave)",
             accessories: [
@@ -880,7 +937,9 @@ export function generateWorkoutForGoal(
         cycleIndex,
         isDeload: deload,
         mainLift: template.mainLift,
-        exercises: []
+        exercises: [],
+        locationChoice: greekLocationChoice || undefined,
+        extraLocation: greekLocationChoice ? extraLocation : undefined,
     };
 
     // Add Warmup

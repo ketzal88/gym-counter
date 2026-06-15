@@ -134,24 +134,24 @@ describe('Greek God plan (greek_god)', () => {
         expect(resolveGoalFromVariantId('greek_god_intermediate_3day')).toBe('greek_god');
     });
 
-    it('is registered in GOAL_CONFIG with a 3-day cycle', () => {
+    it('is registered in GOAL_CONFIG with a 4-day cycle', () => {
         expect(GOAL_CONFIG.greek_god).toBeDefined();
-        expect(GOAL_CONFIG.greek_god.cycleLength).toBe(3);
+        expect(GOAL_CONFIG.greek_god.cycleLength).toBe(4);
         expect(GOAL_CONFIG.greek_god.totalDays).toBe(180);
     });
 
-    it('has all 3 day types defined with labels', () => {
-        for (let i = 1; i <= 3; i++) {
+    it('has all 4 day types defined with labels (incl. the extra session)', () => {
+        for (let i = 1; i <= 4; i++) {
             expect(TEMPLATES_GREEK_GOD[i]).toBeDefined();
             expect(TEMPLATES_GREEK_GOD[i].type).toBeTruthy();
             expect(DAY_LABELS_GREEK_GOD[i]).toBeTruthy();
         }
     });
 
-    it('cycles through 3 day types', () => {
-        expect(getDayType(1, 3)).toBe(1);
-        expect(getDayType(3, 3)).toBe(3);
-        expect(getDayType(4, 3)).toBe(1);
+    it('cycles through 4 day types', () => {
+        expect(getDayType(1, 4)).toBe(1);
+        expect(getDayType(4, 4)).toBe(4);
+        expect(getDayType(5, 4)).toBe(1);
     });
 
     it('generates the push/planche day (day 1) with skills first and lateral raises', () => {
@@ -173,15 +173,49 @@ describe('Greek God plan (greek_god)', () => {
         expect(warmups.some(w => /Muñeca/i.test(w.name))).toBe(true);
     });
 
-    it('reduces volume during deload (cycle 4 starts at day 10)', () => {
-        // cycleLength 3 → cycle 4 = days 10-12; day 10 is day type 1
-        expect(getCycleIndex(10, 3)).toBe(4);
+    it('reduces volume during deload (cycle 4 starts at day 13 in a 4-day cycle)', () => {
+        // cycleLength 4 → cycle 4 = days 13-16; day 13 is day type 1
+        expect(getCycleIndex(13, 4)).toBe(4);
         const normal = generateWorkoutForGoal(1, mockLiftState, 'greek_god');
-        const deload = generateWorkoutForGoal(10, mockLiftState, 'greek_god');
+        const deload = generateWorkoutForGoal(13, mockLiftState, 'greek_god');
         expect(deload.isDeload).toBe(true);
         const normalSets = normal.exercises.find(e => e.id === 'greek_planche')!.sets;
         const deloadSets = deload.exercises.find(e => e.id === 'greek_planche')!.sets;
         expect(deloadSets).toBeLessThan(normalSets);
+    });
+
+    it('every non-deload day offers the gym/home choice (not locked to one day)', () => {
+        for (const day of [1, 2, 3, 4]) {
+            const gym = generateWorkoutForGoal(day, mockLiftState, 'greek_god');
+            expect(gym.locationChoice).toBe(true);
+            expect(gym.extraLocation).toBe('gym');
+        }
+    });
+
+    it('ANY day can be done at home (no-bar full body), usable as many times as wanted', () => {
+        for (const day of [1, 2, 3, 4]) {
+            const workout = generateWorkoutForGoal(day, mockLiftState, 'greek_god', 'home');
+            expect(workout.locationChoice).toBe(true);
+            expect(workout.extraLocation).toBe('home');
+            expect(workout.dayType).toContain('Casa');
+            // Solo peso corporal o mancuernas — nada que requiera barra/dominadas
+            const strengthTypes = workout.exercises
+                .filter(e => e.blockType === 'strength')
+                .map(e => e.exerciseType);
+            expect(strengthTypes.every(t => t === 'bodyweight' || t === 'dumbbell')).toBe(true);
+            expect(workout.exercises.some(e => e.id === 'greek_xh_rope')).toBe(true);
+        }
+    });
+
+    it('day 4 default (gym) is the extra full-body session', () => {
+        const workout = generateWorkoutForGoal(4, mockLiftState, 'greek_god');
+        expect(workout.dayType).toContain('Gimnasio');
+        expect(workout.exercises.some(e => e.id.startsWith('greek_x_'))).toBe(true);
+    });
+
+    it('home session has no protocol unlock (no main lift)', () => {
+        const home = generateWorkoutForGoal(1, mockLiftState, 'greek_god', 'home');
+        expect(evaluateUnlock([], mockLiftState, home)).toBeNull();
     });
 
     it('never unlocks weight increments (no main lift)', () => {
