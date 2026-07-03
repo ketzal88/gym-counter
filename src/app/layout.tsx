@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     default: 'GymCounter - Protocolos de entrenamiento de 180 días',
     template: '%s | GymCounter',
   },
-  description: 'Protocolos de 180 días con progresión automática. 7 programas especializados que se adaptan a tu objetivo, nivel y disponibilidad. Tracking completo. Funciona offline.',
+  description: 'Protocolos de 180 días con progresión automática. 8 programas especializados que se adaptan a tu objetivo, nivel y disponibilidad. Tracking completo. Funciona offline.',
   keywords: [
     'gym tracker', 'workout tracker', 'entrenamiento', 'rutina gym',
     'progresión automática', 'plan de entrenamiento', 'fitness app',
@@ -51,7 +51,7 @@ export const metadata: Metadata = {
     alternateLocale: 'en_US',
     siteName: 'GymCounter',
     title: 'GymCounter - Protocolos de entrenamiento de 180 días',
-    description: 'Protocolos de 180 días con progresión automática. 7 programas especializados. Tracking completo. Funciona offline. Comenzá gratis.',
+    description: 'Protocolos de 180 días con progresión automática. 8 programas especializados. Tracking completo. Funciona offline. Comenzá gratis.',
     images: [
       {
         url: '/icon-512.png',
@@ -64,7 +64,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary',
     title: 'GymCounter - Protocolos de entrenamiento de 180 días',
-    description: 'Protocolos de 180 días con progresión automática. 7 programas. Tracking completo. Funciona offline.',
+    description: 'Protocolos de 180 días con progresión automática. 8 programas. Tracking completo. Funciona offline.',
     images: ['/icon-512.png'],
   },
   robots: {

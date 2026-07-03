@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/useToast';
 import ToastContainer from './ui/ToastContainer';
 import ConfirmDialog from './ui/ConfirmDialog';
 
-type FitnessGoal = 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn' | 'greek_god';
+type FitnessGoal = 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn' | 'greek_god' | 'postpartum';
 type ExperienceLevel = 'beginner' | 'intermediate' | 'advanced';
 type WeeklyAvailability = 3 | 4 | 5 | 6;
 
@@ -71,6 +71,7 @@ export default function ChangePlanCard() {
         { id: 'toned_abs', label: t('onboarding.goalTonedAbs') },
         { id: 'glute_building', label: t('onboarding.goalGluteBuilding') },
         { id: 'fat_burn', label: t('onboarding.goalFatBurn') },
+        { id: 'postpartum', label: t('onboarding.goalPostpartum') },
     ];
 
     const LEVEL_OPTIONS: { id: ExperienceLevel; label: string }[] = [

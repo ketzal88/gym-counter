@@ -31,6 +31,9 @@ import ChangePlanCard from './ChangePlanCard';
 import ProtocolOverview from './ProtocolOverview';
 import TabHeader from './TabHeader';
 import SubscriptionCard from './SubscriptionCard';
+import DailyBaseCard from './postpartum/DailyBaseCard';
+import DiastasisTestCard from './postpartum/DiastasisTestCard';
+import PostpartumGuideCard from './postpartum/PostpartumGuideCard';
 import { isSameDay } from '@/utils/date';
 import { useLanguage } from '@/context/LanguageContext';
 import { useSubscription } from '@/context/SubscriptionContext';
@@ -187,9 +190,12 @@ export default function UnifiedDashboard() {
     glute_building: t('onboarding.goalGluteBuilding'),
     fat_burn: t('onboarding.goalFatBurn'),
     greek_god: t('onboarding.goalGreekGod'),
+    postpartum: t('onboarding.goalPostpartum'),
   };
-  // Planes de pura calistenia (sin levantamientos con barra) no muestran la grilla de cargas.
-  const usesBarbellLifts = userGoal !== 'greek_god';
+  const totalDays = GOAL_CONFIG[userGoal].totalDays;
+  // Planes de pura calistenia/reconexión (sin levantamientos con barra) no muestran la grilla de cargas.
+  const usesBarbellLifts = userGoal !== 'greek_god' && userGoal !== 'postpartum';
+  const isPostpartum = userGoal === 'postpartum';
 
   // --- Statistics Calculation ---
   const currentYear = new Date().getFullYear();
@@ -363,6 +369,19 @@ export default function UnifiedDashboard() {
                   <span className="material-symbols-rounded text-sm">chevron_right</span>
                 </div>
               </section>
+            )}
+
+            {/* POSTPARTUM: superficies propias (base diaria, autotest, guía) */}
+            {isPostpartum && user && (
+              <div className="space-y-4">
+                <DailyBaseCard userId={user.uid} />
+                <DiastasisTestCard
+                  userId={user.uid}
+                  result={userTrainingState?.diastasisResult}
+                  testedAt={userTrainingState?.diastasisTestedAt}
+                />
+                <PostpartumGuideCard />
+              </div>
             )}
 
             <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-5">
@@ -595,7 +614,7 @@ export default function UnifiedDashboard() {
                     </div>
                     <h2 className="text-3xl font-bold leading-none flex items-baseline gap-2">
                       {t('dashboard.day')} {userTrainingState.currentDay}
-                      <span className="text-slate-600 text-lg font-medium">/ 180</span>
+                      <span className="text-slate-600 text-lg font-medium">/ {totalDays}</span>
                     </h2>
                   </div>
                   <div className="text-right">
