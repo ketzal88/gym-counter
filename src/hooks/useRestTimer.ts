@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { ensureNotificationPermission, notifyRestOver } from '@/lib/notifications';
 
 const DEFAULT_REST_DURATION = 120;
 const STORAGE_KEY = 'gymcounter_rest_duration';
@@ -32,6 +33,8 @@ export function useRestTimer() {
 
     const startRestTimer = useCallback(() => {
         if (timerRef.current) clearInterval(timerRef.current);
+        // Pedir permiso de notificaciones dentro del gesto del usuario (tocó una serie).
+        ensureNotificationPermission();
         const duration = getStoredDuration();
         setRestTimer(duration);
         setTimerActive(true);
@@ -53,6 +56,9 @@ export function useRestTimer() {
                         osc.start();
                         osc.stop(ctx.currentTime + 0.3);
                     } catch { /* audio not available */ }
+                    // Notificación del sistema (Wear OS la espeja al Pixel Watch) + vibración del teléfono.
+                    notifyRestOver();
+                    try { navigator.vibrate?.([300, 120, 300]); } catch { /* vibrate no soportado */ }
                     return 0;
                 }
                 return prev - 1;
