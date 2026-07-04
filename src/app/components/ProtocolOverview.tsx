@@ -12,7 +12,7 @@ interface ProtocolOverviewProps {
 export default function ProtocolOverview({ currentDay, onClose, variantId }: ProtocolOverviewProps) {
     const goal: GoalType = variantId ? resolveGoalFromVariantId(variantId) : 'military_v1';
     const config = GOAL_CONFIG[goal];
-    const { templates: activeTemplates, dayLabels: activeDayLabels, cycleLength, warmup: activeWarmup } = config;
+    const { templates: activeTemplates, dayLabels: activeDayLabels, cycleLength, warmup: activeWarmup, totalDays } = config;
 
     const currentDayType = getDayType(currentDay, cycleLength);
     const currentCycle = getCycleIndex(currentDay, cycleLength);
@@ -45,13 +45,13 @@ export default function ProtocolOverview({ currentDay, onClose, variantId }: Pro
         }
     };
 
-    // Generate 180-day timeline grouped by cycles
-    const totalCycles = Math.ceil(180 / cycleLength);
+    // Generate full-plan timeline grouped by cycles (totalDays según el plan)
+    const totalCycles = Math.ceil(totalDays / cycleLength);
     const cycles = Array.from({ length: totalCycles }).map((_, cycleIdx) => {
         const cycleNum = cycleIdx + 1;
         const startDay = cycleIdx * cycleLength + 1;
         const deload = isDeload(cycleNum);
-        const daysInCycle = Math.min(cycleLength, 180 - (startDay - 1));
+        const daysInCycle = Math.min(cycleLength, totalDays - (startDay - 1));
         const days = Array.from({ length: daysInCycle }).map((_, dayIdx) => {
             const absoluteDay = startDay + dayIdx;
             const dayType = dayIdx + 1;
@@ -114,7 +114,7 @@ export default function ProtocolOverview({ currentDay, onClose, variantId }: Pro
                                 <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Día Actual</p>
                                 <p className="text-3xl font-black text-white tabular-nums">
                                     {currentDay}
-                                    <span className="text-slate-600 text-sm ml-1">/ 180</span>
+                                    <span className="text-slate-600 text-sm ml-1">/ {totalDays}</span>
                                 </p>
                             </div>
                             <div className="flex-1 bg-slate-800/20 p-4 rounded-2xl border border-slate-700/30">
@@ -130,10 +130,10 @@ export default function ProtocolOverview({ currentDay, onClose, variantId }: Pro
                         <div className="bg-slate-800/30 p-4 rounded-2xl border border-slate-700/30">
                             <div className="flex justify-between mb-2">
                                 <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Progreso Total</span>
-                                <span className="text-[11px] font-black text-blue-400">{Math.round((currentDay / 180) * 100)}%</span>
+                                <span className="text-[11px] font-black text-blue-400">{Math.round((currentDay / totalDays) * 100)}%</span>
                             </div>
                             <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-                                <div className="h-full bg-gradient-to-r from-blue-600 to-indigo-500 rounded-full transition-all" style={{ width: `${(currentDay / 180) * 100}%` }} />
+                                <div className="h-full bg-gradient-to-r from-blue-600 to-indigo-500 rounded-full transition-all" style={{ width: `${(currentDay / totalDays) * 100}%` }} />
                             </div>
                         </div>
 
@@ -305,7 +305,7 @@ export default function ProtocolOverview({ currentDay, onClose, variantId }: Pro
                                         )}
                                     </div>
                                     <span className="text-[10px] font-bold text-slate-600">
-                                        Día {cycle.startDay} - {Math.min(cycle.startDay + cycleLength - 1, 180)}
+                                        Día {cycle.startDay} - {Math.min(cycle.startDay + cycleLength - 1, totalDays)}
                                     </span>
                                 </div>
 
@@ -344,7 +344,7 @@ export default function ProtocolOverview({ currentDay, onClose, variantId }: Pro
                             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Resumen del Programa</p>
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="bg-slate-900/50 p-3 rounded-xl">
-                                    <p className="text-2xl font-black text-white">180</p>
+                                    <p className="text-2xl font-black text-white">{totalDays}</p>
                                     <p className="text-[10px] text-slate-500 font-bold">Días totales</p>
                                 </div>
                                 <div className="bg-slate-900/50 p-3 rounded-xl">

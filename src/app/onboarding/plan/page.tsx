@@ -10,7 +10,8 @@ import { selectPlanVariant, getVariantDisplayName } from '@/services/planVariant
 import { GOAL_CONFIG, resolveGoalFromVariantId } from '@/services/protocolEngine';
 import { Check, Calendar, Clock, Layers } from 'lucide-react';
 
-type FitnessGoal = 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn' | 'greek_god';
+type FitnessGoal = 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn' | 'greek_god' | 'postpartum';
+type DiastasisResult = 'mild' | 'moderate' | 'unknown';
 type ExperienceLevel = 'beginner' | 'intermediate' | 'advanced';
 type WeeklyAvailability = 3 | 4 | 5 | 6;
 
@@ -39,6 +40,7 @@ export default function OnboardingPlanPage() {
         glute_building: t('onboarding.descGluteBuilding'),
         fat_burn: t('onboarding.descFatBurn'),
         greek_god: t('onboarding.descGreekGod'),
+        postpartum: t('onboarding.descPostpartum'),
     };
 
     const EXPERIENCE_FEATURES: Record<ExperienceLevel, string[]> = {
@@ -49,6 +51,8 @@ export default function OnboardingPlanPage() {
     const [loading, setLoading] = useState(false);
     const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
     const [planVariantId, setPlanVariantId] = useState<string>('');
+    // Posparto: resultado del autotest de diástasis capturado en este paso.
+    const [diastasisResult, setDiastasisResult] = useState<DiastasisResult | null>(null);
 
     useEffect(() => {
         const profileData = localStorage.getItem('onboarding_profile');
@@ -110,6 +114,11 @@ export default function OnboardingPlanPage() {
                 trialEndDate: trialEndDate,
             }, { merge: true });
 
+            const planTotalDays = GOAL_CONFIG[resolveGoalFromVariantId(planVariantId)].totalDays;
+            // Estimación calendario: sesiones ÷ días/semana → semanas. Posparto (36 sesiones)
+            // no equivale a 36 días, así que estimamos por semanas reales.
+            const estimatedCalendarDays = Math.ceil(planTotalDays / onboardingData.weeklyAvailability) * 7;
+
             await setDoc(doc(db, 'userTrainingState', user.uid), {
                 currentDay: 1,
                 completedProtocolSessions: 0,
@@ -125,7 +134,9 @@ export default function OnboardingPlanPage() {
                 assignedVariant: planVariantId,
                 protocolCompleted: false,
                 planStartedAt: serverTimestamp(),
-                estimatedCompletionDate: new Date(now.getTime() + 180 * 24 * 60 * 60 * 1000),
+                estimatedCompletionDate: new Date(now.getTime() + estimatedCalendarDays * 24 * 60 * 60 * 1000),
+                // Autotest de diástasis (solo posparto): guarda el resultado si se registró.
+                ...(diastasisResult ? { diastasisResult, diastasisTestedAt: new Date().toISOString() } : {}),
             });
 
             localStorage.removeItem('onboarding_profile');
@@ -158,7 +169,8 @@ export default function OnboardingPlanPage() {
     // Estructura real del plan (etiquetas de día y largo de ciclo) según el goal,
     // así el preview refleja exactamente lo que generará el motor para cada plan.
     const planConfig = GOAL_CONFIG[resolveGoalFromVariantId(planVariantId)];
-    const totalDays = 180;
+    const totalDays = planConfig.totalDays;
+    const isPostpartum = onboardingData.fitnessGoal === 'postpartum';
     const estimatedWeeks = Math.ceil(totalDays / onboardingData.weeklyAvailability);
 
     return (
@@ -197,7 +209,7 @@ export default function OnboardingPlanPage() {
                         <div className="flex items-center justify-center gap-1 mb-1">
                             <Layers className="w-4 h-4 text-slate-400" />
                         </div>
-                        <div className="text-xl font-bold text-slate-900 dark:text-white">180</div>
+                        <div className="text-xl font-bold text-slate-900 dark:text-white">{totalDays}</div>
                         <div className="text-xs text-slate-500 dark:text-slate-500">{t('onboarding.totalDays')}</div>
                     </div>
                     <div className="p-4 text-center">
@@ -219,6 +231,63 @@ export default function OnboardingPlanPage() {
                     ))}
                 </div>
             </div>
+
+            {/* POSTPARTUM: autotest de diástasis */}
+            {isPostpartum && (
+                <div className="rounded-xl border-2 border-teal-500/40 bg-teal-50/60 dark:bg-teal-900/10 p-5 space-y-4">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <span className="material-symbols-rounded text-teal-600 dark:text-teal-400">fact_check</span>
+                        {t('postpartum.onboardingTestTitle')}
+                    </h3>
+                    <div className="space-y-2 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                        <p>{t('postpartum.testIntro')}</p>
+                        <ol className="list-decimal list-inside space-y-1">
+                            <li>{t('postpartum.testStep1')}</li>
+                            <li>{t('postpartum.testStep2')}</li>
+                            <li>{t('postpartum.testStep3')}</li>
+                            <li>{t('postpartum.testStep4')}</li>
+                        </ol>
+                    </div>
+                    <div className="space-y-2">
+                        <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                            {t('postpartum.testResultQuestion')}
+                        </p>
+                        {([
+                            { id: 'mild' as DiastasisResult, label: t('postpartum.testMild'), advice: t('postpartum.testMildAdvice'), tone: 'ok' },
+                            { id: 'moderate' as DiastasisResult, label: t('postpartum.testModerate'), advice: t('postpartum.testModerateAdvice'), tone: 'warn' },
+                            { id: 'unknown' as DiastasisResult, label: t('postpartum.testUnknown'), advice: t('postpartum.testUnknownAdvice'), tone: 'muted' },
+                        ]).map(opt => {
+                            const isSel = diastasisResult === opt.id;
+                            return (
+                                <button
+                                    key={opt.id}
+                                    type="button"
+                                    onClick={() => setDiastasisResult(opt.id)}
+                                    className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                                        isSel
+                                            ? 'border-teal-500 bg-white dark:bg-slate-950'
+                                            : 'border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-950/60 hover:border-slate-300 dark:hover:border-slate-700'
+                                    }`}
+                                >
+                                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{opt.label}</p>
+                                    {isSel && (
+                                        <p className={`text-xs mt-1 leading-relaxed ${
+                                            opt.tone === 'warn' ? 'text-amber-600 dark:text-amber-400'
+                                                : opt.tone === 'ok' ? 'text-teal-600 dark:text-teal-400'
+                                                : 'text-slate-500 dark:text-slate-400'
+                                        }`}>
+                                            {opt.advice}
+                                        </p>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <p className="text-[11px] text-slate-400 dark:text-slate-600 italic leading-relaxed">
+                        {t('postpartum.disclaimer')}
+                    </p>
+                </div>
+            )}
 
             {/* First Week Preview */}
             <div className="space-y-4">

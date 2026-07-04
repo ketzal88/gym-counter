@@ -5,12 +5,16 @@ import {
     isDeload,
     generateWorkout,
     generateWorkoutForGoal,
+    generatePostpartumWorkout,
+    getPostpartumPhase,
     evaluateUnlock,
     resolveGoalFromVariantId,
     DAY_LABELS,
     DAY_LABELS_GREEK_GOD,
+    DAY_LABELS_POSTPARTUM,
     TEMPLATES,
     TEMPLATES_GREEK_GOD,
+    TEMPLATES_POSTPARTUM,
     GOAL_CONFIG,
 } from '@/services/protocolEngine';
 
@@ -222,6 +226,72 @@ describe('Greek God plan (greek_god)', () => {
         const workout = generateWorkoutForGoal(1, mockLiftState, 'greek_god');
         const result = evaluateUnlock([], mockLiftState, workout);
         expect(result).toBeNull();
+    });
+});
+
+describe('Postpartum plan (postpartum)', () => {
+    it('resolves the postpartum goal from its variantId', () => {
+        expect(resolveGoalFromVariantId('postpartum_beginner_3day')).toBe('postpartum');
+        expect(resolveGoalFromVariantId('postpartum_intermediate_3day')).toBe('postpartum');
+    });
+
+    it('is registered in GOAL_CONFIG: 3-day cycle, 36 total days', () => {
+        expect(GOAL_CONFIG.postpartum).toBeDefined();
+        expect(GOAL_CONFIG.postpartum.cycleLength).toBe(3);
+        expect(GOAL_CONFIG.postpartum.totalDays).toBe(36);
+    });
+
+    it('defines the 3 A/B/C templates with labels', () => {
+        for (let i = 1; i <= 3; i++) {
+            expect(TEMPLATES_POSTPARTUM[i]).toBeDefined();
+            expect(TEMPLATES_POSTPARTUM[i].type).toBeTruthy();
+            expect(DAY_LABELS_POSTPARTUM[i]).toBeTruthy();
+        }
+    });
+
+    it('maps sessions to the 3 phases (1-9 / 10-24 / 25-36)', () => {
+        expect(getPostpartumPhase(1)).toBe(1);
+        expect(getPostpartumPhase(9)).toBe(1);
+        expect(getPostpartumPhase(10)).toBe(2);
+        expect(getPostpartumPhase(24)).toBe(2);
+        expect(getPostpartumPhase(25)).toBe(3);
+        expect(getPostpartumPhase(36)).toBe(3);
+    });
+
+    it('phase 1 is ALWAYS Routine A (reconnection)', () => {
+        for (const day of [1, 2, 3, 9]) {
+            const w = generatePostpartumWorkout(day);
+            expect(w.phase).toBe(1);
+            expect(w.dayType).toContain('Rutina A');
+        }
+    });
+
+    it('phase 2+ rotates A/B/C', () => {
+        expect(generatePostpartumWorkout(10).dayType).toContain('Rutina A');
+        expect(generatePostpartumWorkout(11).dayType).toContain('Rutina B');
+        expect(generatePostpartumWorkout(12).dayType).toContain('Rutina C');
+        expect(generatePostpartumWorkout(13).dayType).toContain('Rutina A');
+    });
+
+    it('has no main lift, no deload, and never unlocks weight', () => {
+        const w = generatePostpartumWorkout(5);
+        expect(w.mainLift).toBeUndefined();
+        expect(w.isDeload).toBe(false);
+        expect(evaluateUnlock([], mockLiftState, w)).toBeNull();
+    });
+
+    it('uses the postpartum warmup and only bodyweight/dumbbell strength work', () => {
+        const w = generatePostpartumWorkout(11); // Rutina B (con mancuernas)
+        const warmups = w.exercises.filter(e => e.blockType === 'warmup');
+        expect(warmups.length).toBe(GOAL_CONFIG.postpartum.warmup.length);
+        const strengthTypes = w.exercises.filter(e => e.blockType === 'strength').map(e => e.exerciseType);
+        expect(strengthTypes.every(t => t === 'bodyweight' || t === 'dumbbell')).toBe(true);
+    });
+
+    it('generateWorkoutForGoal routes postpartum to the phase-aware generator', () => {
+        const w = generateWorkoutForGoal(1, mockLiftState, 'postpartum');
+        expect(w.phase).toBe(1);
+        expect(w.dayType).toContain('Rutina A');
     });
 });
 

@@ -34,6 +34,7 @@ export interface ProtocolWorkout {
     unlockResult?: Partial<LiftState>;
     locationChoice?: boolean; // greek_god: este día ofrece elección gimnasio/casa
     extraLocation?: 'gym' | 'home';
+    phase?: 1 | 2 | 3; // postpartum: fase de progresión activa para este día
 }
 
 export const WARMUP = [
@@ -477,9 +478,7 @@ export const TEMPLATES_GREEK_GOD: Record<number, {
             { id: "greek_pseudo_planche", name: "Pseudo Planche Push-ups", sets: 4, reps: "6-10", exerciseType: "bodyweight", blockType: "strength" },
             { id: "greek_weighted_pullups", name: "Pull-ups con Peso", sets: 4, reps: "5-8", exerciseType: "bodyweight_weighted", blockType: "strength" },
             { id: "greek_pike_pushups", name: "Pike Push-ups / HSPU pared", sets: 3, reps: "6-10", exerciseType: "bodyweight", blockType: "strength" },
-            { id: "greek_pistol_squats", name: "Pistol Squats", sets: 3, reps: "5-8/pierna", exerciseType: "bodyweight", blockType: "strength" },
-            { id: "greek_lateral_raises_a", name: "Lateral Raises (última serie drop set)", sets: 4, reps: "12-20", exerciseType: "dumbbell", blockType: "strength" },
-            { id: "greek_hanging_leg_raises", name: "Hanging Leg Raises", sets: 3, reps: "10-15", exerciseType: "bodyweight", blockType: "strength" }
+            { id: "greek_lateral_raises_a", name: "Lateral Raises (última serie drop set)", sets: 4, reps: "12-20", exerciseType: "dumbbell", blockType: "strength" }
         ]
     },
     2: {
@@ -491,9 +490,7 @@ export const TEMPLATES_GREEK_GOD: Record<number, {
             { id: "greek_weighted_dips", name: "Weighted Dips", sets: 4, reps: "6-10", exerciseType: "bodyweight_weighted", blockType: "strength" },
             { id: "greek_archer_pullups", name: "Archer Pull-ups / Pull-ups con peso", sets: 4, reps: "5-8/lado", exerciseType: "bodyweight", blockType: "strength" },
             { id: "greek_australian_rows", name: "Australian / Inverted Rows", sets: 3, reps: "10-15", exerciseType: "bodyweight", blockType: "strength" },
-            { id: "greek_single_leg_rdl", name: "Single-leg RDL (mancuernas)", sets: 3, reps: "8-10/pierna", exerciseType: "dumbbell", blockType: "strength" },
-            { id: "greek_lateral_raises_b", name: "Lateral Raises (lean-away, un brazo)", sets: 4, reps: "12-20", exerciseType: "dumbbell", blockType: "strength" },
-            { id: "greek_curls", name: "Curl Bíceps + Hammer Curl", sets: 3, reps: "10-12", exerciseType: "dumbbell", blockType: "strength" }
+            { id: "greek_lateral_raises_b", name: "Lateral Raises (lean-away, un brazo)", sets: 4, reps: "12-20", exerciseType: "dumbbell", blockType: "strength" }
         ]
     },
     3: {
@@ -505,10 +502,8 @@ export const TEMPLATES_GREEK_GOD: Record<number, {
             { id: "greek_archer_pushups", name: "Archer / Decline Push-ups", sets: 4, reps: "8-12", exerciseType: "bodyweight", blockType: "strength" },
             { id: "greek_chinups", name: "Chin-ups (supinado)", sets: 4, reps: "6-10", exerciseType: "bodyweight", blockType: "strength" },
             { id: "greek_bulgarian_split", name: "Bulgarian Split Squat (mancuernas)", sets: 3, reps: "8-12/pierna", exerciseType: "dumbbell", blockType: "strength" },
-            { id: "greek_overhead_press", name: "Overhead Press (mancuernas)", sets: 3, reps: "8-12", exerciseType: "dumbbell", blockType: "strength" },
             { id: "greek_lateral_raises_c", name: "Lateral Raises (drop set al fallo)", sets: 3, reps: "12-20", exerciseType: "dumbbell", blockType: "strength" },
-            { id: "greek_calf_raises", name: "Standing Calf Raises (una pierna)", sets: 4, reps: "15-20/pierna", exerciseType: "dumbbell", blockType: "strength" },
-            { id: "greek_core_hold", name: "Plank / Hollow Body / Ab Wheel", sets: 3, reps: "30-45 seg", exerciseType: "bodyweight", blockType: "strength" }
+            { id: "greek_calf_raises", name: "Standing Calf Raises (una pierna)", sets: 4, reps: "15-20/pierna", exerciseType: "dumbbell", blockType: "strength" }
         ]
     },
     4: {
@@ -519,9 +514,7 @@ export const TEMPLATES_GREEK_GOD: Record<number, {
             { id: "greek_x_incline_db", name: "Incline Dumbbell Press", sets: 4, reps: "8-12", exerciseType: "dumbbell", blockType: "strength" },
             { id: "greek_x_lateral", name: "Lateral Raises (cable o mancuerna)", sets: 4, reps: "12-20", exerciseType: "dumbbell", blockType: "strength" },
             { id: "greek_x_row", name: "Seated Row / Machine Row", sets: 3, reps: "10-12", exerciseType: "dumbbell", blockType: "strength" },
-            { id: "greek_x_facepull", name: "Face Pulls", sets: 3, reps: "15-20", exerciseType: "dumbbell", blockType: "strength" },
             { id: "greek_x_arms", name: "Curl + Tríceps Pushdown", sets: 3, reps: "10-12", exerciseType: "dumbbell", blockType: "strength" },
-            { id: "greek_x_legs", name: "Leg Press / Goblet Squat", sets: 3, reps: "10-12", exerciseType: "dumbbell", blockType: "strength" },
             {
                 id: "greek_x_rope", name: "Finisher: Soga (intervalos)", sets: 1, reps: "8-10 min", blockType: "conditioning", conditioning: {
                     format: "Other",
@@ -544,8 +537,6 @@ export const TEMPLATES_GREEK_EXTRA_HOME: { type: string, accessories: typeof TEM
         { id: "greek_xh_db_row", name: "Bent-over Rows (mancuernas)", sets: 4, reps: "10-12", exerciseType: "dumbbell", blockType: "strength" },
         { id: "greek_xh_curls", name: "Curl Bíceps + Hammer (mancuernas)", sets: 3, reps: "10-12", exerciseType: "dumbbell", blockType: "strength" },
         { id: "greek_xh_bulgarian", name: "Bulgarian Split Squat (mancuernas)", sets: 3, reps: "8-12/pierna", exerciseType: "dumbbell", blockType: "strength" },
-        { id: "greek_xh_single_leg_rdl", name: "Single-leg RDL (mancuernas)", sets: 3, reps: "10/pierna", exerciseType: "dumbbell", blockType: "strength" },
-        { id: "greek_xh_calf", name: "Standing Calf Raises (mancuernas)", sets: 3, reps: "15-20/pierna", exerciseType: "dumbbell", blockType: "strength" },
         { id: "greek_xh_core", name: "Core: Plank / Hollow / V-ups", sets: 3, reps: "30-45 seg", exerciseType: "bodyweight", blockType: "strength" },
         {
             id: "greek_xh_rope", name: "Finisher: Soga (intervalos)", sets: 1, reps: "8-10 min", blockType: "conditioning", conditioning: {
@@ -577,6 +568,84 @@ export const WARMUP_WOMEN = [
     { name: 'Estocadas con Rotación', reps: '10' },
     { name: 'Cat-Cow Stretch', reps: '10' }
 ];
+
+// ============================================================
+// TEMPLATES: RECUPERACIÓN POSPARTO (diástasis-safe) — ciclo A/B/C (3 días)
+// 12 semanas en 3 fases reales que cambian la rutina (ver getPostpartumPhase):
+//   Fase 1 (sesiones 1-9): SOLO Rutina A (reconexión, sin peso)
+//   Fase 2 (10-24): A/B/C con mancuernas livianas
+//   Fase 3 (25-36): A/B/C, cargas/rango mayores
+// Sin mainLift (nada de 1RM de barra) y SIN deload: la progresión es propia y
+// se gobierna por señales (sin coning, sin pérdidas), no por peso automático.
+// La "Base diaria" de reconexión NO vive acá: es una card diaria del dashboard.
+// ============================================================
+export const TEMPLATES_POSTPARTUM: Record<number, {
+    type: string,
+    mainLift?: keyof LiftState,
+    accessories: {
+        id: string,
+        name: string,
+        sets: number,
+        reps: string,
+        exerciseType?: ProtocolExercise['exerciseType'],
+        blockType?: ProtocolExercise['blockType'],
+        conditioning?: ProtocolExercise['conditioningMetadata']
+    }[]
+}> = {
+    1: {
+        // RUTINA A — Core profundo + suelo pélvico (sin peso)
+        type: "Rutina A · Core + Suelo pélvico",
+        accessories: [
+            { id: "pp_a_breath_tva", name: "Respiración + Activación Transverso", sets: 3, reps: "8 resp", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "pp_a_pelvic_tilt", name: "Báscula Pélvica", sets: 3, reps: "10", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "pp_a_heel_slides", name: "Heel Slides (deslizar talón)", sets: 3, reps: "8/pierna", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "pp_a_deadbug_1leg", name: "Toe Taps / Dead Bug 1 pierna", sets: 3, reps: "8/lado", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "pp_a_glute_bridge", name: "Puente de Glúteos", sets: 3, reps: "12", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "pp_a_bird_dog", name: "Bird Dog (perro-pájaro)", sets: 3, reps: "8/lado", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "pp_a_side_plank_knees", name: "Plancha Lateral de Rodillas", sets: 2, reps: "15-20 seg/lado", exerciseType: "bodyweight", blockType: "strength" }
+        ]
+    },
+    2: {
+        // RUTINA B — Tren inferior + core (mancuernas)
+        type: "Rutina B · Tren inferior + Core",
+        accessories: [
+            { id: "pp_b_goblet_squat", name: "Sentadilla Goblet", sets: 3, reps: "10", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "pp_b_rdl", name: "Peso Muerto Rumano", sets: 3, reps: "10", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "pp_b_lunges", name: "Zancadas / Lunges", sets: 3, reps: "8/pierna", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "pp_b_hip_thrust", name: "Puente de Glúteos con Carga", sets: 3, reps: "12", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "pp_b_dead_bug", name: "Dead Bug", sets: 3, reps: "8/lado", exerciseType: "bodyweight", blockType: "strength" },
+            { id: "pp_b_bird_dog", name: "Bird Dog", sets: 3, reps: "8/lado", exerciseType: "bodyweight", blockType: "strength" }
+        ]
+    },
+    3: {
+        // RUTINA C — Tren superior + core anti-rotación (mancuernas)
+        type: "Rutina C · Tren superior + Core",
+        accessories: [
+            { id: "pp_c_row", name: "Remo Inclinado", sets: 3, reps: "10", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "pp_c_shoulder_press", name: "Press de Hombro Sentada", sets: 3, reps: "8-10", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "pp_c_floor_press", name: "Press de Pecho en el Piso (Floor Press)", sets: 3, reps: "10", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "pp_c_farmer_carry", name: "Farmer Carry (caminar con peso)", sets: 3, reps: "30-40 seg", exerciseType: "dumbbell", blockType: "strength" },
+            { id: "pp_c_side_plank_knees", name: "Plancha Lateral de Rodillas", sets: 2, reps: "20 seg/lado", exerciseType: "bodyweight", blockType: "strength" }
+        ]
+    }
+};
+
+// Warmup del plan posparto: mini reconexión antes de la rutina (la Base diaria completa
+// vive como card del dashboard). Exhalar en el esfuerzo, cero coning.
+export const WARMUP_POSTPARTUM = [
+    { name: 'Respiración Diafragmática 360°', reps: '6-8 resp' },
+    { name: 'Activación Transverso (drawing-in)', reps: '8' },
+    { name: 'Báscula Pélvica', reps: '8' }
+];
+
+// Los 4 ejercicios de la "Base diaria" de reconexión (card diaria del dashboard).
+// No pasan por el motor de workouts: se hacen casi todos los días, incluso los de descanso.
+export const POSTPARTUM_DAILY_BASE = [
+    { id: 'pp_base_breath', name: 'Respiración diafragmática 360°', reps: '8-10 respiraciones' },
+    { id: 'pp_base_tva', name: 'Activación del transverso (drawing-in)', reps: '10 reps · sostener 3-5 seg' },
+    { id: 'pp_base_pelvic_tilt', name: 'Báscula pélvica (posterior)', reps: '10 reps · sostener 5 seg' },
+    { id: 'pp_base_pelvic_floor', name: 'Conexión de suelo pélvico (Kegel suave)', reps: '10 reps' }
+] as const;
 
 // ============================================================
 // DAY LABELS por variante
@@ -615,6 +684,12 @@ export const DAY_LABELS_GREEK_GOD: Record<number, string> = {
     4: "Sesión Extra (Full Body)"
 };
 
+export const DAY_LABELS_POSTPARTUM: Record<number, string> = {
+    1: "Rutina A · Core + Suelo pélvico",
+    2: "Rutina B · Tren inferior + Core",
+    3: "Rutina C · Tren superior + Core"
+};
+
 export const DAY_LABELS: Record<number, string> = {
     1: "Upper Strength (Bench)",
     2: "Lower Strength (Squat)",
@@ -633,7 +708,7 @@ export const DAY_LABELS: Record<number, string> = {
 // ============================================================
 // Mapeo de goal a templates, labels y cycle length
 // ============================================================
-export type GoalType = 'military_v1' | 'toned_abs' | 'glute_building' | 'fat_burn' | 'greek_god';
+export type GoalType = 'military_v1' | 'toned_abs' | 'glute_building' | 'fat_burn' | 'greek_god' | 'postpartum';
 
 export const GOAL_CONFIG: Record<GoalType, {
     templates: typeof TEMPLATES,
@@ -677,6 +752,24 @@ export const GOAL_CONFIG: Record<GoalType, {
         warmup: WARMUP_GREEK,
         totalDays: 180,
     },
+    postpartum: {
+        templates: TEMPLATES_POSTPARTUM,
+        dayLabels: DAY_LABELS_POSTPARTUM,
+        cycleLength: 3,
+        warmup: WARMUP_POSTPARTUM,
+        totalDays: 36, // 12 semanas × ~3 sesiones/semana
+    },
+};
+
+// ============================================================
+// Fases del plan posparto (el "día" del motor = contador de sesiones).
+// ============================================================
+export const POSTPARTUM_PHASE_BOUNDS = { phase1End: 9, phase2End: 24 } as const;
+
+export const getPostpartumPhase = (dayNumber: number): 1 | 2 | 3 => {
+    if (dayNumber <= POSTPARTUM_PHASE_BOUNDS.phase1End) return 1;
+    if (dayNumber <= POSTPARTUM_PHASE_BOUNDS.phase2End) return 2;
+    return 3;
 };
 
 export const getDayType = (dayNumber: number, cycleLength = 12) => ((dayNumber - 1) % cycleLength) + 1;
@@ -889,6 +982,57 @@ export async function getTemplatesForVariant(_variantId: string): Promise<typeof
 }
 
 /**
+ * Genera un workout del plan posparto según la fase activa.
+ * Fase 1 (sesiones 1-9): SOLO Rutina A. Fase 2/3: rota A/B/C.
+ * No hay deload ni mainLift; la progresión de carga es manual y guiada por señales.
+ */
+export function generatePostpartumWorkout(dayNumber: number): ProtocolWorkout {
+    const cycleLength = 3;
+    const phase = getPostpartumPhase(dayNumber);
+
+    // Fase 1 = reconexión: siempre Rutina A. Fases 2/3 rotan A/B/C.
+    const dayTypeIndex = phase === 1 ? 1 : getDayType(dayNumber, cycleLength);
+    const template = TEMPLATES_POSTPARTUM[dayTypeIndex];
+
+    const workout: ProtocolWorkout = {
+        dayNumber,
+        dayType: template.type,
+        cycleIndex: getCycleIndex(dayNumber, cycleLength),
+        isDeload: false,
+        mainLift: undefined,
+        exercises: [],
+        phase,
+    };
+
+    // Warmup (mini reconexión)
+    WARMUP_POSTPARTUM.forEach((w, i) => {
+        workout.exercises.push({
+            id: `warmup_${i}`,
+            name: w.name,
+            sets: 1,
+            reps: w.reps,
+            blockType: 'warmup',
+            exerciseType: 'bodyweight'
+        });
+    });
+
+    // Accesorios (todo strength; dumbbell o bodyweight, nunca barra)
+    template.accessories.forEach(acc => {
+        workout.exercises.push({
+            id: acc.id,
+            name: acc.name,
+            sets: acc.sets,
+            reps: acc.reps,
+            exerciseType: acc.exerciseType || 'bodyweight',
+            blockType: acc.blockType || 'strength',
+            conditioningMetadata: acc.conditioning
+        });
+    });
+
+    return workout;
+}
+
+/**
  * Genera un workout según el goal del usuario
  * Soporta military_v1 (12 días), toned_abs, glute_building, fat_burn (6 días)
  */
@@ -901,6 +1045,11 @@ export function generateWorkoutForGoal(
     // Military v1 usa la función original para mantener compatibilidad
     if (goal === 'military_v1') {
         return generateWorkout(dayNumber, liftState);
+    }
+
+    // Posparto: fases reales, sin deload, sin mainLift (ver generatePostpartumWorkout)
+    if (goal === 'postpartum') {
+        return generatePostpartumWorkout(dayNumber);
     }
 
     const config = GOAL_CONFIG[goal];
@@ -1036,6 +1185,7 @@ export function resolveGoalFromVariantId(variantId: string): GoalType {
     if (variantId.startsWith('glute_building')) return 'glute_building';
     if (variantId.startsWith('fat_burn')) return 'fat_burn';
     if (variantId.startsWith('greek_god')) return 'greek_god';
+    if (variantId.startsWith('postpartum')) return 'postpartum';
     if (variantId.startsWith('military') || variantId.startsWith('muscle_gain') || variantId.startsWith('max_strength') || variantId.startsWith('conditioning') || variantId.startsWith('weight_loss')) return 'military_v1';
     return 'military_v1';
 }

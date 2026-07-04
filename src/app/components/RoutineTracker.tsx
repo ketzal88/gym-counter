@@ -7,6 +7,7 @@ import {
     resolveGoalFromVariantId,
     evaluateUnlock,
     ProtocolWorkout,
+    GOAL_CONFIG,
 } from '@/services/protocolEngine';
 import {
     addWorkoutLog,
@@ -39,6 +40,7 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
 
     // Tracking state
     const [completedExercises, setCompletedExercises] = useState<Record<string, boolean>>({});
+    const [skippedExercises, setSkippedExercises] = useState<Record<string, boolean>>({});
     const [exerciseLogs, setExerciseLogs] = useState<Record<string, { reps: string, weight: string, completed: boolean }[]>>({});
     const [saving, setSaving] = useState(false);
     const { toasts, addToast, removeToast } = useToast();
@@ -70,6 +72,11 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
     // Helper: Round Numbers
     const roundTo2_5 = (num: number) => Math.round(num / 2.5) * 2.5;
     const roundTo5 = (num: number) => Math.round(num / 5) * 5;
+
+    // Total de días según el plan (posparto = 36, resto = 180). Gobierna el "/ N",
+    // el umbral de "protocolo completado" y el texto de cierre.
+    const planGoal = userState?.assignedVariant ? resolveGoalFromVariantId(userState.assignedVariant) : 'military_v1';
+    const totalDays = GOAL_CONFIG[planGoal].totalDays;
 
     // Elapsed timer
     useEffect(() => {
@@ -183,12 +190,14 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                     }
                     setExerciseLogs(restoredLogs);
                     setCompletedExercises(draft.completedExercises || {});
+                    setSkippedExercises(draft.skippedExercises || {});
                     setActiveExerciseIndex(draft.activeExerciseIndex || 0);
                     setWorkoutStartTime(draft.workoutStartTime ? new Date(draft.workoutStartTime) : new Date());
                     setWorkoutStarted(true);
                 } else {
                     setExerciseLogs(logs);
                     setCompletedExercises({});
+                    setSkippedExercises({});
                 }
             }
         };
@@ -227,10 +236,11 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
             activeExerciseIndex,
             exerciseLogs,
             completedExercises,
+            skippedExercises,
             extraLocation: workout.extraLocation,
             savedAt: new Date().toISOString(),
         });
-    }, [userId, userState, workout, workoutStarted, workoutStartTime, activeExerciseIndex, exerciseLogs, completedExercises]);
+    }, [userId, userState, workout, workoutStarted, workoutStartTime, activeExerciseIndex, exerciseLogs, completedExercises, skippedExercises]);
 
     const handleInitialize = async () => {
         setLoading(true);
@@ -302,12 +312,22 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
         setActiveExerciseIndex(0);
     };
 
+    // Saltear un ejercicio: lo marca como salteado (no completo) y avanza al siguiente,
+    // para poder cerrar la sesión sin tener que completarlo.
+    const skipExercise = (id: string) => {
+        setSkippedExercises(prev => ({ ...prev, [id]: true }));
+        if (workout && activeExerciseIndex < workout.exercises.length - 1) {
+            setActiveExerciseIndex(prev => prev + 1);
+        }
+    };
+
     const isLastExercise = workout ? activeExerciseIndex >= workout.exercises.length - 1 : false;
-    const isLastExerciseCompleted = (() => {
+    // El último ejercicio está "resuelto" si se completó O se salteó → habilita cerrar la sesión.
+    const isLastExerciseResolved = (() => {
         if (!workout) return false;
         const lastEx = workout.exercises[workout.exercises.length - 1];
         if (!lastEx) return false;
-        if (completedExercises[lastEx.id]) return true;
+        if (completedExercises[lastEx.id] || skippedExercises[lastEx.id]) return true;
         const logs = exerciseLogs[lastEx.id];
         return logs ? logs.every(s => s.completed) : false;
     })();
@@ -367,7 +387,7 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                 };
             }
 
-            if (nextDay > 180) {
+            if (nextDay > totalDays) {
                 updates.protocolCompleted = true;
             }
 
@@ -406,6 +426,7 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
             setActiveExerciseIndex(0);
             setElapsedTime(0);
             setExtraLocation('gym');
+            setSkippedExercises({});
             window.scrollTo(0, 0);
 
         } catch (error) {
@@ -500,7 +521,7 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                     <span className="material-symbols-rounded text-6xl">emoji_events</span>
                 </div>
                 <h2 className="text-3xl font-black text-white">PROTOCOLO COMPLETADO!</h2>
-                <p className="text-slate-400">Has completado los 180 dias. Eres una maquina.</p>
+                <p className="text-slate-400">Has completado los {totalDays} dias. Eres una maquina.</p>
                 <button
                     className="bg-slate-800 text-white px-6 py-3 rounded-xl font-bold"
                     onClick={() => setShowResetConfirm(true)}
@@ -536,7 +557,7 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                 <div className="flex justify-between items-end mb-2">
                     <div>
                         <span className="text-[10px] font-black bg-blue-600/20 text-blue-400 px-2 py-0.5 rounded uppercase tracking-wider">
-                            {t('dashboard.day')} {workout.dayNumber} / 180
+                            {t('dashboard.day')} {workout.dayNumber} / {totalDays}
                         </span>
                         <h2 className="text-2xl font-black text-white leading-none mt-1 mb-4">
                             {workout.dayType}
@@ -547,6 +568,25 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                         {workout.isDeload && <span className="text-[10px] font-bold text-amber-500 bg-amber-900/20 px-2 py-1 rounded mt-1 inline-block">{t('dashboard.deload')}</span>}
                     </div>
                 </div>
+
+                {/* POSTPARTUM: phase banner + golden rule */}
+                {workout.phase && (
+                    <div className="bg-teal-500/10 rounded-2xl p-4 border border-teal-500/20 space-y-2">
+                        <div className="flex items-center gap-2">
+                            <span className="material-symbols-rounded text-teal-400">spa</span>
+                            <div>
+                                <p className="text-[10px] font-black text-teal-400 uppercase tracking-widest">
+                                    {t('postpartum.phaseLabel').replace('{n}', String(workout.phase))}
+                                </p>
+                                <p className="text-sm font-bold text-white">{t(`postpartum.phase${workout.phase}Title`)}</p>
+                            </div>
+                        </div>
+                        <p className="text-xs text-slate-300 leading-relaxed">{t(`postpartum.phase${workout.phase}Tip`)}</p>
+                        <p className="text-[11px] text-teal-300/90 leading-relaxed border-t border-teal-500/15 pt-2">
+                            {t('postpartum.goldenRule')}
+                        </p>
+                    </div>
+                )}
 
                 {/* GREEK GOD: Gym / Home location toggle (available any day) */}
                 {workout.locationChoice && (
@@ -625,34 +665,31 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
         <div className="space-y-6 pb-20 animate-fade-in relative z-10">
             <ToastContainer toasts={toasts} onRemove={removeToast} />
 
-            {/* REST TIMER OVERLAY */}
+            {/* REST TIMER OVERLAY — grande para verlo de lejos mientras descansás */}
             {timerActive && (
-                <div className="fixed bottom-12 left-0 right-0 z-50 p-4 animate-fade-in">
-                    <div className="max-w-lg mx-auto bg-slate-900/95 backdrop-blur-md border border-blue-500/30 rounded-2xl p-4 shadow-2xl shadow-blue-500/10">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-blue-600/20 flex items-center justify-center">
-                                    <span className="material-symbols-rounded text-blue-400 text-xl">timer</span>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Descanso</p>
-                                    <p className="text-2xl font-black text-white tabular-nums">{formatTime(restTimer)}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-24 h-2 bg-slate-800 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-blue-500 rounded-full transition-all duration-1000 ease-linear"
-                                        style={{ width: `${(restTimer / restDuration) * 100}%` }}
-                                    />
-                                </div>
-                                <button
-                                    onClick={cancelRestTimer}
-                                    className="w-10 h-10 rounded-xl bg-slate-800 hover:bg-red-900/50 text-slate-400 hover:text-red-400 flex items-center justify-center transition-all"
-                                >
-                                    <span className="material-symbols-rounded text-lg">close</span>
-                                </button>
-                            </div>
+                <div className="fixed inset-x-0 bottom-6 z-50 p-4 animate-fade-in">
+                    <div className="max-w-lg mx-auto bg-slate-900/95 backdrop-blur-md border border-blue-500/40 rounded-3xl px-6 py-5 shadow-2xl shadow-blue-500/20">
+                        <div className="flex items-center justify-between mb-1">
+                            <p className="text-xs font-black text-blue-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                <span className="material-symbols-rounded text-lg">timer</span>
+                                Descanso
+                            </p>
+                            <button
+                                onClick={cancelRestTimer}
+                                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-red-900/40 text-slate-300 hover:text-red-400 text-xs font-black uppercase tracking-widest flex items-center gap-1.5 transition-all"
+                            >
+                                <span className="material-symbols-rounded text-base">skip_next</span>
+                                Saltar
+                            </button>
+                        </div>
+                        <p className="text-center font-black text-white tabular-nums leading-none tracking-tighter text-7xl sm:text-8xl">
+                            {formatTime(restTimer)}
+                        </p>
+                        <div className="mt-4 h-3 bg-slate-800 rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-blue-500 rounded-full transition-all duration-1000 ease-linear"
+                                style={{ width: `${(restTimer / restDuration) * 100}%` }}
+                            />
                         </div>
                     </div>
                 </div>
@@ -842,6 +879,15 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                             </div>
                         </div>
                     )}
+
+                    {/* SKIP: avanzar sin marcar completo (para poder cerrar la sesión) */}
+                    <button
+                        onClick={() => skipExercise(currentExercise.id)}
+                        className="w-full py-3 rounded-2xl text-sm font-bold text-slate-400 bg-slate-800/40 hover:bg-slate-800 hover:text-slate-200 border border-slate-800 transition-all flex items-center justify-center gap-2"
+                    >
+                        <span className="material-symbols-rounded text-lg">skip_next</span>
+                        {t('routine.skipExercise')}
+                    </button>
                 </div>
             )}
 
@@ -884,8 +930,8 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                 </div>
             )}
 
-            {/* COMPLETE SESSION BUTTON (only when last exercise is done) */}
-            {isLastExercise && isLastExerciseCompleted && (
+            {/* COMPLETE SESSION BUTTON (last exercise completed or skipped) */}
+            {isLastExercise && isLastExerciseResolved && (
                 <div className="space-y-3 animate-fade-in">
                     <div className="text-center">
                         <p className="text-sm text-slate-400">

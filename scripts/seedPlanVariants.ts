@@ -21,7 +21,7 @@ const db = getFirestore(app);
 interface PlanVariantConfig {
     id: string;
     name: string;
-    goal: 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn' | 'greek_god';
+    goal: 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn' | 'greek_god' | 'postpartum';
     experienceLevel: 'beginner' | 'intermediate' | 'advanced';
     weeklyDays: 3 | 4 | 5 | 6;
     totalDays: number;
@@ -428,6 +428,38 @@ const PLAN_VARIANTS: PlanVariantConfig[] = [
         exerciseComplexity: 'advanced',
         description: 'Físico griego con mayor frecuencia semanal: rota empuje/tracción/full body con práctica de skills 4 veces por semana',
         targetAudience: 'Atletas avanzados con disponibilidad de 4 días buscando físico griego'
+    },
+
+    // POSTPARTUM VARIANTS (Recuperación posparto) — 12 semanas, ciclo A/B/C (3 días), sin deload
+    {
+        id: 'postpartum_beginner_3day',
+        name: 'Recuperación posparto - Principiante (3 días)',
+        goal: 'postpartum',
+        experienceLevel: 'beginner',
+        weeklyDays: 3,
+        totalDays: 36,
+        cycleLength: 3,
+        deloadFrequency: 0,
+        volumeMultiplier: 1.0,
+        intensityMultiplier: 1.0,
+        exerciseComplexity: 'basic',
+        description: 'Plan de 12 semanas en 3 fases para el posparto: reconecta el core profundo y el suelo pélvico y recupera fuerza de forma progresiva, seguro para la diástasis. En casa con dos mancuernas.',
+        targetAudience: 'Mujeres en posparto que buscan reconectar el core y volver a entrenar de forma segura'
+    },
+    {
+        id: 'postpartum_intermediate_3day',
+        name: 'Recuperación posparto - Intermedio (3 días)',
+        goal: 'postpartum',
+        experienceLevel: 'intermediate',
+        weeklyDays: 3,
+        totalDays: 36,
+        cycleLength: 3,
+        deloadFrequency: 0,
+        volumeMultiplier: 1.0,
+        intensityMultiplier: 1.0,
+        exerciseComplexity: 'standard',
+        description: 'Recuperación posparto con base de fuerza previa: mismas 3 fases (reconexión → carga liviana → progresión) priorizando control del core y suelo pélvico.',
+        targetAudience: 'Mujeres en posparto con experiencia previa de entrenamiento'
     },
 ];
 

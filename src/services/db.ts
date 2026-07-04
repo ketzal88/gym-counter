@@ -92,6 +92,10 @@ export interface UserTrainingState {
     // Tracking
     planStartedAt?: Date;
     estimatedCompletionDate?: Date; // basado en disponibilidad semanal
+
+    // Posparto: resultado del autotest de diástasis (opcional, solo plan postpartum)
+    diastasisResult?: 'mild' | 'moderate' | 'unknown';
+    diastasisTestedAt?: string; // ISO string de la última vez que se hizo el test
 }
 
 export interface UserProfile {
@@ -112,7 +116,7 @@ export interface UserProfile {
     height?: number; // cm
 
     // Perfil fitness
-    fitnessGoal?: 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn' | 'greek_god';
+    fitnessGoal?: 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn' | 'greek_god' | 'postpartum';
     experienceLevel?: 'beginner' | 'intermediate' | 'advanced';
     weeklyAvailability?: 3 | 4 | 5 | 6; // días por semana
     injuries?: string; // texto libre opcional
@@ -353,7 +357,7 @@ export const subscribeToUserProfile = (userId: string, callback: (profile: UserP
 export interface PlanVariant {
     id: string; // ej: "muscle_gain_intermediate_5day"
     name: string; // ej: "Ganancia Muscular - Intermedio (5 días)"
-    goal: 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn' | 'greek_god';
+    goal: 'weight_loss' | 'muscle_gain' | 'max_strength' | 'conditioning' | 'toned_abs' | 'glute_building' | 'fat_burn' | 'greek_god' | 'postpartum';
     experienceLevel: 'beginner' | 'intermediate' | 'advanced';
     weeklyDays: 3 | 4 | 5 | 6;
 

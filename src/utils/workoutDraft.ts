@@ -12,6 +12,7 @@ export interface WorkoutDraft {
     activeExerciseIndex: number;
     exerciseLogs: Record<string, { reps: string; weight: string; completed: boolean }[]>;
     completedExercises: Record<string, boolean>;
+    skippedExercises?: Record<string, boolean>; // ejercicios salteados (no completos)
     extraLocation?: 'gym' | 'home'; // greek_god día 4: variante elegida (gym/casa)
     savedAt: string; // ISO — para descartar borradores abandonados
 }
