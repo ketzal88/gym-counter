@@ -15,15 +15,14 @@ export default function BadgesGallery({ userId }: BadgesGalleryProps) {
   const [selectedBadge, setSelectedBadge] = useState<string | null>(null);
 
   useEffect(() => {
+    const loadBadges = async () => {
+      setLoading(true);
+      const badges = await getUserBadges(userId);
+      setUserBadges(badges);
+      setLoading(false);
+    };
     loadBadges();
   }, [userId]);
-
-  const loadBadges = async () => {
-    setLoading(true);
-    const badges = await getUserBadges(userId);
-    setUserBadges(badges);
-    setLoading(false);
-  };
 
   if (loading) {
     return (

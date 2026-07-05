@@ -966,22 +966,6 @@ export function adjustVolume(sets: number, volumeMultiplier: number): number {
 }
 
 /**
- * Obtiene los templates para una variante específica
- * NOTA: Por ahora usa TEMPLATES hardcoded. En futuras fases,
- * esto se moverá a cargar desde Firestore collection planVariants
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function getTemplatesForVariant(_variantId: string): Promise<typeof TEMPLATES> {
-    // TODO: En Fase 2, implementar carga desde Firestore
-    // const { getPlanVariant } = await import('./planVariantService');
-    // const variant = await getPlanVariant(variantId);
-    // return variant?.dayTemplates || TEMPLATES;
-
-    // Por ahora, retornar templates hardcoded
-    return TEMPLATES;
-}
-
-/**
  * Genera un workout del plan posparto según la fase activa.
  * Fase 1 (sesiones 1-9): SOLO Rutina A. Fase 2/3: rota A/B/C.
  * No hay deload ni mainLift; la progresión de carga es manual y guiada por señales.

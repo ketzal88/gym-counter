@@ -14,13 +14,12 @@ export default function BadgePreview({ userId }: BadgePreviewProps) {
   const [userBadges, setUserBadges] = useState<UserBadges | null>(null);
 
   useEffect(() => {
+    const loadBadges = async () => {
+      const badges = await getUserBadges(userId);
+      setUserBadges(badges);
+    };
     loadBadges();
   }, [userId]);
-
-  const loadBadges = async () => {
-    const badges = await getUserBadges(userId);
-    setUserBadges(badges);
-  };
 
   if (!userBadges || userBadges.badges.length === 0) return null;
 

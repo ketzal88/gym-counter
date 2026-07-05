@@ -25,7 +25,7 @@ function NumberStepper({
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const clamp = (v: number) => Math.max(min, Math.min(max, v));
+    const clamp = useCallback((v: number) => Math.max(min, Math.min(max, v)), [min, max]);
 
     const stopRepeat = useCallback(() => {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -40,7 +40,7 @@ function NumberStepper({
                 onChange(clamp(value + delta));
             }, 80);
         }, 400);
-    }, [value, onChange, min, max]);
+    }, [value, onChange, clamp]);
 
     const handlePointerDown = (delta: number) => {
         onChange(clamp(value + delta));
