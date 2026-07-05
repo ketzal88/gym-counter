@@ -25,6 +25,11 @@ service cloud.firestore {
       allow write: if false; // Only webhooks can write
     }
 
+    // Stripe idempotency ledger (server-only: written by the webhook via Admin SDK)
+    match /processedStripeEvents/{stripeEventId} {
+      allow read, write: if false; // Admin SDK bypasses rules; clients have no access
+    }
+
     // User badges (read for owner, write via backend)
     match /userBadges/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;

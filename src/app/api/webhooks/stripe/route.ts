@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { getFirestore, Timestamp } from 'firebase-admin/firestore';
+import { getFirestore, Timestamp, DocumentReference } from 'firebase-admin/firestore';
 import { notifySubscription, notifyError } from '@/lib/slack';
 
 function getStripe() {
@@ -9,9 +9,21 @@ function getStripe() {
   });
 }
 
+// Firestore create() rechaza con gRPC ALREADY_EXISTS (código 6) si el doc ya existe.
+// Lo usamos como candado de idempotencia atómico para el reintento de webhooks.
+function isAlreadyExists(err: unknown): boolean {
+  const code = (err as { code?: number | string })?.code;
+  if (code === 6 || code === 'already-exists') return true;
+  const message = err instanceof Error ? err.message : '';
+  return /already exists/i.test(message);
+}
+
 export async function POST(request: NextRequest) {
   const stripe = getStripe();
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
+  // Se setea sólo si LOGRAMOS reclamar el evento (create exitoso). Si el procesamiento
+  // falla después, lo liberamos en el catch para que el reintento de Stripe reprocese.
+  let processedRef: DocumentReference | null = null;
   try {
     const body = await request.text();
     const signature = request.headers.get('stripe-signature');
@@ -37,6 +49,22 @@ export async function POST(request: NextRequest) {
     }
 
     const db = getFirestore();
+
+    // Idempotencia: Stripe reintenta entregas. Reclamamos el event.id de forma atómica
+    // con create() (falla si ya existe) ANTES de mutar. Si es un reintento ya procesado,
+    // devolvemos 200 sin re-ejecutar mutaciones ni notificaciones a Slack.
+    // Ver .claude/rules/firestore-conventions.md (idempotencia del webhook Stripe).
+    const claimRef = db.collection('processedStripeEvents').doc(event.id);
+    try {
+      await claimRef.create({ type: event.type, processedAt: Timestamp.now() });
+      processedRef = claimRef;
+    } catch (err: unknown) {
+      if (isAlreadyExists(err)) {
+        console.log(`↩️ Evento Stripe duplicado ${event.id} (${event.type}) — ya procesado, se omite`);
+        return NextResponse.json({ received: true, duplicate: true });
+      }
+      throw err; // otro error (no reclamamos): que el catch externo devuelva 500 y Stripe reintente
+    }
 
     // Manejar eventos según tipo
     switch (event.type) {
@@ -321,6 +349,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ received: true });
   } catch (error: unknown) {
+    // El procesamiento falló DESPUÉS de reclamar el evento: liberamos el candado para que
+    // el reintento de Stripe pueda reprocesarlo (si no, quedaría marcado como procesado).
+    if (processedRef) {
+      await processedRef.delete().catch(() => { /* best-effort: no bloquear la respuesta 500 */ });
+    }
     console.error('Webhook handler error:', error);
     await notifyError('stripe-webhook', error instanceof Error ? error.message : 'Webhook handler failed', error instanceof Error ? error.stack : undefined);
     return NextResponse.json(

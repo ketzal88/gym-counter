@@ -28,13 +28,18 @@ lives in `firestore.rules`; types live in `src/services/db.ts`.
 - `userBadges` and `subscriptionEvents` are `write:false` for clients — server-side only.
 
 ## Stripe webhook idempotency (important)
-Stripe retries deliveries, so the webhook handler MUST be idempotent. Today it does a blind
-`subscriptionEvents.add({ ..., stripeEventId: event.id })` with no dedup — a retry creates a
-duplicate event and re-runs mutations + Slack notifications.
-- Dedup on `event.id`: write the event as `subscriptionEvents/{event.id}` (or a sibling
-  `processedStripeEvents/{event.id}`) with a **create + already-exists guard**, and return
-  200 early if it already exists.
-- Always verify the signature (`stripe.webhooks.constructEvent`) BEFORE any DB work (already done).
+Stripe retries deliveries, so the webhook handler MUST be idempotent. **Implemented** in
+`src/app/api/webhooks/stripe/route.ts`:
+- **Claim-then-process:** after signature verification and before any mutation, claim the event
+  with `processedStripeEvents/{event.id}.create({ type, processedAt })`. `create()` throws
+  gRPC `ALREADY_EXISTS` (code 6) on a retry → return `200 { duplicate: true }` early, skipping
+  all mutations and Slack notifications.
+- **Release on failure:** if processing throws AFTER a successful claim, `delete()` the claim in
+  the catch so Stripe's retry can reprocess (otherwise a transient failure would strand the event
+  marked-as-processed). A claim that never succeeded is never released.
+- `processedStripeEvents` is a server-only ledger (`firestore.rules`: `read, write: if false`;
+  the Admin SDK bypasses rules). Keyed by `event.id`, so no composite index is needed.
+- Always verify the signature (`stripe.webhooks.constructEvent`) BEFORE any DB work (done first).
 
 ## Adding an optional field to an existing doc type
 A new optional field does NOT exist on already-written docs. Therefore:
