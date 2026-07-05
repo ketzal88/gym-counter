@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { POSTPARTUM_DAILY_BASE } from '@/services/protocolEngine';
 import { useLanguage } from '@/context/LanguageContext';
+import { hasVideo } from '@/data/exerciseVideos';
+import YouTubeVideoModal from '../YouTubeVideoModal';
 
 interface DailyBaseCardProps {
     userId: string;
@@ -21,6 +23,7 @@ const todayIso = () => new Date().toISOString().split('T')[0];
 export default function DailyBaseCard({ userId }: DailyBaseCardProps) {
     const { t } = useLanguage();
     const [checked, setChecked] = useState<Record<string, boolean>>({});
+    const [videoExercise, setVideoExercise] = useState<{ id: string; name: string } | null>(null);
 
     useEffect(() => {
         if (!userId) return;
@@ -66,28 +69,42 @@ export default function DailyBaseCard({ userId }: DailyBaseCardProps) {
                 {POSTPARTUM_DAILY_BASE.map(ex => {
                     const isDone = !!checked[ex.id];
                     return (
-                        <button
+                        <div
                             key={ex.id}
-                            type="button"
-                            onClick={() => toggle(ex.id)}
-                            className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors border ${
+                            className={`w-full flex items-center gap-1 rounded-lg transition-colors border ${
                                 isDone
                                     ? 'bg-teal-100/70 dark:bg-teal-900/20 border-teal-200 dark:border-teal-900/40'
                                     : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 hover:border-teal-300 dark:hover:border-teal-800'
                             }`}
                         >
-                            <span className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
-                                isDone ? 'border-teal-500 bg-teal-500 text-white' : 'border-slate-300 dark:border-slate-700 text-transparent'
-                            }`}>
-                                <span className="material-symbols-rounded text-[14px] font-black">check</span>
-                            </span>
-                            <div className="flex-1 min-w-0">
-                                <p className={`text-sm font-semibold ${isDone ? 'text-slate-500 dark:text-slate-500 line-through' : 'text-slate-900 dark:text-white'}`}>
-                                    {ex.name}
-                                </p>
-                                <p className="text-[11px] text-slate-500 dark:text-slate-500">{ex.reps}</p>
-                            </div>
-                        </button>
+                            <button
+                                type="button"
+                                onClick={() => toggle(ex.id)}
+                                className="flex-1 flex items-center gap-3 p-3 text-left min-w-0"
+                            >
+                                <span className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+                                    isDone ? 'border-teal-500 bg-teal-500 text-white' : 'border-slate-300 dark:border-slate-700 text-transparent'
+                                }`}>
+                                    <span className="material-symbols-rounded text-[14px] font-black">check</span>
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                    <p className={`text-sm font-semibold ${isDone ? 'text-slate-500 dark:text-slate-500 line-through' : 'text-slate-900 dark:text-white'}`}>
+                                        {ex.name}
+                                    </p>
+                                    <p className="text-[11px] text-slate-500 dark:text-slate-500">{ex.reps}</p>
+                                </div>
+                            </button>
+                            {hasVideo(ex.id) && (
+                                <button
+                                    type="button"
+                                    onClick={() => setVideoExercise({ id: ex.id, name: ex.name })}
+                                    className="mr-2 w-9 h-9 rounded-lg flex items-center justify-center bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors shrink-0"
+                                    aria-label={`Video: ${ex.name}`}
+                                >
+                                    <span className="material-symbols-rounded text-lg">smart_display</span>
+                                </button>
+                            )}
+                        </div>
                     );
                 })}
 
@@ -97,6 +114,13 @@ export default function DailyBaseCard({ userId }: DailyBaseCardProps) {
                         : <span className="text-slate-400 dark:text-slate-600">{t('postpartum.baseReset')}</span>}
                 </p>
             </div>
+
+            <YouTubeVideoModal
+                exerciseId={videoExercise?.id || ''}
+                exerciseName={videoExercise?.name || ''}
+                isOpen={videoExercise !== null}
+                onClose={() => setVideoExercise(null)}
+            />
         </div>
     );
 }

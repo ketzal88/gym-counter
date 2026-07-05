@@ -351,6 +351,78 @@ export const EXERCISE_VIDEOS: Record<string, ExerciseVideoData> = {
     videoId: 'nMHfZ-yrFjA',
     title: 'How To Jump Rope For Beginners | Basics You Need To Know'
   },
+
+  // POSPARTO (diástasis-safe) — canales especializados en salud femenina / rehab de core
+  'pp_breathing_360': {
+    videoId: 'lIFPG9xahy4',
+    channel: 'Core Fitness for Moms',
+    title: '360 Breathing - Core Fitness for Moms'
+  },
+  'pp_tva': {
+    videoId: '_u2jEA9AV8w',
+    channel: 'Rehab and Revive',
+    title: 'Gentle Transverse Abdominus Exercise for Diastasis Recti'
+  },
+  'pp_pelvic_tilt': {
+    videoId: 'EbRdYBVqKAo',
+    channel: 'Fitasamamabear',
+    title: 'How To Do A Lying Pelvic Tilt For Postpartum Diastasis Recti'
+  },
+  'pp_pelvic_floor': {
+    videoId: '2RoO9jKvvTA',
+    channel: 'Michelle Kenway (Pelvic Floor Physio)',
+    title: 'How to Kegel Postpartum & Strengthen your Pelvic Floor'
+  },
+  'pp_heel_slides': {
+    videoId: '3SMvNev_L4k',
+    channel: 'Core Fitness for Moms',
+    title: 'Diastasis Recti Exercises - Heel Slides'
+  },
+  'pp_dead_bug': {
+    videoId: 'wr_gd3yjzkk',
+    channel: 'Core Fitness for Moms',
+    title: 'Dead Bug Progressions for Diastasis Recti'
+  },
+  'pp_glute_bridge': {
+    videoId: 'Z-HldsJwzPI',
+    channel: 'Girls Gone Strong',
+    title: 'Exercise for Postpartum Diastasis Recti - Glute Bridge'
+  },
+  'pp_bird_dog': {
+    videoId: '-Z-j2wtv5jo',
+    channel: 'Girls Gone Strong',
+    title: 'Exercise for Postpartum Diastasis Recti - Bird Dog'
+  },
+  'pp_side_plank_knees': {
+    videoId: 'ribtncUfriU',
+    channel: 'Dr. Carl Baird',
+    title: 'The Kneeling Side Plank | Beginner Side Plank Variation'
+  },
+  'pp_lunges': {
+    videoId: 'RZKXLMxPF_I',
+    channel: 'FITTR',
+    title: 'Dumbbell Reverse Lunges | Proper Form & Technique'
+  },
+  'pp_hip_thrust': {
+    videoId: '29OfN4ztW_g',
+    channel: 'J2FIT Strength & Conditioning',
+    title: 'Dumbbell Hip Thrust (Full Tutorial) - Glute Exercise for Beginners'
+  },
+  'pp_shoulder_press': {
+    videoId: 'fuQpuu--bMI',
+    channel: 'That Fit Friend',
+    title: 'Seated Dumbbell Shoulder Press Guide | Form, Tips, and Mistakes'
+  },
+  'pp_floor_press': {
+    videoId: 'AqYFvc9t_vU',
+    channel: 'Colossus Fitness',
+    title: 'How To PROPERLY Dumbbell Floor Press'
+  },
+  'pp_farmer_carry': {
+    videoId: 'lLAw6fUccKA',
+    channel: 'Runna',
+    title: "Farmer's Carry Tutorial - Proper Form and Technique"
+  },
 };
 
 // Alias map: protocol engine IDs → exerciseVideos keys
@@ -426,6 +498,36 @@ const EXERCISE_ID_ALIASES: Record<string, string> = {
   'greek_xh_calf': 'calf_raises',
   'greek_xh_core': 'planks',
   'greek_xh_rope': 'jump_rope',
+
+  // POSPARTO — base diaria (pp_base_*)
+  'pp_base_breath': 'pp_breathing_360',
+  'pp_base_tva': 'pp_tva',
+  'pp_base_pelvic_tilt': 'pp_pelvic_tilt',
+  'pp_base_pelvic_floor': 'pp_pelvic_floor',
+
+  // POSPARTO — Fase A (reconexión, pp_a_*)
+  'pp_a_breath_tva': 'pp_breathing_360',
+  'pp_a_pelvic_tilt': 'pp_pelvic_tilt',
+  'pp_a_heel_slides': 'pp_heel_slides',
+  'pp_a_deadbug_1leg': 'pp_dead_bug',
+  'pp_a_glute_bridge': 'pp_glute_bridge',
+  'pp_a_bird_dog': 'pp_bird_dog',
+  'pp_a_side_plank_knees': 'pp_side_plank_knees',
+
+  // POSPARTO — Fase B (carga inferior, pp_b_*) — reusa videos genéricos ya curados
+  'pp_b_goblet_squat': 'goblet_squat',
+  'pp_b_rdl': 'romanian_deadlift',
+  'pp_b_lunges': 'pp_lunges',
+  'pp_b_hip_thrust': 'pp_hip_thrust',
+  'pp_b_dead_bug': 'pp_dead_bug',
+  'pp_b_bird_dog': 'pp_bird_dog',
+
+  // POSPARTO — Fase C (tren superior, pp_c_*)
+  'pp_c_row': 'dumbbell_rows',
+  'pp_c_shoulder_press': 'pp_shoulder_press',
+  'pp_c_floor_press': 'pp_floor_press',
+  'pp_c_farmer_carry': 'pp_farmer_carry',
+  'pp_c_side_plank_knees': 'pp_side_plank_knees',
 };
 
 function resolveExerciseId(exerciseId: string): string {
