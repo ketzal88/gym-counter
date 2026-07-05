@@ -1,0 +1,38 @@
+{
+  "language": "typescript",
+  "packageManager": "npm",
+  "commands": {
+    "typecheck": "npx tsc --noEmit",
+    "lint": "npm run lint",
+    "test": "npm run test",
+    "build": "npm run build"
+  },
+  "security": {
+    "secretScan": "scripts/check-no-secrets.py",
+    "sast": "",
+    "depAudit": "npm audit --audit-level=high",
+    "review": {
+      "apiDir": "src/app/api",
+      "tenantParam": "uid",
+      "authSignals": "verifyIdToken|getAuth|adminAuth|Authorization|constructEvent",
+      "publicEnvPrefix": "NEXT_PUBLIC_",
+      "publicEnvAllow": "FIREBASE"
+    }
+  },
+  "ratchets": {
+    "deadCode": "",
+    "structural": "",
+    "baselineDir": ".sentrux/"
+  },
+  "gates": {
+    "preCommit": { "secretScan": "blocking" },
+    "prePush": {
+      "blocking": true,
+      "steps": ["typecheck", "lint", "test"]
+    }
+  },
+  "paths": {
+    "source": ["src/**"],
+    "codeExtensions": [".ts", ".tsx"]
+  }
+}

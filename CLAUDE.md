@@ -18,7 +18,8 @@ npm run lint         # next lint
 npm run test         # vitest run
 ```
 Slash commands del proyecto: `/ci-simulate` (corre los 4 checks), `/commit-checkpoint`
-(CI local + commit seguro), `/env-check` (paridad de env vars, sin imprimir valores).
+(CI local + commit seguro), `/env-check` (paridad de env vars, sin imprimir valores),
+`/typecheck` (solo `tsc --noEmit`), `/security-review` (triage de seguridad de un cambio).
 
 ## Estructura
 - `src/app/` — rutas: `dashboard`, `onboarding/{profile,goals,plan}`, `auth/{signin,signup}`,
@@ -55,6 +56,26 @@ type-error y muestra la key cruda al otro idioma.
 - Campos opcionales de Firestore: reads con fallback, writes con `merge:true` (ver la rule).
 - Variables de entorno: fuente de verdad `.env.local.example`. NUNCA imprimir valores ni commitear
   `.env*` / `*.pem` (un hook PreToolUse escanea secretos en cada `git commit`).
+
+## Framework de Claude (config-driven)
+Este repo adopta [claude-code-framework](https://github.com/ketzal88/claude-code-framework).
+El manifiesto `stack.json` (raíz) es la **fuente de verdad** de los comandos de cada gate
+(typecheck/lint/test/build), la config de secret-scan y de `/security-review`. Los comandos y
+hooks del core lo leen vía `.claude/core/hooks/scripts/read-config.py` (clave ausente = gate se
+saltea en silencio). Reglas universales del core (`.claude/core/rules/`) importadas abajo; las
+reglas de dominio viven en `.claude/rules/`.
+
+@.claude/core/rules/operating-procedure.md
+@.claude/core/rules/security-gates.md
+@.claude/core/rules/ratchet-philosophy.md
+@.claude/core/rules/commands-encode-workflows.md
+
+**Gate de pre-push (bloqueante) — disponible pero NO cableado.** El guard config-driven vive en
+`.claude/core/hooks/scripts/pre-push-guard.py` y `gates.prePush.steps` ya está declarado en
+`stack.json`, pero por decisión del proyecto NO está en `.claude/settings.json` (el flujo de
+`git push` no se bloquea). Para activarlo, agregá el hook `PreToolUse` de
+`.claude/core/hooks/settings.template.json` a `.claude/settings.json`. Mientras tanto, `/ci-simulate`
+corre los mismos checks a demanda. Ratchets (`ratchets.*`) vacíos → inertes hasta instalar la tool.
 
 ## Docs de referencia (raíz)
 `PROJECT_DOCUMENTATION.md`, `STRIPE_SETUP.md`, `BADGES_INTEGRATION.md`,
