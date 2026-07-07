@@ -5,6 +5,7 @@ import {
     isDeload,
     generateWorkout,
     generateWorkoutForGoal,
+    generateQuickWorkout,
     generatePostpartumWorkout,
     getPostpartumPhase,
     evaluateUnlock,
@@ -226,6 +227,50 @@ describe('Greek God plan (greek_god)', () => {
         const workout = generateWorkoutForGoal(1, mockLiftState, 'greek_god');
         const result = evaluateUnlock([], mockLiftState, workout);
         expect(result).toBeNull();
+    });
+});
+
+describe('Quick no-equipment session (extraLocation: quick)', () => {
+    it('is offered on every plan except postpartum', () => {
+        expect(generateWorkoutForGoal(1, mockLiftState, 'military_v1').quickChoice).toBe(true);
+        expect(generateWorkoutForGoal(1, mockLiftState, 'greek_god').quickChoice).toBe(true);
+        expect(generateWorkoutForGoal(1, mockLiftState, 'fat_burn').quickChoice).toBe(true);
+        expect(generateWorkoutForGoal(1, mockLiftState, 'postpartum').quickChoice).toBeUndefined();
+    });
+
+    it('generates a bodyweight-only session (no bar, no dumbbells, no rope) for any goal', () => {
+        for (const goal of ['military_v1', 'greek_god', 'toned_abs', 'fat_burn'] as const) {
+            const w = generateWorkoutForGoal(1, mockLiftState, goal, 'quick');
+            expect(w.dayType).toContain('Rápido');
+            expect(w.extraLocation).toBe('quick');
+            expect(w.quickChoice).toBe(true);
+            expect(w.mainLift).toBeUndefined();
+            expect(w.exercises.every(e => e.exerciseType === 'bodyweight')).toBe(true);
+            expect(w.exercises.some(e => e.id === 'quick_finisher')).toBe(true);
+        }
+    });
+
+    it('postpartum ignores the quick variant (stays diastasis-safe)', () => {
+        const w = generateWorkoutForGoal(1, mockLiftState, 'postpartum', 'quick');
+        expect(w.dayType).toContain('Rutina A');
+        expect(w.extraLocation).toBeUndefined();
+    });
+
+    it('never unlocks weight and never applies deload reduction', () => {
+        // día 13 con ciclo de 4 = ciclo 4 = semana de deload
+        const deloadDay = generateWorkoutForGoal(13, mockLiftState, 'greek_god', 'quick');
+        expect(deloadDay.isDeload).toBe(false);
+        const normal = generateQuickWorkout(1, 'greek_god');
+        expect(deloadDay.exercises.find(e => e.id === 'quick_squats')!.sets)
+            .toBe(normal.exercises.find(e => e.id === 'quick_squats')!.sets);
+        expect(evaluateUnlock([], mockLiftState, deloadDay)).toBeNull();
+    });
+
+    it('keeps the greek gym/home selector visible when quick is chosen (others only get quick)', () => {
+        const greek = generateWorkoutForGoal(1, mockLiftState, 'greek_god', 'quick');
+        expect(greek.locationChoice).toBe(true);
+        const military = generateWorkoutForGoal(1, mockLiftState, 'military_v1', 'quick');
+        expect(military.locationChoice).toBeUndefined();
     });
 });
 

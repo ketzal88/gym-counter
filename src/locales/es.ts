@@ -458,6 +458,9 @@ const es = {
     atGym: 'Gimnasio',
     atHome: 'En casa',
     homeEquip: 'Sesión full body en casa: solo tus 2 mancuernas, una soga y tu peso corporal. Sin barra. Elegila las veces que quieras.',
+    scheduledSession: 'Sesión del plan',
+    quickWorkout: 'Rápido · 20 min',
+    quickDesc: 'Sin equipamiento: solo tu cuerpo, ~20 minutos para moverte. Cuenta como sesión completada y avanza el día.',
   },
   settings: {
     title: 'Configuraci\u00f3n',

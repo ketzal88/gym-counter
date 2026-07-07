@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-    generateWorkout,
     generateWorkoutForGoal,
     resolveGoalFromVariantId,
     evaluateUnlock,
     ProtocolWorkout,
+    SessionLocation,
     GOAL_CONFIG,
 } from '@/services/protocolEngine';
 import {
@@ -52,8 +52,8 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
     const [workoutStartTime, setWorkoutStartTime] = useState<Date | null>(null);
     const [activeExerciseIndex, setActiveExerciseIndex] = useState(0);
     const [elapsedTime, setElapsedTime] = useState(0);
-    // greek_god día 4 (Sesión Extra): ubicación elegida — gimnasio o casa.
-    const [extraLocation, setExtraLocation] = useState<'gym' | 'home'>('gym');
+    // Variante de la sesión de hoy: programada ('gym'), casa (greek) o rápida sin equipo.
+    const [extraLocation, setExtraLocation] = useState<SessionLocation>('gym');
 
     // Rest Timer & Wake Lock
     const { restTimer, timerActive, restDuration, startRestTimer, cancelRestTimer, formatTime } = useRestTimer();
@@ -152,9 +152,7 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                 const draft = loadWorkoutDraft(userId, userState.currentDay);
                 const loc = draft?.extraLocation ?? extraLocation;
 
-                const generated = goal === 'military_v1'
-                    ? generateWorkout(userState.currentDay, userState.liftState)
-                    : generateWorkoutForGoal(userState.currentDay, userState.liftState, goal, loc);
+                const generated = generateWorkoutForGoal(userState.currentDay, userState.liftState, goal, loc);
 
                 const logs: Record<string, { reps: string; weight: string; completed: boolean }[]> = {};
 
@@ -588,12 +586,16 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                     </div>
                 )}
 
-                {/* GREEK GOD: Gym / Home location toggle (available any day) */}
-                {workout.locationChoice && (
+                {/* Session variant toggle: programada / casa (greek) / rápida sin equipo */}
+                {(workout.locationChoice || workout.quickChoice) && (
                     <div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">{t('routine.extraWhere')}</p>
-                        <div className="grid grid-cols-2 gap-2">
-                            {([['gym', 'fitness_center', t('routine.atGym')], ['home', 'home', t('routine.atHome')]] as const).map(([loc, icon, label]) => (
+                        <div className={`grid gap-2 ${workout.locationChoice ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                            {([
+                                ['gym', 'fitness_center', workout.locationChoice ? t('routine.atGym') : t('routine.scheduledSession')] as const,
+                                ...(workout.locationChoice ? [['home', 'home', t('routine.atHome')] as const] : []),
+                                ...(workout.quickChoice ? [['quick', 'bolt', t('routine.quickWorkout')] as const] : []),
+                            ]).map(([loc, icon, label]) => (
                                 <button
                                     key={loc}
                                     onClick={() => setExtraLocation(loc)}
@@ -608,6 +610,9 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                         </div>
                         {extraLocation === 'home' && (
                             <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">{t('routine.homeEquip')}</p>
+                        )}
+                        {extraLocation === 'quick' && (
+                            <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">{t('routine.quickDesc')}</p>
                         )}
                     </div>
                 )}

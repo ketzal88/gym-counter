@@ -23,6 +23,10 @@ export interface ProtocolExercise {
     videoDuration?: string; // Duration like "2:34"
 }
 
+// Dónde/cómo se hace la sesión de hoy: la programada ('gym'), la variante casa del
+// griego ('home') o la sesión rápida sin equipamiento ('quick', cualquier plan salvo posparto).
+export type SessionLocation = 'gym' | 'home' | 'quick';
+
 export interface ProtocolWorkout {
     dayNumber: number;
     dayType: string;
@@ -33,7 +37,8 @@ export interface ProtocolWorkout {
     note?: string;
     unlockResult?: Partial<LiftState>;
     locationChoice?: boolean; // greek_god: este día ofrece elección gimnasio/casa
-    extraLocation?: 'gym' | 'home';
+    quickChoice?: boolean; // este día ofrece la sesión rápida sin equipamiento
+    extraLocation?: SessionLocation;
     phase?: 1 | 2 | 3; // postpartum: fase de progresión activa para este día
 }
 
@@ -548,6 +553,36 @@ export const TEMPLATES_GREEK_EXTRA_HOME: { type: string, accessories: typeof TEM
     ]
 };
 
+// ============================================================
+// SESIÓN RÁPIDA — sin NADA de equipamiento (ni barra, ni mancuernas, ni soga).
+// ~20 minutos para mover el cuerpo un día que no podés hacer la sesión programada.
+// Disponible en todos los planes salvo posparto (ese plan es diástasis-safe y no
+// admite burpees/mountain climbers). Cuenta como sesión: avanza el día del protocolo.
+// ============================================================
+export const WARMUP_QUICK = [
+    { name: 'Jumping Jacks', reps: '30 seg' },
+    { name: 'Sentadillas sin Peso', reps: '10' },
+    { name: 'Círculos de Brazos y Hombros', reps: '10/lado' },
+    { name: 'Estocadas con Rotación', reps: '6/pierna' }
+];
+
+export const TEMPLATE_QUICK: { type: string, accessories: typeof TEMPLATES_GREEK_GOD[1]['accessories'] } = {
+    type: "Entrenamiento Rápido · 20 min",
+    accessories: [
+        { id: "quick_squats", name: "Sentadillas sin Peso", sets: 3, reps: "15-20", exerciseType: "bodyweight", blockType: "strength" },
+        { id: "quick_pushups", name: "Push-ups (de rodillas si hace falta)", sets: 3, reps: "8-15", exerciseType: "bodyweight", blockType: "strength" },
+        { id: "quick_lunges", name: "Zancadas Alternadas", sets: 3, reps: "10/pierna", exerciseType: "bodyweight", blockType: "strength" },
+        { id: "quick_plank", name: "Plancha", sets: 3, reps: "30-45 seg", exerciseType: "bodyweight", blockType: "strength" },
+        {
+            id: "quick_finisher", name: "Finisher: AMRAP 6", sets: 1, reps: "6 min", blockType: "conditioning", conditioning: {
+                format: "AMRAP",
+                duration: "6 min",
+                instructions: "5 Burpees\n10 Mountain Climbers\n15 Jumping Jacks\nRondas seguidas a ritmo sostenido."
+            }
+        }
+    ]
+};
+
 // Warmup específico para el plan Físico Griego (muñecas/escápulas/hombros).
 // Los skills cargan muñecas/codos/hombros de forma extrema: no negociable.
 export const WARMUP_GREEK = [
@@ -1017,6 +1052,53 @@ export function generatePostpartumWorkout(dayNumber: number): ProtocolWorkout {
 }
 
 /**
+ * Genera la sesión rápida sin equipamiento (~20 min). Reemplaza a la sesión
+ * programada del día y cuenta igual: al guardarla avanza el día del protocolo.
+ * No aplica deload (ya es volumen mínimo).
+ */
+export function generateQuickWorkout(dayNumber: number, goal: GoalType = 'military_v1'): ProtocolWorkout {
+    const { cycleLength } = GOAL_CONFIG[goal];
+    const cycleIndex = getCycleIndex(dayNumber, cycleLength);
+    const isDeloadRecovery = isDeload(cycleIndex) && getDayType(dayNumber, cycleLength) === cycleLength;
+
+    const workout: ProtocolWorkout = {
+        dayNumber,
+        dayType: TEMPLATE_QUICK.type,
+        cycleIndex,
+        isDeload: false,
+        exercises: [],
+        locationChoice: (goal === 'greek_god' && !isDeloadRecovery) || undefined,
+        quickChoice: true,
+        extraLocation: 'quick',
+    };
+
+    WARMUP_QUICK.forEach((w, i) => {
+        workout.exercises.push({
+            id: `warmup_${i}`,
+            name: w.name,
+            sets: 1,
+            reps: w.reps,
+            blockType: 'warmup',
+            exerciseType: 'bodyweight'
+        });
+    });
+
+    TEMPLATE_QUICK.accessories.forEach(acc => {
+        workout.exercises.push({
+            id: acc.id,
+            name: acc.name,
+            sets: acc.sets,
+            reps: acc.reps,
+            exerciseType: acc.exerciseType || 'bodyweight',
+            blockType: acc.blockType || 'strength',
+            conditioningMetadata: acc.conditioning
+        });
+    });
+
+    return workout;
+}
+
+/**
  * Genera un workout según el goal del usuario
  * Soporta military_v1 (12 días), toned_abs, glute_building, fat_burn (6 días)
  */
@@ -1024,11 +1106,19 @@ export function generateWorkoutForGoal(
     dayNumber: number,
     liftState: LiftState,
     goal: GoalType = 'military_v1',
-    extraLocation: 'gym' | 'home' = 'gym'
+    extraLocation: SessionLocation = 'gym'
 ): ProtocolWorkout {
+    // Sesión rápida sin equipamiento: cualquier plan salvo posparto (diástasis-safe).
+    const quickAvailable = goal !== 'postpartum';
+    if (quickAvailable && extraLocation === 'quick') {
+        return generateQuickWorkout(dayNumber, goal);
+    }
+
     // Military v1 usa la función original para mantener compatibilidad
     if (goal === 'military_v1') {
-        return generateWorkout(dayNumber, liftState);
+        const workout = generateWorkout(dayNumber, liftState);
+        workout.quickChoice = true;
+        return workout;
     }
 
     // Posparto: fases reales, sin deload, sin mainLift (ver generatePostpartumWorkout)
@@ -1072,6 +1162,7 @@ export function generateWorkoutForGoal(
         mainLift: template.mainLift,
         exercises: [],
         locationChoice: greekLocationChoice || undefined,
+        quickChoice: true,
         extraLocation: greekLocationChoice ? extraLocation : undefined,
     };
 

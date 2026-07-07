@@ -13,7 +13,7 @@ export interface WorkoutDraft {
     exerciseLogs: Record<string, { reps: string; weight: string; completed: boolean }[]>;
     completedExercises: Record<string, boolean>;
     skippedExercises?: Record<string, boolean>; // ejercicios salteados (no completos)
-    extraLocation?: 'gym' | 'home'; // greek_god día 4: variante elegida (gym/casa)
+    extraLocation?: 'gym' | 'home' | 'quick'; // variante elegida: programada, casa (greek) o rápida
     savedAt: string; // ISO — para descartar borradores abandonados
 }
 

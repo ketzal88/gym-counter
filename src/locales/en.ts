@@ -458,6 +458,9 @@ const en = {
     atGym: 'Gym',
     atHome: 'At home',
     homeEquip: 'Home full-body session: just your 2 dumbbells, a jump rope and your bodyweight. No bar. Pick it as often as you want.',
+    scheduledSession: 'Planned session',
+    quickWorkout: 'Quick · 20 min',
+    quickDesc: 'No equipment needed: just your body, ~20 minutes to move. Counts as a completed session and advances the day.',
   },
   settings: {
     title: 'Settings',
