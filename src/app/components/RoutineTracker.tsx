@@ -670,9 +670,10 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
         <div className="space-y-6 pb-20 animate-fade-in relative z-10">
             <ToastContainer toasts={toasts} onRemove={removeToast} />
 
-            {/* REST TIMER OVERLAY — grande para verlo de lejos mientras descansás */}
+            {/* REST TIMER OVERLAY — grande para verlo de lejos mientras descansás.
+                bottom-20: la BottomNav mide ~77px, el timer tiene que quedar por encima. */}
             {timerActive && (
-                <div className="fixed inset-x-0 bottom-6 z-50 p-4 animate-fade-in">
+                <div className="fixed inset-x-0 bottom-20 z-50 p-4 animate-fade-in">
                     <div className="max-w-lg mx-auto bg-slate-900/95 backdrop-blur-md border border-blue-500/40 rounded-3xl px-6 py-5 shadow-2xl shadow-blue-500/20">
                         <div className="flex items-center justify-between mb-1">
                             <p className="text-xs font-black text-blue-400 uppercase tracking-[0.2em] flex items-center gap-2">
