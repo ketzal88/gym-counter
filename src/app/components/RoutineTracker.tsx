@@ -25,6 +25,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { hasVideo } from '@/data/exerciseVideos';
 import { saveWorkoutDraft, loadWorkoutDraft, clearWorkoutDraft } from '@/utils/workoutDraft';
 import YouTubeVideoModal from './YouTubeVideoModal';
+import ExerciseGuidePanel from './ExerciseGuidePanel';
 import ToastContainer from './ui/ToastContainer';
 import ConfirmDialog from './ui/ConfirmDialog';
 
@@ -883,6 +884,8 @@ export default function RoutineTracker({ userId }: RoutineTrackerProps) {
                                     </div>
                                 ))}
                             </div>
+
+                            <ExerciseGuidePanel exerciseId={currentExercise.id} />
                         </div>
                     )}
 

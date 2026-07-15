@@ -446,6 +446,8 @@ const es = {
     videoNotAvailableDesc2: 'Estamos trabajando en a\u00f1adir m\u00e1s contenido.',
     proTip: 'Pro tip:',
     proTipText: 'Pausa el video y practica la t\u00e9cnica con peso ligero primero',
+    howTo: 'C\u00f3mo se hace',
+    guideSource: 'Instrucciones: exercises-dataset (MIT)',
     bodyweight: 'Bodyweight',
     startWorkout: 'INICIAR RUTINA',
     inProgress: 'EN CURSO',

@@ -446,6 +446,8 @@ const en = {
     videoNotAvailableDesc2: 'We\'re working on adding more content.',
     proTip: 'Pro tip:',
     proTipText: 'Pause the video and practice the technique with light weight first',
+    howTo: 'How to do it',
+    guideSource: 'Instructions: exercises-dataset (MIT)',
     bodyweight: 'Bodyweight',
     startWorkout: 'START WORKOUT',
     inProgress: 'IN PROGRESS',
