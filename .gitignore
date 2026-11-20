@@ -54,9 +54,11 @@ __pycache__/
 # Skills que viven en handsOn-Worker (junctions, ver Worker Brain/.mente/skills.mjs)
 /.claude/skills/agent-orchestration-multi-agent-optimize
 /.claude/skills/agent-tool-builder
+/.claude/skills/design-md
 /.claude/skills/error-debugging-multi-agent-review
 /.claude/skills/graphql-schema
 /.claude/skills/llm-app-patterns
+/.claude/skills/meta-ads-creative
 /.claude/skills/meta-api-expert
 /.claude/skills/paid-ads
 /.claude/skills/skill-creator
