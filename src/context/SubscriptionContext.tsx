@@ -52,12 +52,14 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
                 // Calculate trial days remaining
                 if (status === 'trial' && userData.trialEndDate) {
                     const now = new Date();
-                    const trialEnd = userData.trialEndDate instanceof Date
-                        ? userData.trialEndDate
+                    // Firestore devuelve Timestamp (new Date(Timestamp) da Invalid Date → NaN días).
+                    const raw = userData.trialEndDate as unknown as { toDate?: () => Date };
+                    const trialEnd = typeof raw.toDate === 'function'
+                        ? raw.toDate()
                         : new Date(userData.trialEndDate);
 
                     const daysRemaining = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                    setTrialDaysRemaining(Math.max(0, daysRemaining));
+                    setTrialDaysRemaining(Number.isFinite(daysRemaining) ? Math.max(0, daysRemaining) : 0);
                 } else {
                     setTrialDaysRemaining(0);
                 }

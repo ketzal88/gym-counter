@@ -1,5 +1,6 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
-import { addWorkoutLog, WorkoutLog } from './db';
+import { doc, setDoc, Timestamp } from 'firebase/firestore';
+import { db as firestore, WorkoutLog } from './db';
 
 /**
  * IndexedDB Schema para GymCounter
@@ -127,7 +128,13 @@ export async function syncPendingData(): Promise<{ success: number; failed: numb
       try {
         // Intentar subir a Firestore
         if (item.type === 'workout') {
-          await addWorkoutLog(item.data as Omit<WorkoutLog, 'timestamp' | 'id'>);
+          // ID = id local: si el delete de la cola falla y se reintenta, se sobrescribe en vez de duplicar.
+          // Se conserva la fecha en que se entrenó, no la de la sincronización.
+          const { id, timestamp, ...data } = item.data as WorkoutLog;
+          await setDoc(doc(firestore, 'workouts', id), {
+            ...data,
+            timestamp: Timestamp.fromDate(new Date(timestamp)),
+          });
           console.log('✅ Workout sincronizado:', item.data.id);
         }
         // Añadir más tipos según necesidad (visit, measurement, etc.)
@@ -140,17 +147,13 @@ export async function syncPendingData(): Promise<{ success: number; failed: numb
       } catch (error) {
         console.error('❌ Error sincronizando item:', item.id, error);
 
-        // Incrementar contador de reintentos
+        // Incrementar contador de reintentos. Nunca se descarta: es un entrenamiento del usuario.
         if (item.id) {
           const updatedItem = { ...item, retries: item.retries + 1 };
-
-          // Si ya se reintentó muchas veces, eliminar
           if (updatedItem.retries >= 5) {
-            await db.delete('pendingSync', item.id);
-            console.warn('⚠️ Item eliminado después de 5 reintentos:', item.id);
-          } else {
-            await db.put('pendingSync', updatedItem);
+            console.warn('⚠️ Item sin sincronizar tras varios reintentos, se conserva en la cola:', item.id);
           }
+          await db.put('pendingSync', updatedItem);
         }
         failed++;
       }
