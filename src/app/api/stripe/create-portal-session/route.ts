@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { auth } from '@/lib/firebase-admin';
 import { getFirestore } from 'firebase-admin/firestore';
+import { rateLimit, tooManyRequests } from '@/lib/rateLimit';
 
 function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -22,8 +23,16 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await auth.verifyIdToken(token);
-    const userId = decodedToken.uid;
+    let userId: string;
+    try {
+      userId = (await auth.verifyIdToken(token)).uid;
+    } catch {
+      return NextResponse.json({ message: 'Invalid token' }, { status: 401 });
+    }
+
+    if (!(await rateLimit(`portal_${userId}`, 20, 60 * 60 * 1000))) {
+      return NextResponse.json(tooManyRequests, { status: 429 });
+    }
 
     // Obtener datos del usuario de Firestore
     const db = getFirestore();
@@ -48,9 +57,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ url: session.url });
   } catch (error: unknown) {
     console.error('Error creating portal session:', error);
-    return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
   }
 }

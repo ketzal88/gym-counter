@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { auth } from '@/lib/firebase-admin';
 import { getFirestore } from 'firebase-admin/firestore';
+import { rateLimit, tooManyRequests } from '@/lib/rateLimit';
+
+// Suscripciones que siguen vivas (o cobrando reintentos): una nueva duplicaría el cobro.
+const LIVE_STATUSES: Stripe.Subscription.Status[] = ['active', 'trialing', 'past_due', 'unpaid'];
 
 function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -22,8 +26,16 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await auth.verifyIdToken(token);
-    const userId = decodedToken.uid;
+    let userId: string;
+    try {
+      userId = (await auth.verifyIdToken(token)).uid;
+    } catch {
+      return NextResponse.json({ message: 'Invalid token' }, { status: 401 });
+    }
+
+    if (!(await rateLimit(`checkout_${userId}`, 10, 60 * 60 * 1000))) {
+      return NextResponse.json(tooManyRequests, { status: 429 });
+    }
 
     // Obtener tier del body
     const { tier } = await request.json();
@@ -64,11 +76,21 @@ export async function POST(request: NextRequest) {
       });
       customerId = customer.id;
 
-      // Guardar customer ID en Firestore
-      await db.collection('users').doc(userId).update({
+      // Guardar customer ID en Firestore (merge: el doc puede no existir todavía)
+      await db.collection('users').doc(userId).set({
         stripeCustomerId: customerId,
-      });
+      }, { merge: true });
     }
+
+    // Stripe es la fuente de verdad: no abrir una 2ª suscripción (cobro doble) ni repetir el trial.
+    const { data: previousSubs } = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 100 });
+    if (previousSubs.some((s) => LIVE_STATUSES.includes(s.status))) {
+      return NextResponse.json(
+        { message: 'You already have a subscription. Manage it from your account.' },
+        { status: 409 }
+      );
+    }
+    const hadTrial = previousSubs.some((s) => s.trial_start != null);
 
     // Crear sesión de Checkout
     const session = await stripe.checkout.sessions.create({
@@ -84,7 +106,7 @@ export async function POST(request: NextRequest) {
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?checkout=success`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/paywall?checkout=cancelled`,
       subscription_data: {
-        trial_period_days: 14,
+        ...(hadTrial ? {} : { trial_period_days: 14 }),
         metadata: {
           userId,
         },
@@ -98,9 +120,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ sessionId: session.id, url: session.url });
   } catch (error: unknown) {
     console.error('Error creating checkout session:', error);
-    return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
   }
 }
