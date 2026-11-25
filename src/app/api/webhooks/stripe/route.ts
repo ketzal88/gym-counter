@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { getFirestore, Timestamp, DocumentReference } from 'firebase-admin/firestore';
+import { Timestamp, DocumentReference } from 'firebase-admin/firestore';
+import { db } from '@/lib/firebase-admin';
 import { notifySubscription, notifyError } from '@/lib/slack';
+import { mapStatus, idOf, currentPeriod } from '@/lib/stripeWebhook';
 
 function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -16,6 +18,32 @@ function isAlreadyExists(err: unknown): boolean {
   if (code === 6 || code === 'already-exists') return true;
   const message = err instanceof Error ? err.message : '';
   return /already exists/i.test(message);
+}
+
+/** userId desde la metadata de la suscripción o, si falta, buscando por stripeCustomerId. */
+async function resolveUserId(subscription: Stripe.Subscription): Promise<string | null> {
+  if (subscription.metadata?.userId) return subscription.metadata.userId;
+  const customerId = idOf(subscription.customer);
+  if (!customerId) return null;
+  const snap = await db.collection('users').where('stripeCustomerId', '==', customerId).limit(1).get();
+  if (snap.empty) {
+    console.error('No user found for customer:', customerId);
+    return null;
+  }
+  return snap.docs[0].id;
+}
+
+function periodFields(subscription: Stripe.Subscription) {
+  const period = currentPeriod(subscription);
+  if (!period) return {};
+  return {
+    subscriptionStartDate: Timestamp.fromMillis(period.startMs),
+    subscriptionEndDate: Timestamp.fromMillis(period.endMs),
+  };
+}
+
+async function emailOf(userId: string): Promise<string> {
+  return (await db.collection('users').doc(userId).get()).data()?.email || userId;
 }
 
 export async function POST(request: NextRequest) {
@@ -43,12 +71,10 @@ export async function POST(request: NextRequest) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       console.error('Webhook signature verification failed:', message);
       return NextResponse.json(
-        { message: `Webhook Error: ${message}` },
+        { message: 'Webhook signature verification failed' },
         { status: 400 }
       );
     }
-
-    const db = getFirestore();
 
     // Idempotencia: Stripe reintenta entregas. Reclamamos el event.id de forma atómica
     // con create() (falla si ya existe) ANTES de mutar. Si es un reintento ya procesado,
@@ -66,279 +92,127 @@ export async function POST(request: NextRequest) {
       throw err; // otro error (no reclamamos): que el catch externo devuelva 500 y Stripe reintente
     }
 
+    // Registro del evento con ID determinístico (= event.id): si un reintento reprocesa
+    // después de una falla parcial, sobrescribe la misma fila en vez de duplicarla.
+    const recordEvent = (data: Record<string, unknown>) =>
+      db.collection('subscriptionEvents').doc(event.id).set({
+        ...data,
+        timestamp: Timestamp.now(),
+        stripeEventId: event.id,
+      });
+
+    // Slack va DESPUÉS de aplicar todas las mutaciones y fuera del camino que libera el
+    // candado: una falla de Slack no debe provocar reprocesos ni avisos duplicados.
+    const notifications: Array<() => Promise<unknown>> = [];
+
     // Manejar eventos según tipo
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
         const userId = session.metadata?.userId;
+        const subscriptionId = idOf(session.subscription);
 
         if (!userId) {
           console.error('No userId in checkout session metadata');
           break;
         }
+        if (!subscriptionId) {
+          console.log(`Checkout ${session.id} sin suscripción — se ignora`);
+          break;
+        }
 
-        // Obtener la suscripción
-        const subscriptionId = session.subscription as string;
         const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        const tier = session.metadata?.tier || 'monthly';
 
-        // Actualizar usuario en Firestore
-        await db.collection('users').doc(userId).update({
+        await db.collection('users').doc(userId).set({
           subscriptionStatus: subscription.status === 'trialing' ? 'trial' : 'active',
           stripeSubscriptionId: subscriptionId,
-          subscriptionTier: session.metadata?.tier || 'monthly',
-          subscriptionStartDate: Timestamp.fromMillis(subscription.items.data[0].current_period_start * 1000),
-          subscriptionEndDate: Timestamp.fromMillis(subscription.items.data[0].current_period_end * 1000),
-        });
+          subscriptionTier: tier,
+          ...periodFields(subscription),
+        }, { merge: true });
 
-        // Registrar evento
-        await db.collection('subscriptionEvents').add({
+        await recordEvent({
           userId,
           eventType: 'subscription_created',
-          timestamp: Timestamp.now(),
-          data: {
-            subscriptionId,
-            tier: session.metadata?.tier,
-            status: subscription.status,
-          },
-          stripeEventId: event.id,
+          data: { subscriptionId, tier: session.metadata?.tier ?? null, status: subscription.status },
         });
 
-        // Slack notification
-        const checkoutUser = await db.collection('users').doc(userId).get();
-        const checkoutEmail = checkoutUser.data()?.email || userId;
-        await notifySubscription('started', userId, checkoutEmail, session.metadata?.tier || 'monthly');
-
+        notifications.push(async () => notifySubscription('started', userId, await emailOf(userId), tier));
         console.log(`✅ Checkout completed for user ${userId}`);
         break;
       }
 
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
-        const userId = subscription.metadata?.userId;
+        const userId = await resolveUserId(subscription);
+        if (!userId) break;
 
-        if (!userId) {
-          // Intentar obtener userId desde customer
-          const customer = await stripe.customers.retrieve(subscription.customer as string);
-          if (customer.deleted) break;
-          const userSnapshot = await db.collection('users')
-            .where('stripeCustomerId', '==', customer.id)
-            .limit(1)
-            .get();
+        await db.collection('users').doc(userId).set({
+          subscriptionStatus: mapStatus(subscription.status),
+          ...periodFields(subscription),
+          subscriptionCancelAtPeriodEnd: subscription.cancel_at_period_end || false,
+        }, { merge: true });
 
-          if (userSnapshot.empty) {
-            console.error('No user found for customer:', customer.id);
-            break;
-          }
+        await recordEvent({
+          userId,
+          eventType: 'subscription_updated',
+          data: { status: subscription.status, cancelAtPeriodEnd: subscription.cancel_at_period_end },
+        });
 
-          const userDoc = userSnapshot.docs[0];
-          const actualUserId = userDoc.id;
-
-          // Actualizar suscripción
-          await db.collection('users').doc(actualUserId).update({
-            subscriptionStatus: subscription.status === 'trialing' ? 'trial' : subscription.status === 'active' ? 'active' : 'cancelled',
-            subscriptionStartDate: Timestamp.fromMillis(subscription.items.data[0].current_period_start * 1000),
-            subscriptionEndDate: Timestamp.fromMillis(subscription.items.data[0].current_period_end * 1000),
-            subscriptionCancelAtPeriodEnd: subscription.cancel_at_period_end || false,
-          });
-
-          // Registrar evento
-          await db.collection('subscriptionEvents').add({
-            userId: actualUserId,
-            eventType: 'subscription_updated',
-            timestamp: Timestamp.now(),
-            data: {
-              status: subscription.status,
-              cancelAtPeriodEnd: subscription.cancel_at_period_end,
-            },
-            stripeEventId: event.id,
-          });
-
-          console.log(`✅ Subscription updated for user ${actualUserId}`);
-        } else {
-          // Actualizar suscripción
-          await db.collection('users').doc(userId).update({
-            subscriptionStatus: subscription.status === 'trialing' ? 'trial' : subscription.status === 'active' ? 'active' : 'cancelled',
-            subscriptionStartDate: Timestamp.fromMillis(subscription.items.data[0].current_period_start * 1000),
-            subscriptionEndDate: Timestamp.fromMillis(subscription.items.data[0].current_period_end * 1000),
-            subscriptionCancelAtPeriodEnd: subscription.cancel_at_period_end || false,
-          });
-
-          // Registrar evento
-          await db.collection('subscriptionEvents').add({
-            userId,
-            eventType: 'subscription_updated',
-            timestamp: Timestamp.now(),
-            data: {
-              status: subscription.status,
-              cancelAtPeriodEnd: subscription.cancel_at_period_end,
-            },
-            stripeEventId: event.id,
-          });
-
-          console.log(`✅ Subscription updated for user ${userId}`);
-        }
+        console.log(`✅ Subscription updated for user ${userId}`);
         break;
       }
 
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
-        const userId = subscription.metadata?.userId;
+        const userId = await resolveUserId(subscription);
+        if (!userId) break;
 
-        if (!userId) {
-          // Intentar obtener userId desde customer
-          const customer = await stripe.customers.retrieve(subscription.customer as string);
-          if (customer.deleted) break;
-          const userSnapshot = await db.collection('users')
-            .where('stripeCustomerId', '==', customer.id)
-            .limit(1)
-            .get();
+        await db.collection('users').doc(userId).set({ subscriptionStatus: 'cancelled' }, { merge: true });
 
-          if (userSnapshot.empty) {
-            console.error('No user found for customer:', customer.id);
-            break;
-          }
+        await recordEvent({
+          userId,
+          eventType: 'subscription_cancelled',
+          data: { reason: 'deleted' },
+        });
 
-          const userDoc = userSnapshot.docs[0];
-          const actualUserId = userDoc.id;
-
-          // Marcar suscripción como cancelada
-          await db.collection('users').doc(actualUserId).update({
-            subscriptionStatus: 'cancelled',
-          });
-
-          // Registrar evento
-          await db.collection('subscriptionEvents').add({
-            userId: actualUserId,
-            eventType: 'subscription_cancelled',
-            timestamp: Timestamp.now(),
-            data: {
-              reason: 'deleted',
-            },
-            stripeEventId: event.id,
-          });
-
-          // Slack notification
-          const cancelledUser1 = await db.collection('users').doc(actualUserId).get();
-          await notifySubscription('cancelled', actualUserId, cancelledUser1.data()?.email || actualUserId);
-
-          console.log(`✅ Subscription cancelled for user ${actualUserId}`);
-        } else {
-          // Marcar suscripción como cancelada
-          await db.collection('users').doc(userId).update({
-            subscriptionStatus: 'cancelled',
-          });
-
-          // Registrar evento
-          await db.collection('subscriptionEvents').add({
-            userId,
-            eventType: 'subscription_cancelled',
-            timestamp: Timestamp.now(),
-            data: {
-              reason: 'deleted',
-            },
-            stripeEventId: event.id,
-          });
-
-          // Slack notification
-          const cancelledUser2 = await db.collection('users').doc(userId).get();
-          await notifySubscription('cancelled', userId, cancelledUser2.data()?.email || userId);
-
-          console.log(`✅ Subscription cancelled for user ${userId}`);
-        }
+        notifications.push(async () => notifySubscription('cancelled', userId, await emailOf(userId)));
+        console.log(`✅ Subscription cancelled for user ${userId}`);
         break;
       }
 
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice;
-        const subscriptionId = typeof invoice.parent?.subscription_details?.subscription === 'string'
-          ? invoice.parent.subscription_details.subscription
-          : invoice.parent?.subscription_details?.subscription?.id;
-
+        const subscriptionId = idOf(invoice.parent?.subscription_details?.subscription);
         if (!subscriptionId) break;
 
         const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-        const userId = subscription.metadata?.userId;
+        const userId = await resolveUserId(subscription);
+        if (!userId) break;
 
-        if (!userId) {
-          // Intentar obtener userId desde customer
-          const customer = await stripe.customers.retrieve(subscription.customer as string);
-          if (customer.deleted) break;
-          const userSnapshot = await db.collection('users')
-            .where('stripeCustomerId', '==', customer.id)
-            .limit(1)
-            .get();
+        await recordEvent({
+          userId,
+          eventType: 'payment_failed',
+          data: { invoiceId: invoice.id, amount: invoice.amount_due },
+        });
 
-          if (userSnapshot.empty) {
-            console.error('No user found for customer:', customer.id);
-            break;
-          }
-
-          const userDoc = userSnapshot.docs[0];
-          const actualUserId = userDoc.id;
-
-          // Registrar evento de fallo de pago
-          await db.collection('subscriptionEvents').add({
-            userId: actualUserId,
-            eventType: 'payment_failed',
-            timestamp: Timestamp.now(),
-            data: {
-              invoiceId: invoice.id,
-              amount: invoice.amount_due,
-            },
-            stripeEventId: event.id,
-          });
-
-          // Slack notification
-          const failedUser1 = await db.collection('users').doc(actualUserId).get();
-          await notifySubscription('payment_failed', actualUserId, failedUser1.data()?.email || actualUserId);
-
-          console.log(`⚠️ Payment failed for user ${actualUserId}`);
-        } else {
-          // Registrar evento de fallo de pago
-          await db.collection('subscriptionEvents').add({
-            userId,
-            eventType: 'payment_failed',
-            timestamp: Timestamp.now(),
-            data: {
-              invoiceId: invoice.id,
-              amount: invoice.amount_due,
-            },
-            stripeEventId: event.id,
-          });
-
-          // Slack notification
-          const failedUser2 = await db.collection('users').doc(userId).get();
-          await notifySubscription('payment_failed', userId, failedUser2.data()?.email || userId);
-
-          console.log(`⚠️ Payment failed for user ${userId}`);
-        }
+        notifications.push(async () => notifySubscription('payment_failed', userId, await emailOf(userId)));
+        console.log(`⚠️ Payment failed for user ${userId}`);
         break;
       }
 
       case 'customer.subscription.trial_will_end': {
         const subscription = event.data.object as Stripe.Subscription;
-        const userId = subscription.metadata?.userId;
+        const userId = await resolveUserId(subscription);
+        if (!userId) break;
 
-        if (!userId) {
-          console.error('No userId in subscription metadata');
-          break;
-        }
-
-        // Registrar evento de recordatorio de trial
-        await db.collection('subscriptionEvents').add({
+        await recordEvent({
           userId,
           eventType: 'trial_will_end',
-          timestamp: Timestamp.now(),
-          data: {
-            trialEnd: subscription.trial_end,
-          },
-          stripeEventId: event.id,
+          data: { trialEnd: subscription.trial_end },
         });
 
-        // Slack notification
-        const trialUser = await db.collection('users').doc(userId).get();
-        await notifySubscription('trial_ending', userId, trialUser.data()?.email || userId);
-
+        notifications.push(async () => notifySubscription('trial_ending', userId, await emailOf(userId)));
         console.log(`📅 Trial ending soon for user ${userId}`);
         break;
       }
@@ -347,18 +221,25 @@ export async function POST(request: NextRequest) {
         console.log(`Unhandled event type: ${event.type}`);
     }
 
+    // Mutaciones aplicadas: desde acá el claim queda firme aunque falle Slack.
+    processedRef = null;
+    for (const notify of notifications) {
+      await notify().catch((err) => console.error('Slack notification failed (event already applied):', err));
+    }
+
     return NextResponse.json({ received: true });
   } catch (error: unknown) {
     // El procesamiento falló DESPUÉS de reclamar el evento: liberamos el candado para que
     // el reintento de Stripe pueda reprocesarlo (si no, quedaría marcado como procesado).
     if (processedRef) {
-      await processedRef.delete().catch(() => { /* best-effort: no bloquear la respuesta 500 */ });
+      const ref = processedRef;
+      await ref.delete().catch((err) => {
+        // Si esto falla el evento queda marcado como procesado sin aplicarse: hay que reprocesarlo a mano.
+        console.error(`CRITICAL: no se pudo liberar el claim ${ref.id}; el evento no se reintentará`, err);
+      });
     }
     console.error('Webhook handler error:', error);
     await notifyError('stripe-webhook', error instanceof Error ? error.message : 'Webhook handler failed', error instanceof Error ? error.stack : undefined);
-    return NextResponse.json(
-      { message: error instanceof Error ? error.message : 'Webhook handler failed' },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: 'Webhook handler failed' }, { status: 500 });
   }
 }
