@@ -18,7 +18,8 @@ export default function AdminUsersPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   const ADMIN_EMAIL = 'gabrielucc@gmail.com';
-  const isAdmin = user?.email === ADMIN_EMAIL;
+  // Solo UX: la barrera real es firestore.rules (isAdmin exige email_verified).
+  const isAdmin = user?.email === ADMIN_EMAIL && user.emailVerified;
 
   useEffect(() => {
     if (!loading && !user) {

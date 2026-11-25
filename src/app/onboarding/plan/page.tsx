@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/services/db';
 import { selectPlanVariant, getVariantDisplayName } from '@/services/planVariantService';
 import { GOAL_CONFIG, resolveGoalFromVariantId } from '@/services/protocolEngine';
@@ -91,6 +91,10 @@ export default function OnboardingPlanPage() {
             const now = new Date();
             const trialEndDate = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
 
+            // El trial de la app se otorga una sola vez (firestore.rules rechaza reiniciarlo).
+            const existing = (await getDoc(doc(db, 'users', user.uid))).data();
+            const startsTrial = !existing?.subscriptionStatus && !existing?.trialStartDate && !existing?.stripeSubscriptionId;
+
             await setDoc(doc(db, 'users', user.uid), {
                 uid: user.uid,
                 displayName: user.displayName || '',
@@ -109,9 +113,7 @@ export default function OnboardingPlanPage() {
                 injuries: onboardingData.injuries || '',
                 assignedPlan: planVariantId,
                 planAssignedAt: serverTimestamp(),
-                subscriptionStatus: 'trial',
-                trialStartDate: now,
-                trialEndDate: trialEndDate,
+                ...(startsTrial ? { subscriptionStatus: 'trial', trialStartDate: now, trialEndDate } : {}),
             }, { merge: true });
 
             const planTotalDays = GOAL_CONFIG[resolveGoalFromVariantId(planVariantId)].totalDays;

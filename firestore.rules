@@ -2,15 +2,62 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Admin: el email solo vale si está verificado (si no, alguien podría registrarlo con Email/Password).
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == 'gabrielucc@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+
+    // Campos de facturación: solo los escribe el servidor (Admin SDK, webhook de Stripe).
+    function billingKeys() {
+      return ['subscriptionStatus', 'subscriptionTier', 'subscriptionStartDate', 'subscriptionEndDate',
+              'subscriptionCancelAtPeriodEnd', 'stripeCustomerId', 'stripeSubscriptionId',
+              'trialStartDate', 'trialEndDate'];
+    }
+
+    // Única excepción: el onboarding arranca el trial de la app UNA vez, con fechas actuales y ≤ 14 días.
+    function isValidTrialStart() {
+      let d = request.resource.data;
+      return d.subscriptionStatus == 'trial'
+        && d.trialStartDate is timestamp && d.trialEndDate is timestamp
+        && d.trialStartDate > request.time - duration.value(1, 'd')
+        && d.trialStartDate < request.time + duration.value(1, 'd')
+        && d.trialEndDate <= d.trialStartDate + duration.value(14, 'd');
+    }
+
     // Users collection
     match /users/{userId} {
       // Lectura: propio usuario O admin
-      allow read: if request.auth != null &&
-        (request.auth.uid == userId || request.auth.token.email == 'gabrielucc@gmail.com');
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
 
-      // Escritura: propio usuario (merge) O admin (full update)
-      allow write: if request.auth != null &&
-        (request.auth.uid == userId || request.auth.token.email == 'gabrielucc@gmail.com');
+      allow create: if request.auth != null && request.auth.uid == userId && (
+        !request.resource.data.keys().hasAny(billingKeys())
+        || (request.resource.data.keys().toSet().intersection(billingKeys().toSet())
+              .hasOnly(['subscriptionStatus', 'trialStartDate', 'trialEndDate'])
+            && isValidTrialStart())
+      );
+
+      allow update: if request.auth != null && request.auth.uid == userId && (
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(billingKeys())
+        || (request.resource.data.diff(resource.data).affectedKeys().intersection(billingKeys().toSet())
+              .hasOnly(['subscriptionStatus', 'trialStartDate', 'trialEndDate'])
+            && !('subscriptionStatus' in resource.data)
+            && !('trialStartDate' in resource.data)
+            && !('stripeSubscriptionId' in resource.data)
+            && isValidTrialStart())
+      );
+
+      // Borrar y recrear el doc reiniciaría el trial: solo admin.
+      allow delete: if isAdmin();
+
+      // Admin: escritura completa
+      allow create, update: if isAdmin();
+    }
+
+    // Rate limit de las rutas API (server-only: Admin SDK)
+    match /rateLimits/{key} {
+      allow read, write: if false;
     }
 
     // Plan variants (read-only for authenticated users)
