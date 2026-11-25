@@ -1,18 +1,15 @@
 import { auth } from '@/lib/firebase';
 
-function fireAndForget(type: string, payload: Record<string, unknown>, withAuth = false) {
+// /api/notify exige token: sin usuario logueado la notificación se descarta.
+function fireAndForget(type: string, payload: Record<string, unknown>) {
   (async () => {
     try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-
-      if (withAuth && auth.currentUser) {
-        const token = await auth.currentUser.getIdToken();
-        headers['Authorization'] = `Bearer ${token}`;
-      }
+      if (!auth.currentUser) return;
+      const token = await auth.currentUser.getIdToken();
 
       await fetch('/api/notify', {
         method: 'POST',
-        headers,
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ type, payload }),
       });
     } catch {
@@ -21,8 +18,9 @@ function fireAndForget(type: string, payload: Record<string, unknown>, withAuth 
   })();
 }
 
-export function reportNewUser(email: string, name: string, method: string) {
-  fireAndForget('new_user', { email, name, method });
+// El servidor toma email y método del token; no se mandan datos del usuario en el body.
+export function reportNewUser() {
+  fireAndForget('new_user', {});
 }
 
 export function reportError(source: string, error: unknown) {
@@ -32,5 +30,5 @@ export function reportError(source: string, error: unknown) {
 }
 
 export function submitFeedback(message: string) {
-  fireAndForget('feedback', { message }, true);
+  fireAndForget('feedback', { message });
 }

@@ -9,6 +9,23 @@ interface SlackBlock {
   elements?: { type: string; text: string }[];
 }
 
+/** Escapa los caracteres de control de mrkdwn (menciones, links) y los cierres de bloque de código. */
+export function slackEscape(value: string, max = 1500): string {
+  return value
+    .slice(0, max)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/```/g, "'''");
+}
+
+/** El canal es interno, pero no hace falta el email completo: alcanza para reconocerlo + el uid. */
+export function maskEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  if (!domain) return '***';
+  return `${local.slice(0, 2)}***@${domain}`;
+}
+
 async function sendSlackMessage(channel: string, text: string, blocks?: SlackBlock[]) {
   if (!SLACK_BOT_TOKEN || !channel) return;
 
@@ -20,16 +37,21 @@ async function sendSlackMessage(channel: string, text: string, blocks?: SlackBlo
         'Authorization': `Bearer ${SLACK_BOT_TOKEN}`,
       },
       body: JSON.stringify({ channel, text, blocks }),
+      // Si Slack se cuelga no puede demorar la respuesta (ej. el webhook de Stripe).
+      signal: AbortSignal.timeout(5000),
     });
   } catch (error) {
     console.error('Failed to send Slack message:', error);
   }
 }
 
-export async function notifyNewUser(email: string, name: string, method: string) {
+const nowAR = () => new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
+
+export async function notifyNewUser(userId: string, email: string, method: string) {
   if (!BUSINESS_CHANNEL) return;
 
-  await sendSlackMessage(BUSINESS_CHANNEL, `New user: ${email}`, [
+  const who = slackEscape(maskEmail(email));
+  await sendSlackMessage(BUSINESS_CHANNEL, `New user: ${who}`, [
     {
       type: 'header',
       text: { type: 'plain_text', text: '🆕 Nuevo usuario registrado', emoji: true },
@@ -37,10 +59,10 @@ export async function notifyNewUser(email: string, name: string, method: string)
     {
       type: 'section',
       fields: [
-        { type: 'mrkdwn', text: `*Email:*\n${email}` },
-        { type: 'mrkdwn', text: `*Nombre:*\n${name || 'Sin nombre'}` },
-        { type: 'mrkdwn', text: `*Método:*\n${method}` },
-        { type: 'mrkdwn', text: `*Fecha:*\n${new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}` },
+        { type: 'mrkdwn', text: `*Email:*\n${who}` },
+        { type: 'mrkdwn', text: `*User ID:*\n${slackEscape(userId)}` },
+        { type: 'mrkdwn', text: `*Método:*\n${slackEscape(method)}` },
+        { type: 'mrkdwn', text: `*Fecha:*\n${nowAR()}` },
       ],
     },
   ]);
@@ -63,22 +85,20 @@ export async function notifySubscription(
   };
 
   const { emoji, title } = config[event];
+  const who = slackEscape(maskEmail(email));
 
   const fields = [
-    { type: 'mrkdwn', text: `*Usuario:*\n${email}` },
-    { type: 'mrkdwn', text: `*User ID:*\n${userId}` },
+    { type: 'mrkdwn', text: `*Usuario:*\n${who}` },
+    { type: 'mrkdwn', text: `*User ID:*\n${slackEscape(userId)}` },
   ];
 
   if (tier) {
-    fields.push({ type: 'mrkdwn', text: `*Plan:*\n${tier}` });
+    fields.push({ type: 'mrkdwn', text: `*Plan:*\n${slackEscape(tier)}` });
   }
 
-  fields.push({
-    type: 'mrkdwn',
-    text: `*Fecha:*\n${new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}`,
-  });
+  fields.push({ type: 'mrkdwn', text: `*Fecha:*\n${nowAR()}` });
 
-  await sendSlackMessage(BUSINESS_CHANNEL, `${emoji} ${title}: ${email}`, [
+  await sendSlackMessage(BUSINESS_CHANNEL, `${emoji} ${title}: ${who}`, [
     {
       type: 'header',
       text: { type: 'plain_text', text: `${emoji} ${title}`, emoji: true },
@@ -90,6 +110,9 @@ export async function notifySubscription(
 export async function notifyError(source: string, message: string, stack?: string) {
   if (!ERROR_CHANNEL) return;
 
+  const src = slackEscape(source, 100);
+  const msg = slackEscape(message, 1500);
+
   const blocks: SlackBlock[] = [
     {
       type: 'header',
@@ -98,30 +121,31 @@ export async function notifyError(source: string, message: string, stack?: strin
     {
       type: 'section',
       fields: [
-        { type: 'mrkdwn', text: `*Fuente:*\n${source}` },
-        { type: 'mrkdwn', text: `*Fecha:*\n${new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}` },
+        { type: 'mrkdwn', text: `*Fuente:*\n${src}` },
+        { type: 'mrkdwn', text: `*Fecha:*\n${nowAR()}` },
       ],
     },
     {
       type: 'section',
-      text: { type: 'mrkdwn', text: `*Error:*\n\`\`\`${message}\`\`\`` },
+      text: { type: 'mrkdwn', text: `*Error:*\n\`\`\`${msg}\`\`\`` },
     },
   ];
 
   if (stack) {
     blocks.push({
       type: 'section',
-      text: { type: 'mrkdwn', text: `*Stack:*\n\`\`\`${stack.slice(0, 2500)}\`\`\`` },
+      text: { type: 'mrkdwn', text: `*Stack:*\n\`\`\`${slackEscape(stack, 2500)}\`\`\`` },
     });
   }
 
-  await sendSlackMessage(ERROR_CHANNEL, `Error in ${source}: ${message}`, blocks);
+  await sendSlackMessage(ERROR_CHANNEL, `Error in ${src}: ${msg}`, blocks);
 }
 
-export async function notifyFeedback(email: string, message: string) {
+export async function notifyFeedback(userId: string, email: string, message: string) {
   if (!BUSINESS_CHANNEL) return;
 
-  await sendSlackMessage(BUSINESS_CHANNEL, `Feedback from ${email}`, [
+  const who = slackEscape(maskEmail(email));
+  await sendSlackMessage(BUSINESS_CHANNEL, `Feedback from ${who}`, [
     {
       type: 'header',
       text: { type: 'plain_text', text: '💬 Feedback de usuario', emoji: true },
@@ -129,13 +153,13 @@ export async function notifyFeedback(email: string, message: string) {
     {
       type: 'section',
       fields: [
-        { type: 'mrkdwn', text: `*De:*\n${email}` },
-        { type: 'mrkdwn', text: `*Fecha:*\n${new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}` },
+        { type: 'mrkdwn', text: `*De:*\n${who} (${slackEscape(userId)})` },
+        { type: 'mrkdwn', text: `*Fecha:*\n${nowAR()}` },
       ],
     },
     {
       type: 'section',
-      text: { type: 'mrkdwn', text: `*Mensaje:*\n> ${message}` },
+      text: { type: 'mrkdwn', text: `*Mensaje:*\n> ${slackEscape(message, 2500).replace(/\n/g, '\n> ')}` },
     },
   ]);
 }

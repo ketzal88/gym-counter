@@ -64,8 +64,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
                 // Notify Slack about new user registration
                 if (isNewUser) {
-                    const method = user.providerData[0]?.providerId === 'google.com' ? 'Google' : 'Email';
-                    reportNewUser(user.email || '', user.displayName || '', method);
+                    reportNewUser();
                 }
 
                 // Subscribe to user profile to get onboarding status
